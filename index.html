@@ -539,8 +539,8 @@
                 </div>
                 <div class="upgrade-item">
                     <div class="upgrade-info">
-                        <h4>起始部隊 (Lv.<span id="lvl-initial-troops">1</span>)</h4>
-                        <p id="desc-initial-troops">開局守護者 0 名</p>
+                        <h4>多聯裝彈道 (Lv.<span id="lvl-initial-troops">1</span>)</h4>
+                        <p id="desc-initial-troops">2 顆並排齊射</p>
                     </div>
                     <button class="btn-upgrade" id="btn-upg-troops">
                         <span>🪙</span>
@@ -825,9 +825,15 @@
                 return Math.max(0.08, 0.42 - 0.035 * (lvl - 1));
             }
 
+            getStreamColumnCount() {
+                const lvl = this.data.upgrades.initialTroops || 1;
+                // Lv.1~3: 2顆, Lv.4~6: 3顆, Lv.7+: 4顆並排齊射
+                return Math.min(4, 2 + Math.floor((lvl - 1) / 3));
+            }
+
             getInitialTroopsCount() {
                 const lvl = this.data.upgrades.initialTroops;
-                return (lvl - 1) * 4;
+                return (lvl >= 4) ? 2 : 0; // 高階時僅保留2隻前鋒微量護衛，不破壞排面射擊焦點
             }
 
             getCoinBonusMultiplier() {
@@ -1099,28 +1105,24 @@
             createPlayerCannon() {
                 this.cannonGroup = new THREE.Group();
 
-                // 砲台底盤
-                const baseGeo = new THREE.CylinderGeometry(0.8, 1.0, 0.45, 16);
+                // 砲台底盤 (加寬以容納多聯裝砲管)
+                const baseGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.45, 18);
                 const baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
                 const base = new THREE.Mesh(baseGeo, baseMat);
                 base.position.y = 0.22;
                 this.cannonGroup.add(base);
 
-                // 砲管
-                const barrelGeo = new THREE.CylinderGeometry(0.32, 0.4, 1.3, 14);
-                barrelGeo.rotateX(Math.PI / 2);
-                const barrelMat = new THREE.MeshLambertMaterial({ color: 0x00d4ff, emissive: 0x003366 });
-                const barrel = new THREE.Mesh(barrelGeo, barrelMat);
-                barrel.position.set(0, 0.4, 0.55);
-                this.cannonGroup.add(barrel);
+                // 砲管專用材質 (快取複用)
+                this.barrelMat = new THREE.MeshLambertMaterial({ color: 0x00d4ff, emissive: 0x003366 });
+                this.barrelsGroup = null;
 
-                // 瞄準指示光束 (Aim Guide Line)
-                const aimGeo = new THREE.PlaneGeometry(0.12, 35);
+                // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
+                const aimGeo = new THREE.PlaneGeometry(1.5, 35);
                 aimGeo.rotateX(-Math.PI / 2);
                 const aimMat = new THREE.MeshBasicMaterial({
                     color: 0x00d4ff,
                     transparent: true,
-                    opacity: 0.25
+                    opacity: 0.18
                 });
                 const aimLine = new THREE.Mesh(aimGeo, aimMat);
                 aimLine.position.set(0, 0.06, 18.5);
@@ -1128,6 +1130,37 @@
 
                 this.cannonGroup.position.set(0, 0, 0);
                 this.scene.add(this.cannonGroup);
+
+                // 預設建立雙聯裝砲管
+                this.updateCannonBarrels(2);
+            }
+
+            updateCannonBarrels(streamCount = 2) {
+                if (this.currentBarrelCount === streamCount && this.barrelsGroup) return;
+                this.currentBarrelCount = streamCount;
+
+                // 妥善釋放舊幾何體記憶體 (遵守 three-best-practices memory-dispose)
+                if (this.barrelsGroup) {
+                    this.cannonGroup.remove(this.barrelsGroup);
+                    this.barrelsGroup.traverse(child => {
+                        if (child.geometry) child.geometry.dispose();
+                    });
+                }
+
+                this.barrelsGroup = new THREE.Group();
+                const spacing = 0.4;
+                const radius = (streamCount >= 4) ? 0.15 : (streamCount === 3 ? 0.18 : 0.22);
+
+                for (let i = 0; i < streamCount; i++) {
+                    const offset = (i - (streamCount - 1) / 2) * spacing;
+                    const barrelGeo = new THREE.CylinderGeometry(radius * 0.8, radius, 1.3, 12);
+                    barrelGeo.rotateX(Math.PI / 2);
+                    const barrel = new THREE.Mesh(barrelGeo, this.barrelMat);
+                    barrel.position.set(offset, 0.4, 0.55);
+                    this.barrelsGroup.add(barrel);
+                }
+
+                this.cannonGroup.add(this.barrelsGroup);
             }
 
             onWindowResize() {
@@ -1346,8 +1379,8 @@
                 }
             }
 
-            // 發射藍軍
-            spawnBlueTroop(x, z, spreadX = 0.2, spreadVx = 0.4) {
+            // 發射藍軍 (微調離散度以確保並排齊射時維持整齊方陣橫隊)
+            spawnBlueTroop(x, z, spreadX = 0.04, spreadVx = 0.08, baseVz = 9.2) {
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (!u.active) {
@@ -1356,7 +1389,7 @@
                         u.y = 0.4;
                         u.z = z;
                         u.vx = (Math.random() - 0.5) * spreadVx;
-                        u.vz = 9.0 + (Math.random() - 0.5) * 0.8; // 調整衝鋒速度使兵潮推擠感更充實
+                        u.vz = baseVz + (Math.random() - 0.5) * 0.15; // 速度高度一致，形成一排排平推浪潮
                         u.passedGateMask = 0;
                         return u;
                     }
@@ -1909,11 +1942,15 @@
 
                 const lvlTroops = gameStorage.data.upgrades.initialTroops;
                 const costTroops = gameStorage.getUpgradeCost('initialTroops');
+                const streamCount = gameStorage.getStreamColumnCount();
                 document.getElementById('lvl-initial-troops').innerText = lvlTroops;
-                document.getElementById('desc-initial-troops').innerText = `開局守護者 ${gameStorage.getInitialTroopsCount()} 名`;
+                document.getElementById('desc-initial-troops').innerText = `${streamCount} 聯裝並排 (每次 ${streamCount} 顆)`;
                 const btnTroops = document.getElementById('btn-upg-troops');
                 document.getElementById('cost-initial-troops').innerText = costTroops;
                 btnTroops.disabled = (gameStorage.data.coins < costTroops);
+
+                // 即時在大廳同步 3D 砲台管數外觀
+                this.threeScene.updateCannonBarrels(streamCount);
 
                 const lvlCoins = gameStorage.data.upgrades.coinMultiplier;
                 const costCoins = gameStorage.getUpgradeCost('coinMultiplier');
@@ -2001,15 +2038,18 @@
                 this.maxShieldHp = 3;
                 this.cannonX = 0;
                 this.targetCannonX = 0;
-                this.lastShootTime = 0;
+                this.lastShootTime = -999; // 立即觸發首波並排齊射
                 this.shakeAmount = 0;
                 this.entityMgr.resetAll();
+
+                // 同步當前等級的砲管外觀
+                this.threeScene.updateCannonBarrels(gameStorage.getStreamColumnCount());
 
                 this.mainMenuModal.classList.add('hidden');
                 this.gameOverModal.classList.add('hidden');
                 this.bossWarning.classList.remove('show');
 
-                // 開局預備部隊
+                // 開局預備前鋒（若有微量守護小兵）
                 const initTroops = gameStorage.getInitialTroopsCount();
                 for (let i = 0; i < initTroops; i++) {
                     const spreadX = (i - (initTroops - 1) / 2) * 0.45;
@@ -2273,11 +2313,16 @@
                     this.cannonX += (this.targetCannonX - this.cannonX) * 18.0 * dt;
                     this.threeScene.cannonGroup.position.x = this.cannonX;
 
-                    // 連續發射藍軍
+                    // 連續多聯裝並排發射藍軍 (Multi-Barrel Parallel Stream: 2, 3 或 4 顆)
                     const fireInterval = gameStorage.getFireInterval();
                     if (time - this.lastShootTime >= fireInterval) {
                         this.lastShootTime = time;
-                        this.entityMgr.spawnBlueTroop(this.cannonX, 0.8);
+                        const streamCount = gameStorage.getStreamColumnCount();
+                        const spacing = 0.4;
+                        for (let s = 0; s < streamCount; s++) {
+                            const offset = (s - (streamCount - 1) / 2) * spacing;
+                            this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.8, 0.04, 0.08);
+                        }
                         soundFX.playShoot();
                     }
 
