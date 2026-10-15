@@ -6,14 +6,48 @@
     <title>軍團防線：增殖衝擊 (Mob Defense: Swarm Rush)</title>
     <style>
         :root {
-            --primary-blue: #00b4d8;
-            --primary-blue-glow: rgba(0, 180, 216, 0.6);
-            --danger-red: #ff3366;
-            --danger-red-glow: rgba(255, 51, 102, 0.6);
+            --primary-blue: #00f0ff;
+            --primary-blue-glow: rgba(0, 240, 255, 0.55);
+            --danger-red: #ff385c;
+            --danger-red-glow: rgba(255, 56, 92, 0.55);
             --gold-accent: #ffd166;
-            --dark-bg: #090d14;
-            --panel-bg: rgba(14, 20, 30, 0.92);
-            --glass-border: rgba(255, 255, 255, 0.14);
+            --dark-bg: #0c1322;
+            --panel-bg: rgba(14, 23, 38, 0.94);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --text-color: #ffffff;
+            --subtext-color: #94a3b8;
+            --card-inner-bg: rgba(255, 255, 255, 0.05);
+            --hud-bg: linear-gradient(180deg, rgba(8, 14, 26, 0.85) 0%, rgba(8, 14, 26, 0) 100%);
+        }
+
+        html[data-theme="bright"] {
+            --primary-blue: #0284c7;
+            --primary-blue-glow: rgba(2, 132, 199, 0.35);
+            --danger-red: #ff4757;
+            --danger-red-glow: rgba(255, 71, 87, 0.35);
+            --gold-accent: #d97706;
+            --dark-bg: #e2e8f0;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(0, 0, 0, 0.12);
+            --text-color: #0f172a;
+            --subtext-color: #475569;
+            --card-inner-bg: rgba(0, 0, 0, 0.04);
+            --hud-bg: linear-gradient(180deg, rgba(220, 234, 245, 0.92) 0%, rgba(220, 234, 245, 0) 100%);
+        }
+
+        html[data-theme="candy"] {
+            --primary-blue: #00f5d4;
+            --primary-blue-glow: rgba(0, 245, 212, 0.55);
+            --danger-red: #ff2a85;
+            --danger-red-glow: rgba(255, 42, 133, 0.55);
+            --gold-accent: #ffb703;
+            --dark-bg: #140c22;
+            --panel-bg: rgba(27, 15, 46, 0.94);
+            --glass-border: rgba(255, 255, 255, 0.16);
+            --text-color: #ffffff;
+            --subtext-color: #c4b5fd;
+            --card-inner-bg: rgba(255, 255, 255, 0.05);
+            --hud-bg: linear-gradient(180deg, rgba(20, 12, 34, 0.88) 0%, rgba(20, 12, 34, 0) 100%);
         }
 
         * {
@@ -31,8 +65,9 @@
             height: 100%;
             overflow: hidden;
             background-color: var(--dark-bg);
-            color: #ffffff;
+            color: var(--text-color);
             touch-action: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         #canvas-container {
@@ -70,8 +105,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+            background: var(--hud-bg);
             pointer-events: auto;
+            transition: background 0.3s ease;
         }
 
         .hud-left, .hud-right {
@@ -81,7 +117,7 @@
         }
 
         .stat-badge {
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--card-inner-bg);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--glass-border);
@@ -92,7 +128,8 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            color: var(--text-color);
         }
 
         .stat-badge.coins {
@@ -117,7 +154,7 @@
             font-size: 13px;
             font-weight: 800;
             letter-spacing: 1px;
-            color: #eee;
+            color: var(--text-color);
             margin-bottom: 4px;
         }
 
@@ -133,13 +170,13 @@
         .progress-fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #06d6a0, #00b4d8);
+            background: linear-gradient(90deg, #06d6a0, var(--primary-blue));
             transition: width 0.3s ease;
         }
 
-        /* 快速控制鍵 (音效/暫停) */
+        /* 快速控制鍵 (主題/音效) */
         .icon-btn {
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--card-inner-bg);
             border: 1px solid var(--glass-border);
             border-radius: 50%;
             width: 32px;
@@ -148,13 +185,41 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: #fff;
+            color: var(--text-color);
             font-size: 14px;
-            transition: background 0.15s ease;
+            transition: background 0.15s ease, transform 0.1s ease;
         }
 
         .icon-btn:hover {
             background: rgba(255, 255, 255, 0.18);
+        }
+        .icon-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* 主題切換 Toast 提示 */
+        .theme-toast {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-blue);
+            color: var(--text-color);
+            padding: 7px 18px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 800;
+            box-shadow: 0 6px 20px var(--primary-blue-glow);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            z-index: 50;
+        }
+
+        .theme-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
         /* 操作引導提示 */
@@ -163,10 +228,10 @@
             bottom: 45px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--text-color);
             font-size: 13px;
             font-weight: 600;
-            background: rgba(0, 0, 0, 0.55);
+            background: var(--panel-bg);
             border: 1px solid var(--glass-border);
             padding: 6px 16px;
             border-radius: 20px;
@@ -176,6 +241,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
         }
 
         @keyframes pulse-guide {
@@ -217,9 +283,11 @@
             border: 1px solid var(--glass-border);
             border-radius: 20px;
             padding: 16px 16px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
             text-align: center;
             position: relative;
+            color: var(--text-color);
+            transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
 
         .modal-card::-webkit-scrollbar {
@@ -233,7 +301,7 @@
         .modal-card h1 {
             font-size: 20px;
             font-weight: 900;
-            background: linear-gradient(135deg, #00b4d8, #90e0ef);
+            background: linear-gradient(135deg, var(--primary-blue), var(--danger-red));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 2px;
@@ -243,11 +311,12 @@
             font-size: 18px;
             font-weight: 800;
             margin-bottom: 4px;
+            color: var(--text-color);
         }
 
         .modal-card p.subtitle {
             font-size: 11px;
-            color: #8fa0b5;
+            color: var(--subtext-color);
             margin-bottom: 10px;
             line-height: 1.35;
         }
@@ -255,7 +324,7 @@
         /* 模式切換按鈕組 */
         .mode-selector {
             display: flex;
-            background: rgba(0, 0, 0, 0.35);
+            background: var(--card-inner-bg);
             padding: 3px;
             border-radius: 12px;
             margin-bottom: 10px;
@@ -267,7 +336,7 @@
             padding: 6px;
             border: none;
             background: transparent;
-            color: #8fa0b5;
+            color: var(--subtext-color);
             font-weight: 700;
             font-size: 12px;
             border-radius: 9px;
@@ -278,7 +347,41 @@
         .mode-btn.active {
             background: var(--primary-blue);
             color: #fff;
-            box-shadow: 0 4px 10px rgba(0, 180, 216, 0.4);
+            box-shadow: 0 4px 10px var(--primary-blue-glow);
+        }
+
+        /* 主題切換按鈕組 */
+        .theme-selector {
+            display: flex;
+            gap: 6px;
+            background: var(--card-inner-bg);
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .theme-btn {
+            flex: 1;
+            padding: 7px 4px;
+            border: none;
+            background: transparent;
+            color: var(--subtext-color);
+            font-weight: 700;
+            font-size: 11.5px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .theme-btn.active {
+            background: var(--primary-blue);
+            color: #ffffff;
+            box-shadow: 0 4px 10px var(--primary-blue-glow);
         }
 
         /* 關卡選擇器 */
@@ -290,21 +393,21 @@
         }
 
         .stage-badge {
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--card-inner-bg);
             border: 1px solid var(--glass-border);
             border-radius: 10px;
             padding: 6px 0;
             font-weight: 800;
             font-size: 12.5px;
             cursor: pointer;
-            color: #cbd5e0;
+            color: var(--text-color);
             transition: all 0.15s ease;
         }
 
         .stage-badge.selected {
             background: var(--primary-blue);
             color: #fff;
-            border-color: #90e0ef;
+            border-color: var(--primary-blue);
             transform: scale(1.05);
         }
 
@@ -323,7 +426,7 @@
         }
 
         .upgrade-item {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--card-inner-bg);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
             padding: 8px 12px;
@@ -334,13 +437,13 @@
 
         .upgrade-info h4 {
             font-size: 12.5px;
-            color: #fff;
+            color: var(--text-color);
             margin-bottom: 1px;
         }
 
         .upgrade-info p {
             font-size: 10.5px;
-            color: #7d93ac;
+            color: var(--subtext-color);
         }
 
         .btn-upgrade {
@@ -373,7 +476,7 @@
         /* 主操作按鈕 */
         .btn-primary {
             width: 100%;
-            background: linear-gradient(135deg, #00b4d8, #0077b6);
+            background: linear-gradient(135deg, var(--primary-blue), #0077b6);
             color: #ffffff;
             border: none;
             padding: 12px 16px;
@@ -396,8 +499,8 @@
 
         .btn-secondary {
             width: 100%;
-            background: rgba(255, 255, 255, 0.08);
-            color: #ffffff;
+            background: var(--card-inner-bg);
+            color: var(--text-color);
             border: 1px solid var(--glass-border);
             padding: 10px 16px;
             border-radius: 14px;
@@ -487,9 +590,12 @@
                     <span>👥</span>
                     <span id="hud-swarm-count">0</span>
                 </div>
+                <button class="icon-btn" id="btn-theme-toggle" title="切換配色風格">🎨</button>
                 <button class="icon-btn" id="btn-sound-toggle" title="切換音效">🔊</button>
             </div>
         </div>
+
+        <div class="theme-toast" id="theme-toast">🎨 已切換配色風格</div>
 
         <div id="boss-warning">⚠️ BOSS APPROACHING ⚠️</div>
 
@@ -508,13 +614,23 @@
             <h1>軍團防線：增殖衝擊</h1>
             <p class="subtitle">Mob Defense: Swarm Rush<br>穿過數學倍率門，聚集萬人藍色大軍粉碎紅軍！</p>
 
+            <!-- 配色風格選擇器 -->
+            <div class="theme-select-section" style="margin-bottom:10px; text-align:left;">
+                <p style="font-size:11px; color:var(--subtext-color); margin-bottom:5px; font-weight:700;">畫面配色風格 (Theme)：</p>
+                <div class="theme-selector" id="theme-selector-group">
+                    <button class="theme-btn active" data-theme="arcade">⚡ 電光競技</button>
+                    <button class="theme-btn" data-theme="bright">☀️ 清爽晴空</button>
+                    <button class="theme-btn" data-theme="candy">🍬 賽博糖果</button>
+                </div>
+            </div>
+
             <div class="mode-selector">
                 <button class="mode-btn active" id="btn-mode-stage">關卡模式 (Stage)</button>
                 <button class="mode-btn" id="btn-mode-endless">無盡生存 (Endless)</button>
             </div>
 
             <div id="stage-select-section">
-                <p style="font-size:11px; color:#8fa0b5; margin-bottom:6px; text-align:left;">選擇關卡 (1-10)：</p>
+                <p style="font-size:11px; color:var(--subtext-color); margin-bottom:6px; text-align:left;">選擇關卡 (1-10)：</p>
                 <div class="stage-selector" id="stage-grid">
                     <!-- 動態生成 10 個關卡按鈕 -->
                 </div>
@@ -603,6 +719,172 @@
 
     <script type="module">
         import * as THREE from 'three';
+
+        // =========================================================================
+        // 配色方案預設集 (Color Theme Presets)
+        // 包含 3D 材質光影、實體色彩與 UI CSS 變數
+        // =========================================================================
+        const THEME_PRESETS = {
+            arcade: {
+                id: 'arcade',
+                name: '電光競技 (Neon Arcade)',
+                icon: '⚡',
+                // 3D 環境
+                sceneBg: 0x0c1322,
+                fogDensity: 0.015,
+                hemiSky: 0xdff4ff,
+                hemiGround: 0x18263d,
+                hemiIntensity: 1.2,
+                dirColor: 0xfff5e6,
+                dirIntensity: 1.3,
+                groundColor: 0x141d2e,
+                railColor: 0x00f0ff,
+                gridColor1: 0x263a57,
+                gridColor2: 0x19283d,
+                // 藍軍 / 我方
+                blueTroopColor: 0x00f0ff,
+                blueTroopEmissive: 0x002c4c,
+                cannonBaseColor: 0x0077b6,
+                cannonBaseEmissive: 0x002244,
+                cannonBarrelColor: 0x00f0ff,
+                cannonBarrelEmissive: 0x003366,
+                aimLineColor: 0x00f0ff,
+                aimLineOpacity: 0.22,
+                // 紅軍 / 敵軍 (高明度螢光赤紅 + 充足自發光，徹底解決暗沉)
+                redTroopColor: 0xff385c,
+                redTroopEmissive: 0x660824,
+                gargoyleColor: 0xc055ff,
+                gargoyleEmissive: 0x3d1066,
+                bossColor: 0xff2a4d,
+                bossEmissive: 0x660818,
+                goldColor: 0xffd166,
+                // 倍增門
+                gateBlue: 0x00f0ff,
+                gateRed: 0xff385c,
+                gateBlueCss: 'rgba(0, 240, 255, 0.95)',
+                gateRedCss: 'rgba(255, 56, 92, 0.95)',
+                css: {
+                    '--primary-blue': '#00f0ff',
+                    '--primary-blue-glow': 'rgba(0, 240, 255, 0.55)',
+                    '--danger-red': '#ff385c',
+                    '--danger-red-glow': 'rgba(255, 56, 92, 0.55)',
+                    '--gold-accent': '#ffd166',
+                    '--dark-bg': '#0c1322',
+                    '--panel-bg': 'rgba(14, 23, 38, 0.94)',
+                    '--glass-border': 'rgba(255, 255, 255, 0.15)',
+                    '--text-color': '#ffffff',
+                    '--subtext-color': '#94a3b8',
+                    '--card-inner-bg': 'rgba(255, 255, 255, 0.05)',
+                    '--hud-bg': 'linear-gradient(180deg, rgba(8, 14, 26, 0.85) 0%, rgba(8, 14, 26, 0) 100%)'
+                }
+            },
+            bright: {
+                id: 'bright',
+                name: '清爽晴空 (Clean Bright)',
+                icon: '☀️',
+                // 3D 環境 (淺色乾淨明亮跑道)
+                sceneBg: 0xdceaf5,
+                fogDensity: 0.012,
+                hemiSky: 0xffffff,
+                hemiGround: 0xbcd5ec,
+                hemiIntensity: 1.45,
+                dirColor: 0xfffaee,
+                dirIntensity: 1.4,
+                groundColor: 0xf3f8fc,
+                railColor: 0x0284c7,
+                gridColor1: 0xc2d8ec,
+                gridColor2: 0xdae8f5,
+                // 藍軍 / 我方 (清澈寶石藍)
+                blueTroopColor: 0x0284c7,
+                blueTroopEmissive: 0x00264d,
+                cannonBaseColor: 0x0369a1,
+                cannonBaseEmissive: 0x001d3d,
+                cannonBarrelColor: 0x0284c7,
+                cannonBarrelEmissive: 0x002e5c,
+                aimLineColor: 0x0284c7,
+                aimLineOpacity: 0.2,
+                // 紅軍 / 敵軍 (熱力番茄鮮紅，淺底反差極高)
+                redTroopColor: 0xff4757,
+                redTroopEmissive: 0x4d000a,
+                gargoyleColor: 0x8b5cf6,
+                gargoyleEmissive: 0x3b1078,
+                bossColor: 0xd63031,
+                bossEmissive: 0x4a0d0d,
+                goldColor: 0xf59e0b,
+                // 倍增門
+                gateBlue: 0x0284c7,
+                gateRed: 0xff4757,
+                gateBlueCss: 'rgba(2, 132, 199, 0.95)',
+                gateRedCss: 'rgba(255, 71, 87, 0.95)',
+                css: {
+                    '--primary-blue': '#0284c7',
+                    '--primary-blue-glow': 'rgba(2, 132, 199, 0.35)',
+                    '--danger-red': '#ff4757',
+                    '--danger-red-glow': 'rgba(255, 71, 87, 0.35)',
+                    '--gold-accent': '#d97706',
+                    '--dark-bg': '#e2e8f0',
+                    '--panel-bg': 'rgba(255, 255, 255, 0.95)',
+                    '--glass-border': 'rgba(0, 0, 0, 0.12)',
+                    '--text-color': '#0f172a',
+                    '--subtext-color': '#475569',
+                    '--card-inner-bg': 'rgba(0, 0, 0, 0.04)',
+                    '--hud-bg': 'linear-gradient(180deg, rgba(220, 234, 245, 0.92) 0%, rgba(220, 234, 245, 0) 100%)'
+                }
+            },
+            candy: {
+                id: 'candy',
+                name: '賽博糖果 (Cyber Candy)',
+                icon: '🍬',
+                // 3D 環境 (深紫霓虹光)
+                sceneBg: 0x18102a,
+                fogDensity: 0.015,
+                hemiSky: 0xf5d0fe,
+                hemiGround: 0x2a1444,
+                hemiIntensity: 1.25,
+                dirColor: 0xfff0fb,
+                dirIntensity: 1.35,
+                groundColor: 0x22163b,
+                railColor: 0x00f5d4,
+                gridColor1: 0x44266e,
+                gridColor2: 0x2c174a,
+                // 藍軍 / 我方 (青檸薄荷)
+                blueTroopColor: 0x00f5d4,
+                blueTroopEmissive: 0x003b33,
+                cannonBaseColor: 0x09927d,
+                cannonBaseEmissive: 0x003028,
+                cannonBarrelColor: 0x00f5d4,
+                cannonBarrelEmissive: 0x003d35,
+                aimLineColor: 0x00f5d4,
+                aimLineOpacity: 0.25,
+                // 紅軍 / 敵軍 (極致螢光洋紅桃粉，吸睛搶眼)
+                redTroopColor: 0xff2a85,
+                redTroopEmissive: 0x66002f,
+                gargoyleColor: 0xc026d3,
+                gargoyleEmissive: 0x4a044e,
+                bossColor: 0xf43f5e,
+                bossEmissive: 0x700924,
+                goldColor: 0xffbe0b,
+                // 倍增門
+                gateBlue: 0x00f5d4,
+                gateRed: 0xff2a85,
+                gateBlueCss: 'rgba(0, 245, 212, 0.95)',
+                gateRedCss: 'rgba(255, 42, 133, 0.95)',
+                css: {
+                    '--primary-blue': '#00f5d4',
+                    '--primary-blue-glow': 'rgba(0, 245, 212, 0.55)',
+                    '--danger-red': '#ff2a85',
+                    '--danger-red-glow': 'rgba(255, 42, 133, 0.55)',
+                    '--gold-accent': '#ffb703',
+                    '--dark-bg': '#140c22',
+                    '--panel-bg': 'rgba(27, 15, 46, 0.94)',
+                    '--glass-border': 'rgba(255, 255, 255, 0.16)',
+                    '--text-color': '#ffffff',
+                    '--subtext-color': '#c4b5fd',
+                    '--card-inner-bg': 'rgba(255, 255, 255, 0.05)',
+                    '--hud-bg': 'linear-gradient(180deg, rgba(20, 12, 34, 0.88) 0%, rgba(20, 12, 34, 0) 100%)'
+                }
+            }
+        };
 
         // =========================================================================
         // 0. 音效系統 (Web Audio API Procedural Synthesizer)
@@ -782,6 +1064,7 @@
                     unlockedStage: 1,
                     highSurvivalTime: 0,
                     highKills: 0,
+                    selectedTheme: 'arcade',
                     upgrades: {
                         fireRate: 1,      // BaseCost: 100
                         initialTroops: 1, // BaseCost: 150
@@ -1038,12 +1321,12 @@
                 this.container.appendChild(this.renderer.domElement);
 
                 // 光源：1 個主光源營造立體感，1 個環境底光
-                const hemiLight = new THREE.HemisphereLight(0xdff0ff, 0x141f30, 0.9);
-                this.scene.add(hemiLight);
+                this.hemiLight = new THREE.HemisphereLight(0xdff4ff, 0x18263d, 1.2);
+                this.scene.add(this.hemiLight);
 
-                const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.25);
-                dirLight.position.set(8, 22, 12);
-                this.scene.add(dirLight);
+                this.dirLight = new THREE.DirectionalLight(0xfff5e6, 1.3);
+                this.dirLight.position.set(8, 22, 12);
+                this.scene.add(this.dirLight);
 
                 // 建立跑道與底座
                 this.createTrack();
@@ -1071,35 +1354,35 @@
                 // 跑道地面
                 const groundGeo = new THREE.PlaneGeometry(trackWidth, trackLength);
                 groundGeo.rotateX(-Math.PI / 2);
-                const groundMat = new THREE.MeshLambertMaterial({ color: 0x121722 });
-                this.trackMesh = new THREE.Mesh(groundGeo, groundMat);
+                this.groundMat = new THREE.MeshLambertMaterial({ color: 0x141d2e });
+                this.trackMesh = new THREE.Mesh(groundGeo, this.groundMat);
                 this.trackMesh.position.set(0, -0.05, trackLength / 2 - 8);
                 this.scene.add(this.trackMesh);
 
                 // 兩側霓虹邊界護欄
                 const railGeo = new THREE.BoxGeometry(0.3, 0.5, trackLength);
-                const railMat = new THREE.MeshBasicMaterial({ color: 0x00b4d8 });
+                this.railMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
 
-                const leftRail = new THREE.Mesh(railGeo, railMat);
-                leftRail.position.set(-trackWidth / 2, 0.2, trackLength / 2 - 8);
-                this.scene.add(leftRail);
+                this.leftRail = new THREE.Mesh(railGeo, this.railMat);
+                this.leftRail.position.set(-trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.scene.add(this.leftRail);
 
-                const rightRail = new THREE.Mesh(railGeo, railMat);
-                rightRail.position.set(trackWidth / 2, 0.2, trackLength / 2 - 8);
-                this.scene.add(rightRail);
+                this.rightRail = new THREE.Mesh(railGeo, this.railMat);
+                this.rightRail.position.set(trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.scene.add(this.rightRail);
 
                 // 底線守護能量條 (Defense Shield Line)
                 const shieldBarGeo = new THREE.BoxGeometry(trackWidth, 0.12, 0.5);
-                this.shieldBarMat = new THREE.MeshBasicMaterial({ color: 0x00b4d8 });
+                this.shieldBarMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
                 const shieldBar = new THREE.Mesh(shieldBarGeo, this.shieldBarMat);
                 shieldBar.position.set(0, 0.05, 0);
                 this.scene.add(shieldBar);
 
                 // 地面網格格線
-                const gridHelper = new THREE.GridHelper(trackWidth, 10, 0x1f2e45, 0x152233);
-                gridHelper.position.set(0, 0, trackLength / 2 - 8);
-                gridHelper.scale.z = trackLength / trackWidth;
-                this.scene.add(gridHelper);
+                this.gridHelper = new THREE.GridHelper(trackWidth, 10, 0x263a57, 0x19283d);
+                this.gridHelper.position.set(0, 0, trackLength / 2 - 8);
+                this.gridHelper.scale.z = trackLength / trackWidth;
+                this.scene.add(this.gridHelper);
             }
 
             createPlayerCannon() {
@@ -1107,24 +1390,24 @@
 
                 // 砲台底盤 (加寬以容納多聯裝砲管)
                 const baseGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.45, 18);
-                const baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
-                const base = new THREE.Mesh(baseGeo, baseMat);
+                this.baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
+                const base = new THREE.Mesh(baseGeo, this.baseMat);
                 base.position.y = 0.22;
                 this.cannonGroup.add(base);
 
                 // 砲管專用材質 (快取複用)
-                this.barrelMat = new THREE.MeshLambertMaterial({ color: 0x00d4ff, emissive: 0x003366 });
+                this.barrelMat = new THREE.MeshLambertMaterial({ color: 0x00f0ff, emissive: 0x003366 });
                 this.barrelsGroup = null;
 
                 // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
                 const aimGeo = new THREE.PlaneGeometry(1.5, 35);
                 aimGeo.rotateX(-Math.PI / 2);
-                const aimMat = new THREE.MeshBasicMaterial({
-                    color: 0x00d4ff,
+                this.aimMat = new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff,
                     transparent: true,
-                    opacity: 0.18
+                    opacity: 0.22
                 });
-                const aimLine = new THREE.Mesh(aimGeo, aimMat);
+                const aimLine = new THREE.Mesh(aimGeo, this.aimMat);
                 aimLine.position.set(0, 0.06, 18.5);
                 this.cannonGroup.add(aimLine);
 
@@ -1163,6 +1446,62 @@
                 this.cannonGroup.add(this.barrelsGroup);
             }
 
+            applyTheme(theme) {
+                if (!theme) return;
+                this.scene.background.set(theme.sceneBg);
+                if (this.scene.fog) {
+                    this.scene.fog.color.set(theme.sceneBg);
+                    this.scene.fog.density = theme.fogDensity;
+                }
+                if (this.hemiLight) {
+                    this.hemiLight.color.set(theme.hemiSky);
+                    this.hemiLight.groundColor.set(theme.hemiGround);
+                    this.hemiLight.intensity = theme.hemiIntensity;
+                }
+                if (this.dirLight) {
+                    this.dirLight.color.set(theme.dirColor);
+                    this.dirLight.intensity = theme.dirIntensity;
+                }
+                if (this.groundMat) {
+                    this.groundMat.color.set(theme.groundColor);
+                    this.groundMat.needsUpdate = true;
+                }
+                if (this.railMat) {
+                    this.railMat.color.set(theme.railColor);
+                    this.railMat.needsUpdate = true;
+                }
+                if (this.shieldBarMat) {
+                    this.shieldBarMat.color.set(theme.railColor);
+                    this.shieldBarMat.needsUpdate = true;
+                }
+                if (this.baseMat) {
+                    this.baseMat.color.set(theme.cannonBaseColor);
+                    this.baseMat.emissive.set(theme.cannonBaseEmissive);
+                    this.baseMat.needsUpdate = true;
+                }
+                if (this.barrelMat) {
+                    this.barrelMat.color.set(theme.cannonBarrelColor);
+                    this.barrelMat.emissive.set(theme.cannonBarrelEmissive);
+                    this.barrelMat.needsUpdate = true;
+                }
+                if (this.aimMat) {
+                    this.aimMat.color.set(theme.aimLineColor);
+                    this.aimMat.opacity = theme.aimLineOpacity;
+                    this.aimMat.needsUpdate = true;
+                }
+                if (this.gridHelper) {
+                    this.scene.remove(this.gridHelper);
+                    if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
+                    if (this.gridHelper.material) this.gridHelper.material.dispose();
+                    const trackWidth = 11;
+                    const trackLength = 85;
+                    this.gridHelper = new THREE.GridHelper(trackWidth, 10, theme.gridColor1, theme.gridColor2);
+                    this.gridHelper.position.set(0, 0, trackLength / 2 - 8);
+                    this.gridHelper.scale.z = trackLength / trackWidth;
+                    this.scene.add(this.gridHelper);
+                }
+            }
+
             onWindowResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.updateCameraTransform();
@@ -1197,8 +1536,8 @@
                 // 藍軍戰士：醒目高亮皇家藍膠囊體 (CapsuleGeometry)
                 const geo = new THREE.CapsuleGeometry(0.32, 0.45, 8, 14);
                 const mat = new THREE.MeshLambertMaterial({
-                    color: 0x00d4ff,
-                    emissive: 0x002244
+                    color: 0x00f0ff,
+                    emissive: 0x002c4c
                 });
 
                 this.blueMesh = new THREE.InstancedMesh(geo, mat, this.MAX_BLUE);
@@ -1223,11 +1562,11 @@
             }
 
             initRedTroops() {
-                // 紅軍步兵：緋紅色膠囊體
+                // 紅軍步兵：高明度熾紅膠囊體 + 充足自發光，徹底告別黑底暗沉
                 const geo = new THREE.CapsuleGeometry(0.32, 0.45, 8, 14);
                 const mat = new THREE.MeshLambertMaterial({
-                    color: 0xff2a5f,
-                    emissive: 0x330011
+                    color: 0xff385c,
+                    emissive: 0x660824
                 });
 
                 this.redMesh = new THREE.InstancedMesh(geo, mat, this.MAX_RED);
@@ -1251,12 +1590,12 @@
             }
 
             initGargoyles() {
-                // 石像鬼：深紫幾何低空飛行單位 (三角錐本體 + 雙翼)
+                // 石像鬼：亮紫幾何低空飛行單位 (三角錐本體 + 雙翼)
                 const geo = new THREE.ConeGeometry(0.45, 0.9, 5);
                 geo.rotateX(Math.PI / 2);
                 const mat = new THREE.MeshLambertMaterial({
-                    color: 0xa855f7,
-                    emissive: 0x2e1065
+                    color: 0xc055ff,
+                    emissive: 0x3d1066
                 });
 
                 this.gargoyleMesh = new THREE.InstancedMesh(geo, mat, this.MAX_GARGOYLES);
@@ -1284,23 +1623,23 @@
                 const bossGroup = new THREE.Group();
 
                 const bodyGeo = new THREE.CylinderGeometry(0.9, 1.15, 2.2, 12);
-                const bodyMat = new THREE.MeshLambertMaterial({
-                    color: 0xcc0033,
-                    emissive: 0x44000f
+                this.bossBodyMat = new THREE.MeshLambertMaterial({
+                    color: 0xff2a4d,
+                    emissive: 0x660818
                 });
-                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                const body = new THREE.Mesh(bodyGeo, this.bossBodyMat);
                 body.position.y = 1.1;
                 bossGroup.add(body);
 
                 // 金屬刺甲
                 const spikeGeo = new THREE.ConeGeometry(0.35, 0.7, 6);
-                const spikeMat = new THREE.MeshLambertMaterial({ color: 0xffd166 });
-                const leftSpike = new THREE.Mesh(spikeGeo, spikeMat);
+                this.bossSpikeMat = new THREE.MeshLambertMaterial({ color: 0xffd166 });
+                const leftSpike = new THREE.Mesh(spikeGeo, this.bossSpikeMat);
                 leftSpike.position.set(-1.0, 1.8, 0);
                 leftSpike.rotation.z = Math.PI / 4;
                 bossGroup.add(leftSpike);
 
-                const rightSpike = new THREE.Mesh(spikeGeo, spikeMat);
+                const rightSpike = new THREE.Mesh(spikeGeo, this.bossSpikeMat);
                 rightSpike.position.set(1.0, 1.8, 0);
                 rightSpike.rotation.z = -Math.PI / 4;
                 bossGroup.add(rightSpike);
@@ -1355,6 +1694,34 @@
                     this.particleMesh.setMatrixAt(i, _tempMatrix);
                 }
                 this.particleMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            applyTheme(theme) {
+                if (!theme) return;
+                if (this.blueMesh && this.blueMesh.material) {
+                    this.blueMesh.material.color.set(theme.blueTroopColor);
+                    this.blueMesh.material.emissive.set(theme.blueTroopEmissive);
+                    this.blueMesh.material.needsUpdate = true;
+                }
+                if (this.redMesh && this.redMesh.material) {
+                    this.redMesh.material.color.set(theme.redTroopColor);
+                    this.redMesh.material.emissive.set(theme.redTroopEmissive);
+                    this.redMesh.material.needsUpdate = true;
+                }
+                if (this.gargoyleMesh && this.gargoyleMesh.material) {
+                    this.gargoyleMesh.material.color.set(theme.gargoyleColor);
+                    this.gargoyleMesh.material.emissive.set(theme.gargoyleEmissive);
+                    this.gargoyleMesh.material.needsUpdate = true;
+                }
+                if (this.bossBodyMat) {
+                    this.bossBodyMat.color.set(theme.bossColor);
+                    this.bossBodyMat.emissive.set(theme.bossEmissive);
+                    this.bossBodyMat.needsUpdate = true;
+                }
+                if (this.bossSpikeMat) {
+                    this.bossSpikeMat.color.set(theme.goldColor);
+                    this.bossSpikeMat.needsUpdate = true;
+                }
             }
 
             spawnExplosion(x, y, z, count = 5) {
@@ -1644,6 +2011,7 @@
             constructor(scene) {
                 this.scene = scene;
                 this.gateObjects = [];
+                this.activeTheme = THEME_PRESETS.arcade;
             }
 
             clear() {
@@ -1654,6 +2022,32 @@
                 this.gateObjects = [];
             }
 
+            drawGateCanvas(ctx, config, bgCss) {
+                ctx.clearRect(0, 0, 256, 128);
+                // 背景厚重膠囊卡片
+                ctx.fillStyle = bgCss;
+                ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 7;
+                ctx.stroke();
+
+                // 文字標籤
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 68px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let labelText = '';
+                if (config.type === 'add') labelText = `+${config.value}`;
+                else if (config.type === 'mult') labelText = `×${config.value}`;
+                else if (config.type === 'sub') labelText = `-${config.value}`;
+                else if (config.type === 'div') labelText = `÷${config.value}`;
+
+                ctx.fillText(labelText, 128, 64);
+            }
+
             createGate(config, gateId) {
                 const gateWidth = 2.5;
                 const gateHeight = 2.4;
@@ -1661,7 +2055,8 @@
                 const group = new THREE.Group();
 
                 const isPositive = (config.type === 'add' || config.type === 'mult');
-                const themeColor = isPositive ? 0x00d4ff : 0xff3366;
+                const themeColor = isPositive ? (this.activeTheme ? this.activeTheme.gateBlue : 0x00f0ff) : (this.activeTheme ? this.activeTheme.gateRed : 0xff385c);
+                const bgCss = isPositive ? (this.activeTheme ? this.activeTheme.gateBlueCss : 'rgba(0, 240, 255, 0.95)') : (this.activeTheme ? this.activeTheme.gateRedCss : 'rgba(255, 56, 92, 0.95)');
 
                 // 1. 半透明能量光幕
                 const curtainGeo = new THREE.PlaneGeometry(gateWidth, gateHeight);
@@ -1697,29 +2092,7 @@
                 canvas.width = 256;
                 canvas.height = 128;
                 const ctx = canvas.getContext('2d');
-
-                // 背景厚重膠囊卡片
-                ctx.fillStyle = isPositive ? 'rgba(0, 180, 216, 0.95)' : 'rgba(255, 51, 102, 0.95)';
-                ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
-                ctx.fill();
-
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 7;
-                ctx.stroke();
-
-                // 文字標籤
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '900 68px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                let labelText = '';
-                if (config.type === 'add') labelText = `+${config.value}`;
-                else if (config.type === 'mult') labelText = `×${config.value}`;
-                else if (config.type === 'sub') labelText = `-${config.value}`;
-                else if (config.type === 'div') labelText = `÷${config.value}`;
-
-                ctx.fillText(labelText, 128, 64);
+                this.drawGateCanvas(ctx, config, bgCss);
 
                 const texture = new THREE.CanvasTexture(canvas);
                 const labelMat = new THREE.MeshBasicMaterial({
@@ -1742,6 +2115,10 @@
                     bitmask: (1 << gateId),
                     config: config,
                     mesh: group,
+                    curtainMat: curtainMat,
+                    pillarMat: pillarMat,
+                    canvas: canvas,
+                    ctx: ctx,
                     texture: texture,
                     width: gateWidth,
                     baseX: config.x,
@@ -1752,6 +2129,29 @@
 
                 this.gateObjects.push(gateObj);
                 return gateObj;
+            }
+
+            applyTheme(theme) {
+                if (!theme) return;
+                this.activeTheme = theme;
+                for (const g of this.gateObjects) {
+                    const isPositive = (g.config.type === 'add' || g.config.type === 'mult');
+                    const themeColor = isPositive ? theme.gateBlue : theme.gateRed;
+                    const bgCss = isPositive ? theme.gateBlueCss : theme.gateRedCss;
+
+                    if (g.curtainMat) {
+                        g.curtainMat.color.set(themeColor);
+                        g.curtainMat.needsUpdate = true;
+                    }
+                    if (g.pillarMat) {
+                        g.pillarMat.color.set(themeColor);
+                        g.pillarMat.needsUpdate = true;
+                    }
+                    if (g.ctx && g.canvas && g.texture) {
+                        this.drawGateCanvas(g.ctx, g.config, bgCss);
+                        g.texture.needsUpdate = true;
+                    }
+                }
             }
 
             setupLevelGates(gatesConfig) {
@@ -1860,6 +2260,7 @@
 
                 this.bindUI();
                 this.bindInputs();
+                this.initTheme();
                 this.renderMenu();
 
                 this.clock = new THREE.Clock();
@@ -1874,9 +2275,30 @@
                 this.levelProgressBar = document.getElementById('level-progress-bar');
                 this.bossWarning = document.getElementById('boss-warning');
                 this.debugStats = document.getElementById('debug-stats');
+                this.themeToast = document.getElementById('theme-toast');
 
                 this.mainMenuModal = document.getElementById('main-menu-modal');
                 this.gameOverModal = document.getElementById('game-over-modal');
+
+                // 配色主題切換 (頂部 HUD 圖示快速循環)
+                const btnTheme = document.getElementById('btn-theme-toggle');
+                if (btnTheme) {
+                    btnTheme.addEventListener('click', () => {
+                        const themeKeys = ['arcade', 'bright', 'candy'];
+                        const currentIdx = themeKeys.indexOf(this.currentThemeKey || 'arcade');
+                        const nextKey = themeKeys[(currentIdx + 1) % themeKeys.length];
+                        this.setTheme(nextKey, true);
+                    });
+                }
+
+                // 主選單主題選擇按鈕群
+                const themeButtons = document.querySelectorAll('.theme-btn');
+                themeButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const themeKey = btn.getAttribute('data-theme');
+                        if (themeKey) this.setTheme(themeKey, false);
+                    });
+                });
 
                 // 音效開關切換
                 const btnSound = document.getElementById('btn-sound-toggle');
@@ -1936,6 +2358,49 @@
                 document.getElementById('btn-upg-coins').addEventListener('click', () => {
                     if (gameStorage.upgrade('coinMultiplier')) this.renderMenu();
                 });
+            }
+
+            initTheme() {
+                const savedTheme = gameStorage.data.selectedTheme || 'arcade';
+                this.setTheme(savedTheme, false);
+            }
+
+            setTheme(themeKey, showToast = false) {
+                const preset = THEME_PRESETS[themeKey] || THEME_PRESETS.arcade;
+                this.currentThemeKey = preset.id;
+                gameStorage.data.selectedTheme = preset.id;
+                gameStorage.save();
+
+                // 1. 更新 HTML 屬性與 CSS 變數
+                document.documentElement.setAttribute('data-theme', preset.id);
+                for (const [key, val] of Object.entries(preset.css)) {
+                    document.documentElement.style.setProperty(key, val);
+                }
+
+                // 2. 更新 3D Three.js 場景、實體與倍率門
+                this.threeScene.applyTheme(preset);
+                this.entityMgr.applyTheme(preset);
+                this.gateMgr.applyTheme(preset);
+
+                // 3. 更新主選單的按鈕 active 樣式
+                const themeButtons = document.querySelectorAll('.theme-btn');
+                themeButtons.forEach(btn => {
+                    if (btn.getAttribute('data-theme') === preset.id) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                // 4. 若需要，顯示 Toast 提示
+                if (showToast && this.themeToast) {
+                    this.themeToast.innerText = `🎨 已切換至：${preset.name}`;
+                    this.themeToast.classList.add('show');
+                    if (this.toastTimer) clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => {
+                        this.themeToast.classList.remove('show');
+                    }, 2000);
+                }
             }
 
             renderMenu() {
