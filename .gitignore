@@ -1,0 +1,129 @@
+# ==============================================================================
+# Game21 - Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. 視覺測試與除錯截圖 (Screenshots & Visual Test Dumps)
+# ------------------------------------------------------------------------------
+screenshot*.png
+screenshot*.jpg
+screenshot*.jpeg
+screenshot*.webp
+*.screenshot.png
+screenshots/
+debug_*/
+
+# ------------------------------------------------------------------------------
+# 2. Web 前端生態與建置產物 (Frontend & Node.js Toolchain)
+# ------------------------------------------------------------------------------
+node_modules/
+dist/
+build/
+out/
+.cache/
+.parcel-cache/
+.vite/
+.next/
+.turbo/
+
+# 日誌檔 (Logs)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# 3. Python 工具鏈與環境 (Python Skills, Scripts & Venvs)
+# 適用於 .agents/skills 與本機 Python 腳本
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虛擬環境 (Virtual Environments)
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# 測試與靜態分析快取 (Testing & Linters Cache)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# 建置與打包 (Build & Distribution)
+*.egg-info/
+*.egg
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+
+# ------------------------------------------------------------------------------
+# 4. 編輯器與 IDE (IDEs & Code Editors)
+# ------------------------------------------------------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (WebStorm, PyCharm, etc.)
+.idea/
+
+# 其他編輯器暫存 (Vim, Sublime, etc.)
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# 5. 作業系統暫存檔 (Operating System Specifics)
+# ------------------------------------------------------------------------------
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ------------------------------------------------------------------------------
+# 6. 環境變數與敏感資訊 (Environment Variables & Secrets)
+# ------------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# ------------------------------------------------------------------------------
+# 7. 暫存檔與備份檔 (Temporary & Backup Files)
+# ------------------------------------------------------------------------------
+*.bak
+*.tmp
+*.temp
+*.orig

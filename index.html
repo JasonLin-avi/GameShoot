@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>軍團防線：增殖衝擊 (Mob Defense: Swarm Rush)</title>
+    <style>
+        :root {
+            --primary-blue: #00b4d8;
+            --primary-blue-glow: rgba(0, 180, 216, 0.6);
+            --danger-red: #ff3366;
+            --danger-red-glow: rgba(255, 51, 102, 0.6);
+            --gold-accent: #ffd166;
+            --dark-bg: #090d14;
+            --panel-bg: rgba(14, 20, 30, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 戰鬥 UI 頂層 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* 頂部 HUD 狀態列 */
+        .hud-header {
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
+            pointer-events: auto;
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-badge.coins {
+            color: var(--gold-accent);
+            border-color: rgba(255, 209, 102, 0.35);
+        }
+
+        .stat-badge.shield {
+            color: var(--primary-blue);
+        }
+
+        .hud-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 260px;
+            margin: 0 12px;
+        }
+
+        .hud-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #eee;
+            margin-bottom: 4px;
+        }
+
+        .progress-track {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            height: 7px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #06d6a0, #00b4d8);
+            transition: width 0.3s ease;
+        }
+
+        /* 快速控制鍵 (音效/暫停) */
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+            font-size: 14px;
+            transition: background 0.15s ease;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        /* 操作引導提示 */
+        .drag-guide {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid var(--glass-border);
+            padding: 6px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            animation: pulse-guide 2s infinite ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @keyframes pulse-guide {
+            0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.45; transform: translateX(-50%) scale(0.96); }
+        }
+
+        /* 模態彈窗 (主頁、升級、過關、失敗) */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            pointer-events: auto;
+            opacity: 1;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .modal-card {
+            width: 90%;
+            max-width: 400px;
+            max-height: 94vh;
+            overflow-y: auto;
+            background: var(--panel-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 16px 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-card::-webkit-scrollbar {
+            width: 4px;
+        }
+        .modal-card::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .modal-card h1 {
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00b4d8, #90e0ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+        }
+
+        .modal-card h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .modal-card p.subtitle {
+            font-size: 11px;
+            color: #8fa0b5;
+            margin-bottom: 10px;
+            line-height: 1.35;
+        }
+
+        /* 模式切換按鈕組 */
+        .mode-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 3px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            background: transparent;
+            color: #8fa0b5;
+            font-weight: 700;
+            font-size: 12px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--primary-blue);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 180, 216, 0.4);
+        }
+
+        /* 關卡選擇器 */
+        .stage-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .stage-badge {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 6px 0;
+            font-weight: 800;
+            font-size: 12.5px;
+            cursor: pointer;
+            color: #cbd5e0;
+            transition: all 0.15s ease;
+        }
+
+        .stage-badge.selected {
+            background: var(--primary-blue);
+            color: #fff;
+            border-color: #90e0ef;
+            transform: scale(1.05);
+        }
+
+        .stage-badge.locked {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        /* 升級項目卡片 */
+        .upgrade-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .upgrade-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upgrade-info h4 {
+            font-size: 12.5px;
+            color: #fff;
+            margin-bottom: 1px;
+        }
+
+        .upgrade-info p {
+            font-size: 10.5px;
+            color: #7d93ac;
+        }
+
+        .btn-upgrade {
+            background: linear-gradient(135deg, #ffd166, #ffaa00);
+            color: #111;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 9px;
+            font-size: 11.5px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(255, 209, 102, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition: transform 0.1s ease;
+        }
+
+        .btn-upgrade:disabled {
+            background: #39424e;
+            color: #718096;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-upgrade:not(:disabled):active {
+            transform: scale(0.96);
+        }
+
+        /* 主操作按鈕 */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #00b4d8, #0077b6);
+            color: #ffffff;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 6px 20px var(--primary-blue-glow);
+            transition: all 0.2s ease;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Boss 警告橫幅 */
+        #boss-warning {
+            position: absolute;
+            top: 22%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(90deg, rgba(255, 51, 102, 0), rgba(255, 51, 102, 0.88) 20%, rgba(255, 51, 102, 0.88) 80%, rgba(255, 51, 102, 0));
+            width: 100%;
+            padding: 12px 0;
+            color: #fff;
+            font-weight: 900;
+            font-size: 22px;
+            letter-spacing: 3px;
+            text-align: center;
+            text-transform: uppercase;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-shadow: 0 0 16px rgba(255, 51, 102, 0.9);
+        }
+
+        #boss-warning.show {
+            opacity: 1;
+            animation: boss-pulse 0.75s infinite alternate;
+        }
+
+        @keyframes boss-pulse {
+            from { transform: translate(-50%, -50%) scale(0.97); }
+            to { transform: translate(-50%, -50%) scale(1.03); }
+        }
+
+        /* FPS & Debug 工具標籤 */
+        #debug-stats {
+            position: absolute;
+            bottom: 6px;
+            left: 10px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: monospace;
+            pointer-events: none;
+            z-index: 11;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- 戰鬥 HUD 層 -->
+    <div id="ui-layer">
+        <div class="hud-header">
+            <div class="hud-left">
+                <div class="stat-badge coins">
+                    <span>🪙</span>
+                    <span id="hud-coins">0</span>
+                </div>
+                <div class="stat-badge shield">
+                    <span>🛡️</span>
+                    <span id="hud-shield">3 / 3</span>
+                </div>
+            </div>
+
+            <div class="hud-center">
+                <div class="hud-title" id="hud-mode-title">第 1 關：初陣啟動</div>
+                <div class="progress-track" id="progress-wrapper">
+                    <div class="progress-fill" id="level-progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="hud-right">
+                <div class="stat-badge" id="hud-units-badge">
+                    <span>👥</span>
+                    <span id="hud-swarm-count">0</span>
+                </div>
+                <button class="icon-btn" id="btn-sound-toggle" title="切換音效">🔊</button>
+            </div>
+        </div>
+
+        <div id="boss-warning">⚠️ BOSS APPROACHING ⚠️</div>
+
+        <div class="drag-guide" id="drag-guide">
+            <span>↔️</span>
+            <span>左右滑動或使用 A/D 鍵操控砲台</span>
+        </div>
+    </div>
+
+    <!-- 統計 Debug 標記 -->
+    <div id="debug-stats">FPS: 60 | Calls: 0 | Blues: 0</div>
+
+    <!-- 主頁 / 關卡與升級 Modal -->
+    <div class="modal-overlay" id="main-menu-modal">
+        <div class="modal-card">
+            <h1>軍團防線：增殖衝擊</h1>
+            <p class="subtitle">Mob Defense: Swarm Rush<br>穿過數學倍率門，聚集萬人藍色大軍粉碎紅軍！</p>
+
+            <div class="mode-selector">
+                <button class="mode-btn active" id="btn-mode-stage">關卡模式 (Stage)</button>
+                <button class="mode-btn" id="btn-mode-endless">無盡生存 (Endless)</button>
+            </div>
+
+            <div id="stage-select-section">
+                <p style="font-size:11px; color:#8fa0b5; margin-bottom:6px; text-align:left;">選擇關卡 (1-10)：</p>
+                <div class="stage-selector" id="stage-grid">
+                    <!-- 動態生成 10 個關卡按鈕 -->
+                </div>
+            </div>
+
+            <div id="endless-info-section" style="display:none; margin-bottom:14px; text-align:left; background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:12px; border:1px solid var(--glass-border);">
+                <div style="font-size:13px; font-weight:700; color:#ffd166; margin-bottom:3px;">🏆 無盡模式最高紀錄</div>
+                <div style="font-size:12px; color:#cbd5e0;" id="endless-record-text">最高生存時間：0 秒 | 總擊殺：0</div>
+            </div>
+
+            <!-- 三維數值養成升級 -->
+            <div class="upgrade-grid">
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <h4>發射射速 (Lv.<span id="lvl-fire-rate">1</span>)</h4>
+                        <p id="desc-fire-rate">每秒 2.5 發</p>
+                    </div>
+                    <button class="btn-upgrade" id="btn-upg-rate">
+                        <span>🪙</span>
+                        <span id="cost-fire-rate">100</span>
+                    </button>
+                </div>
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <h4>起始部隊 (Lv.<span id="lvl-initial-troops">1</span>)</h4>
+                        <p id="desc-initial-troops">開局守護者 0 名</p>
+                    </div>
+                    <button class="btn-upgrade" id="btn-upg-troops">
+                        <span>🪙</span>
+                        <span id="cost-initial-troops">150</span>
+                    </button>
+                </div>
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <h4>金幣倍率 (Lv.<span id="lvl-coin-mult">1</span>)</h4>
+                        <p id="desc-coin-mult">金幣收益 +0%</p>
+                    </div>
+                    <button class="btn-upgrade" id="btn-upg-coins">
+                        <span>🪙</span>
+                        <span id="cost-coin-mult">200</span>
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="btn-start-game">
+                <span>🚀</span>
+                <span>開始戰鬥</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 結算彈窗 (勝利 / 失敗 / 無盡結算) -->
+    <div class="modal-overlay hidden" id="game-over-modal">
+        <div class="modal-card">
+            <h2 id="result-title">戰鬥勝利！</h2>
+            <p class="subtitle" id="result-subtitle">你成功守住了防線，全殲敵軍！</p>
+
+            <div style="background: rgba(255, 255, 255, 0.05); border-radius: 14px; padding: 14px; margin-bottom: 16px; border:1px solid var(--glass-border);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+                    <span style="color:#8fa0b5;">擊殺敵軍數</span>
+                    <span style="font-weight:700;" id="res-kills">0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+                    <span style="color:#8fa0b5;">存活時間 / 進度</span>
+                    <span style="font-weight:700;" id="res-time">100%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:var(--gold-accent); font-weight:800; font-size:15px;">
+                    <span>獲得金幣</span>
+                    <span id="res-coins">+0 🪙</span>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="btn-res-action">繼續下一關</button>
+            <button class="btn-secondary" id="btn-res-menu">返回大廳升級</button>
+        </div>
+    </div>
+
+    <!-- Import Map 引入 Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // =========================================================================
+        // 0. 音效系統 (Web Audio API Procedural Synthesizer)
+        // 採用無外部依賴的合成器音效，兼顧極速載入與響應反饋
+        // =========================================================================
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.chimeScaleIndex = 0;
+                this.lastChimeTime = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return !this.muted;
+            }
+
+            // 發射發射聲音：微短促 Pop
+            playShoot() {
+                if (!this.ctx || this.muted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const t = this.ctx.currentTime;
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(420, t);
+                osc.frequency.exponentialRampToValueAtTime(140, t + 0.07);
+
+                gain.gain.setValueAtTime(0.12, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.07);
+            }
+
+            // 穿過倍率門時的五度音階連音 (Chime Scale)
+            playGateChime() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                if (t - this.lastChimeTime > 0.35) {
+                    this.chimeScaleIndex = 0;
+                }
+                this.lastChimeTime = t;
+
+                const freqs = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                const freq = freqs[this.chimeScaleIndex % freqs.length];
+                this.chimeScaleIndex++;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+
+                gain.gain.setValueAtTime(0.22, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.22);
+            }
+
+            // 小兵碰撞消滅打擊感
+            playHit() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(160, t);
+                osc.frequency.exponentialRampToValueAtTime(40, t + 0.05);
+
+                gain.gain.setValueAtTime(0.12, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.05);
+            }
+
+            // Boss 出現警報低頻音
+            playBossWarning() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(95, t);
+                osc.frequency.linearRampToValueAtTime(75, t + 0.5);
+
+                gain.gain.setValueAtTime(0.28, t);
+                gain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.5);
+            }
+
+            // 通關勝利奏鳴
+            playVictory() {
+                if (!this.ctx || this.muted) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const t = this.ctx.currentTime + idx * 0.11;
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(t);
+                    osc.stop(t + 0.32);
+                });
+            }
+
+            // 失敗音效
+            playDefeat() {
+                if (!this.ctx || this.muted) return;
+                const notes = [380, 320, 260, 200];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const t = this.ctx.currentTime + idx * 0.15;
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(t);
+                    osc.stop(t + 0.28);
+                });
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        // =========================================================================
+        // 1. 本地儲存與數值升級管理器 (GameStorage)
+        // 遵循 GDD 4.1 核心數值公式：Cost(level) = BaseCost * (1.25)^(level - 1)
+        // =========================================================================
+        class GameStorage {
+            constructor() {
+                this.STORAGE_KEY = 'GAME21_SAVE_DATA_V2';
+                this.data = {
+                    coins: 150,
+                    unlockedStage: 1,
+                    highSurvivalTime: 0,
+                    highKills: 0,
+                    upgrades: {
+                        fireRate: 1,      // BaseCost: 100
+                        initialTroops: 1, // BaseCost: 150
+                        coinMultiplier: 1 // BaseCost: 200
+                    }
+                };
+                this.load();
+            }
+
+            load() {
+                try {
+                    const saved = localStorage.getItem(this.STORAGE_KEY);
+                    if (saved) {
+                        this.data = Object.assign(this.data, JSON.parse(saved));
+                    }
+                } catch (e) {
+                    console.warn('LocalStorage load failed:', e);
+                }
+            }
+
+            save() {
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+                } catch (e) {
+                    console.warn('LocalStorage save failed:', e);
+                }
+            }
+
+            getUpgradeCost(type) {
+                const baseCosts = {
+                    fireRate: 100,
+                    initialTroops: 150,
+                    coinMultiplier: 200
+                };
+                const lvl = this.data.upgrades[type];
+                return Math.floor(baseCosts[type] * Math.pow(1.25, lvl - 1));
+            }
+
+            getFireInterval() {
+                const lvl = this.data.upgrades.fireRate;
+                return Math.max(0.08, 0.42 - 0.035 * (lvl - 1));
+            }
+
+            getInitialTroopsCount() {
+                const lvl = this.data.upgrades.initialTroops;
+                return (lvl - 1) * 4;
+            }
+
+            getCoinBonusMultiplier() {
+                const lvl = this.data.upgrades.coinMultiplier;
+                return 1.0 + (lvl - 1) * 0.15;
+            }
+
+            upgrade(type) {
+                const cost = this.getUpgradeCost(type);
+                if (this.data.coins >= cost) {
+                    this.data.coins -= cost;
+                    this.data.upgrades[type]++;
+                    this.save();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        const gameStorage = new GameStorage();
+
+        // =========================================================================
+        // 2. 關卡與波次配置數據 (Stage Configurations)
+        // 10 關漸進式設計，從基礎乘法到雙動態門、石像鬼與巨型 Boss
+        // =========================================================================
+        const STAGE_CONFIGS = [
+            {
+                id: 1,
+                name: '第 1 關：初陣啟動',
+                gates: [
+                    { x: -1.8, z: 12, type: 'add', value: 10, moving: false },
+                    { x: 1.8, z: 12, type: 'mult', value: 2, moving: false }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 12, xSpan: 2.5 },
+                    { time: 5.5, type: 'red', count: 18, xSpan: 3.0 },
+                    { time: 10.5, type: 'red', count: 25, xSpan: 3.5 }
+                ]
+            },
+            {
+                id: 2,
+                name: '第 2 關：倍增洪流',
+                gates: [
+                    { x: -2.0, z: 13, type: 'mult', value: 2, moving: false },
+                    { x: 2.0, z: 13, type: 'mult', value: 3, moving: false }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
+                    { time: 5.0, type: 'red', count: 30, xSpan: 4.0 },
+                    { time: 10.0, type: 'red', count: 45, xSpan: 4.5 }
+                ]
+            },
+            {
+                id: 3,
+                name: '第 3 關：巡弋防線',
+                gates: [
+                    { x: 0, z: 14, type: 'mult', value: 3, moving: true, amplitude: 2.2, speed: 2.0 },
+                    { x: 0, z: 23, type: 'add', value: 15, moving: true, amplitude: 2.0, speed: 1.6, phase: Math.PI }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 25, xSpan: 3.5 },
+                    { time: 5.5, type: 'red', count: 40, xSpan: 4.0 },
+                    { time: 11.5, type: 'red', count: 55, xSpan: 4.5 }
+                ]
+            },
+            {
+                id: 4,
+                name: '第 4 關：空降石像鬼',
+                gates: [
+                    { x: -1.8, z: 13, type: 'mult', value: 2, moving: false },
+                    { x: 1.8, z: 13, type: 'mult', value: 3, moving: false },
+                    { x: 0, z: 23, type: 'add', value: 20, moving: true, amplitude: 2.0, speed: 2.2 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
+                    { time: 4.5, type: 'gargoyle', count: 3, xSpan: 3.0 },
+                    { time: 7.5, type: 'red', count: 35, xSpan: 4.0 },
+                    { time: 11.0, type: 'gargoyle', count: 5, xSpan: 3.5 }
+                ]
+            },
+            {
+                id: 5,
+                name: '第 5 關：巨怪衝撞',
+                gates: [
+                    { x: -2.0, z: 12, type: 'mult', value: 3, moving: false },
+                    { x: 2.0, z: 12, type: 'add', value: 25, moving: false },
+                    { x: 0, z: 21, type: 'mult', value: 2, moving: true, amplitude: 2.0, speed: 1.8 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 30, xSpan: 4.0 },
+                    { time: 5.5, type: 'boss', hp: 40, count: 1 },
+                    { time: 9.5, type: 'red', count: 40, xSpan: 4.0 }
+                ]
+            },
+            {
+                id: 6,
+                name: '第 6 關：險峻陷阱',
+                gates: [
+                    { x: -2.0, z: 13, type: 'mult', value: 3, moving: false },
+                    { x: 2.0, z: 13, type: 'sub', value: 10, moving: false },
+                    { x: 0, z: 23, type: 'mult', value: 2, moving: true, amplitude: 2.4, speed: 2.5 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 35, xSpan: 4.0 },
+                    { time: 5.5, type: 'gargoyle', count: 4, xSpan: 3.0 },
+                    { time: 10.0, type: 'red', count: 55, xSpan: 4.5 }
+                ]
+            },
+            {
+                id: 7,
+                name: '第 7 關：雙重交錯',
+                gates: [
+                    { x: -1.6, z: 13, type: 'mult', value: 3, moving: true, amplitude: 1.8, speed: 2.2 },
+                    { x: 1.6, z: 13, type: 'add', value: 20, moving: true, amplitude: 1.8, speed: 2.2, phase: Math.PI },
+                    { x: 0, z: 24, type: 'mult', value: 2, moving: true, amplitude: 2.4, speed: 2.8 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 40, xSpan: 4.0 },
+                    { time: 5.5, type: 'gargoyle', count: 5, xSpan: 3.5 },
+                    { time: 9.5, type: 'red', count: 60, xSpan: 4.5 }
+                ]
+            },
+            {
+                id: 8,
+                name: '第 8 關：夜行狂襲',
+                gates: [
+                    { x: -2.2, z: 13, type: 'mult', value: 4, moving: false },
+                    { x: 2.2, z: 13, type: 'div', value: 2, moving: false },
+                    { x: 0, z: 24, type: 'add', value: 30, moving: true, amplitude: 2.2, speed: 2.5 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 45, xSpan: 4.5 },
+                    { time: 5.0, type: 'gargoyle', count: 6, xSpan: 3.5 },
+                    { time: 8.5, type: 'red', count: 65, xSpan: 4.5 },
+                    { time: 12.0, type: 'gargoyle', count: 6, xSpan: 4.0 }
+                ]
+            },
+            {
+                id: 9,
+                name: '第 9 關：雙雄會戰',
+                gates: [
+                    { x: -2.0, z: 12, type: 'mult', value: 3, moving: true, amplitude: 1.6, speed: 1.8 },
+                    { x: 2.0, z: 12, type: 'mult', value: 4, moving: true, amplitude: 1.6, speed: 1.8, phase: Math.PI },
+                    { x: 0, z: 23, type: 'add', value: 35, moving: false }
+                ],
+                waves: [
+                    { time: 1.0, type: 'boss', hp: 35, count: 1 },
+                    { time: 5.5, type: 'red', count: 60, xSpan: 4.5 },
+                    { time: 11.0, type: 'boss', hp: 50, count: 1 }
+                ]
+            },
+            {
+                id: 10,
+                name: '第 10 關：終極決戰',
+                gates: [
+                    { x: -2.2, z: 12, type: 'mult', value: 4, moving: true, amplitude: 1.5, speed: 2.5 },
+                    { x: 2.2, z: 12, type: 'mult', value: 5, moving: true, amplitude: 1.5, speed: 2.5, phase: Math.PI },
+                    { x: 0, z: 23, type: 'add', value: 50, moving: true, amplitude: 2.4, speed: 3.0 }
+                ],
+                waves: [
+                    { time: 1.0, type: 'red', count: 50, xSpan: 4.5 },
+                    { time: 4.5, type: 'gargoyle', count: 8, xSpan: 4.0 },
+                    { time: 9.0, type: 'boss', hp: 80, count: 1 },
+                    { time: 14.0, type: 'red', count: 80, xSpan: 4.5 }
+                ]
+            }
+        ];
+
+        // =========================================================================
+        // 3. 預先分配物件 (Zero Allocations in Loop - three-best-practices)
+        // 避免在渲染迴圈中分配記憶體觸發 GC 停頓
+        // =========================================================================
+        const _tempVec3 = new THREE.Vector3();
+        const _tempMatrix = new THREE.Matrix4();
+        const _dummy = new THREE.Object3D();
+
+        // =========================================================================
+        // 4. Three.js 場景與相機管理 (ThreeGameScene)
+        // =========================================================================
+        class ThreeGameScene {
+            constructor(container) {
+                this.container = container;
+                this.isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                // 場景設定
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0e17);
+                this.scene.fog = new THREE.FogExp2(0x0a0e17, 0.015);
+
+                // 相機：專為 9:16 直式跑酷塔防最佳化的透視投影
+                this.camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 140);
+                this.updateCameraTransform();
+
+                // 渲染器：根據裝置限制 PixelRatio 並開啟平滑著色
+                this.renderer = new THREE.WebGLRenderer({
+                    antialias: !this.isMobile,
+                    powerPreference: 'high-performance',
+                    precision: this.isMobile ? 'mediump' : 'highp'
+                });
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.container.appendChild(this.renderer.domElement);
+
+                // 光源：1 個主光源營造立體感，1 個環境底光
+                const hemiLight = new THREE.HemisphereLight(0xdff0ff, 0x141f30, 0.9);
+                this.scene.add(hemiLight);
+
+                const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.25);
+                dirLight.position.set(8, 22, 12);
+                this.scene.add(dirLight);
+
+                // 建立跑道與底座
+                this.createTrack();
+                this.createPlayerCannon();
+
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+
+            updateCameraTransform() {
+                const aspect = window.innerWidth / window.innerHeight;
+                // 手機直式螢幕拉遠以保證視野包覆整個跑道
+                if (aspect < 1.0) {
+                    this.camera.position.set(0, 24, -14);
+                    this.camera.lookAt(0, 0, 18);
+                } else {
+                    this.camera.position.set(0, 19, -12);
+                    this.camera.lookAt(0, 0, 19);
+                }
+            }
+
+            createTrack() {
+                const trackWidth = 11;
+                const trackLength = 85;
+
+                // 跑道地面
+                const groundGeo = new THREE.PlaneGeometry(trackWidth, trackLength);
+                groundGeo.rotateX(-Math.PI / 2);
+                const groundMat = new THREE.MeshLambertMaterial({ color: 0x121722 });
+                this.trackMesh = new THREE.Mesh(groundGeo, groundMat);
+                this.trackMesh.position.set(0, -0.05, trackLength / 2 - 8);
+                this.scene.add(this.trackMesh);
+
+                // 兩側霓虹邊界護欄
+                const railGeo = new THREE.BoxGeometry(0.3, 0.5, trackLength);
+                const railMat = new THREE.MeshBasicMaterial({ color: 0x00b4d8 });
+
+                const leftRail = new THREE.Mesh(railGeo, railMat);
+                leftRail.position.set(-trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.scene.add(leftRail);
+
+                const rightRail = new THREE.Mesh(railGeo, railMat);
+                rightRail.position.set(trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.scene.add(rightRail);
+
+                // 底線守護能量條 (Defense Shield Line)
+                const shieldBarGeo = new THREE.BoxGeometry(trackWidth, 0.12, 0.5);
+                this.shieldBarMat = new THREE.MeshBasicMaterial({ color: 0x00b4d8 });
+                const shieldBar = new THREE.Mesh(shieldBarGeo, this.shieldBarMat);
+                shieldBar.position.set(0, 0.05, 0);
+                this.scene.add(shieldBar);
+
+                // 地面網格格線
+                const gridHelper = new THREE.GridHelper(trackWidth, 10, 0x1f2e45, 0x152233);
+                gridHelper.position.set(0, 0, trackLength / 2 - 8);
+                gridHelper.scale.z = trackLength / trackWidth;
+                this.scene.add(gridHelper);
+            }
+
+            createPlayerCannon() {
+                this.cannonGroup = new THREE.Group();
+
+                // 砲台底盤
+                const baseGeo = new THREE.CylinderGeometry(0.8, 1.0, 0.45, 16);
+                const baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0.22;
+                this.cannonGroup.add(base);
+
+                // 砲管
+                const barrelGeo = new THREE.CylinderGeometry(0.32, 0.4, 1.3, 14);
+                barrelGeo.rotateX(Math.PI / 2);
+                const barrelMat = new THREE.MeshLambertMaterial({ color: 0x00d4ff, emissive: 0x003366 });
+                const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+                barrel.position.set(0, 0.4, 0.55);
+                this.cannonGroup.add(barrel);
+
+                // 瞄準指示光束 (Aim Guide Line)
+                const aimGeo = new THREE.PlaneGeometry(0.12, 35);
+                aimGeo.rotateX(-Math.PI / 2);
+                const aimMat = new THREE.MeshBasicMaterial({
+                    color: 0x00d4ff,
+                    transparent: true,
+                    opacity: 0.25
+                });
+                const aimLine = new THREE.Mesh(aimGeo, aimMat);
+                aimLine.position.set(0, 0.06, 18.5);
+                this.cannonGroup.add(aimLine);
+
+                this.cannonGroup.position.set(0, 0, 0);
+                this.scene.add(this.cannonGroup);
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.updateCameraTransform();
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
+            }
+        }
+
+        // =========================================================================
+        // 5. 實體群體渲染管理器 (EntityManager - InstancedMesh)
+        // 遵循 GDD 6.2 與 three-best-practices: geometry-instanced-mesh
+        // 使用膠囊體 (CapsuleGeometry) 實現極簡 Low-Poly 小人，單一 Draw Call 渲染千人衝撞
+        // =========================================================================
+        class EntityManager {
+            constructor(scene) {
+                this.scene = scene;
+
+                this.MAX_BLUE = 1500;
+                this.MAX_RED = 1500;
+                this.MAX_GARGOYLES = 120;
+                this.MAX_PARTICLES = 300;
+
+                this.initBlueTroops();
+                this.initRedTroops();
+                this.initGargoyles();
+                this.initBoss();
+                this.initParticles();
+            }
+
+            initBlueTroops() {
+                // 藍軍戰士：醒目高亮皇家藍膠囊體 (CapsuleGeometry)
+                const geo = new THREE.CapsuleGeometry(0.32, 0.45, 8, 14);
+                const mat = new THREE.MeshLambertMaterial({
+                    color: 0x00d4ff,
+                    emissive: 0x002244
+                });
+
+                this.blueMesh = new THREE.InstancedMesh(geo, mat, this.MAX_BLUE);
+                this.blueMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                // 必須關閉視錐剔除：InstancedMesh 的 boundingSphere 預設在原點，若開啟會在實體向前衝鋒時被整片剔除
+                this.blueMesh.frustumCulled = false;
+                this.scene.add(this.blueMesh);
+
+                this.blueList = [];
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    this.blueList.push({
+                        active: false,
+                        x: 0, y: -999, z: 0,
+                        vx: 0, vz: 12.0, // 向前衝鋒速度
+                        passedGateMask: 0,
+                        bounceTime: Math.random() * Math.PI
+                    });
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.blueMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.blueMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            initRedTroops() {
+                // 紅軍步兵：緋紅色膠囊體
+                const geo = new THREE.CapsuleGeometry(0.32, 0.45, 8, 14);
+                const mat = new THREE.MeshLambertMaterial({
+                    color: 0xff2a5f,
+                    emissive: 0x330011
+                });
+
+                this.redMesh = new THREE.InstancedMesh(geo, mat, this.MAX_RED);
+                this.redMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.redMesh.frustumCulled = false;
+                this.scene.add(this.redMesh);
+
+                this.redList = [];
+                for (let i = 0; i < this.MAX_RED; i++) {
+                    this.redList.push({
+                        active: false,
+                        x: 0, y: -999, z: 0,
+                        vx: 0, vz: -5.5,
+                        hp: 1,
+                        bounceTime: Math.random() * Math.PI
+                    });
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.redMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.redMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            initGargoyles() {
+                // 石像鬼：深紫幾何低空飛行單位 (三角錐本體 + 雙翼)
+                const geo = new THREE.ConeGeometry(0.45, 0.9, 5);
+                geo.rotateX(Math.PI / 2);
+                const mat = new THREE.MeshLambertMaterial({
+                    color: 0xa855f7,
+                    emissive: 0x2e1065
+                });
+
+                this.gargoyleMesh = new THREE.InstancedMesh(geo, mat, this.MAX_GARGOYLES);
+                this.gargoyleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.gargoyleMesh.frustumCulled = false;
+                this.scene.add(this.gargoyleMesh);
+
+                this.gargoyleList = [];
+                for (let i = 0; i < this.MAX_GARGOYLES; i++) {
+                    this.gargoyleList.push({
+                        active: false,
+                        x: 0, y: -999, z: 0,
+                        vx: 0, vz: -8.0,
+                        hp: 3,
+                        wingTime: 0
+                    });
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.gargoyleMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.gargoyleMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            initBoss() {
+                // 巨型 Boss：獨立 Mesh，體積 3.5 倍，附帶金屬刺甲與即時血條
+                const bossGroup = new THREE.Group();
+
+                const bodyGeo = new THREE.CylinderGeometry(0.9, 1.15, 2.2, 12);
+                const bodyMat = new THREE.MeshLambertMaterial({
+                    color: 0xcc0033,
+                    emissive: 0x44000f
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = 1.1;
+                bossGroup.add(body);
+
+                // 金屬刺甲
+                const spikeGeo = new THREE.ConeGeometry(0.35, 0.7, 6);
+                const spikeMat = new THREE.MeshLambertMaterial({ color: 0xffd166 });
+                const leftSpike = new THREE.Mesh(spikeGeo, spikeMat);
+                leftSpike.position.set(-1.0, 1.8, 0);
+                leftSpike.rotation.z = Math.PI / 4;
+                bossGroup.add(leftSpike);
+
+                const rightSpike = new THREE.Mesh(spikeGeo, spikeMat);
+                rightSpike.position.set(1.0, 1.8, 0);
+                rightSpike.rotation.z = -Math.PI / 4;
+                bossGroup.add(rightSpike);
+
+                // 即時血條 Sprite
+                const canvas = document.createElement('canvas');
+                canvas.width = 160;
+                canvas.height = 32;
+                this.bossHpCanvas = canvas;
+                this.bossHpCtx = canvas.getContext('2d');
+                this.bossHpTexture = new THREE.CanvasTexture(canvas);
+
+                const hpSpriteMat = new THREE.SpriteMaterial({ map: this.bossHpTexture });
+                this.bossHpSprite = new THREE.Sprite(hpSpriteMat);
+                this.bossHpSprite.position.set(0, 2.8, 0);
+                this.bossHpSprite.scale.set(2.8, 0.55, 1);
+                bossGroup.add(this.bossHpSprite);
+
+                bossGroup.position.set(0, -999, 0);
+                this.bossGroup = bossGroup;
+                this.scene.add(bossGroup);
+
+                this.boss = {
+                    active: false,
+                    x: 0, y: 0, z: 0,
+                    vz: -2.2,
+                    hp: 50,
+                    maxHp: 50
+                };
+            }
+
+            initParticles() {
+                // 粒子碎屑方塊
+                const geo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+                this.particleMesh = new THREE.InstancedMesh(geo, mat, this.MAX_PARTICLES);
+                this.particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.particleMesh.frustumCulled = false;
+                this.scene.add(this.particleMesh);
+
+                this.particleList = [];
+                for (let i = 0; i < this.MAX_PARTICLES; i++) {
+                    this.particleList.push({
+                        active: false,
+                        x: 0, y: -999, z: 0,
+                        vx: 0, vy: 0, vz: 0,
+                        life: 0, maxLife: 0.5,
+                        scale: 1.0
+                    });
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.particleMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.particleMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            spawnExplosion(x, y, z, count = 5) {
+                let spawned = 0;
+                for (let i = 0; i < this.MAX_PARTICLES; i++) {
+                    const p = this.particleList[i];
+                    if (!p.active) {
+                        p.active = true;
+                        p.x = x; p.y = y; p.z = z;
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 2.5 + Math.random() * 4.5;
+                        p.vx = Math.cos(angle) * speed;
+                        p.vy = 2.5 + Math.random() * 4.0;
+                        p.vz = Math.sin(angle) * speed;
+                        p.life = 0;
+                        p.maxLife = 0.35 + Math.random() * 0.25;
+                        p.scale = 1.0;
+
+                        spawned++;
+                        if (spawned >= count) break;
+                    }
+                }
+            }
+
+            // 發射藍軍
+            spawnBlueTroop(x, z, spreadX = 0.2, spreadVx = 0.4) {
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    const u = this.blueList[i];
+                    if (!u.active) {
+                        u.active = true;
+                        u.x = x + (Math.random() - 0.5) * spreadX;
+                        u.y = 0.4;
+                        u.z = z;
+                        u.vx = (Math.random() - 0.5) * spreadVx;
+                        u.vz = 9.0 + (Math.random() - 0.5) * 0.8; // 調整衝鋒速度使兵潮推擠感更充實
+                        u.passedGateMask = 0;
+                        return u;
+                    }
+                }
+                return null;
+            }
+
+            // 生成紅軍步兵
+            spawnRedTroop(x, z) {
+                for (let i = 0; i < this.MAX_RED; i++) {
+                    const u = this.redList[i];
+                    if (!u.active) {
+                        u.active = true;
+                        u.x = x + (Math.random() - 0.5) * 0.35;
+                        u.y = 0.4;
+                        u.z = z;
+                        u.vx = (Math.random() - 0.5) * 0.4;
+                        u.vz = -4.5 - Math.random() * 0.6; // 穩健向下壓境
+                        u.hp = 1;
+                        return u;
+                    }
+                }
+                return null;
+            }
+
+            // 生成石像鬼
+            spawnGargoyle(x, z) {
+                for (let i = 0; i < this.MAX_GARGOYLES; i++) {
+                    const u = this.gargoyleList[i];
+                    if (!u.active) {
+                        u.active = true;
+                        u.x = x;
+                        u.y = 1.5;
+                        u.z = z;
+                        u.vx = (Math.random() - 0.5) * 0.6;
+                        u.vz = -8.2;
+                        u.hp = 3;
+                        return u;
+                    }
+                }
+                return null;
+            }
+
+            // 生成 Boss
+            spawnBoss(z, hp = 50) {
+                this.boss.active = true;
+                this.boss.x = 0;
+                this.boss.y = 0;
+                this.boss.z = z;
+                this.boss.hp = hp;
+                this.boss.maxHp = hp;
+                this.bossGroup.position.set(0, 0, z);
+                this.updateBossHpBar();
+                soundFX.playBossWarning();
+            }
+
+            updateBossHpBar() {
+                if (!this.bossHpCtx) return;
+                const ctx = this.bossHpCtx;
+                ctx.clearRect(0, 0, 160, 32);
+
+                ctx.fillStyle = 'rgba(0,0,0,0.75)';
+                ctx.fillRect(0, 0, 160, 32);
+
+                const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
+                ctx.fillStyle = '#ff3366';
+                ctx.fillRect(4, 4, (160 - 8) * ratio, 24);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`BOSS: ${this.boss.hp}/${this.boss.maxHp}`, 80, 21);
+
+                this.bossHpTexture.needsUpdate = true;
+            }
+
+            resetAll() {
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    this.blueList[i].active = false;
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.blueMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.blueMesh.instanceMatrix.needsUpdate = true;
+
+                for (let i = 0; i < this.MAX_RED; i++) {
+                    this.redList[i].active = false;
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.redMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.redMesh.instanceMatrix.needsUpdate = true;
+
+                for (let i = 0; i < this.MAX_GARGOYLES; i++) {
+                    this.gargoyleList[i].active = false;
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.gargoyleMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.gargoyleMesh.instanceMatrix.needsUpdate = true;
+
+                this.boss.active = false;
+                this.bossGroup.position.set(0, -999, 0);
+
+                for (let i = 0; i < this.MAX_PARTICLES; i++) {
+                    this.particleList[i].active = false;
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.particleMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.particleMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            getActiveBlueCount() {
+                let c = 0;
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    if (this.blueList[i].active) c++;
+                }
+                return c;
+            }
+
+            update(dt) {
+                const trackHalfWidth = 5.0;
+
+                // 1. 更新藍軍
+                let activeBlues = 0;
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    const u = this.blueList[i];
+                    if (u.active) {
+                        activeBlues++;
+                        
+                        // 集群流體導向：穿過門後 (z > 14) 自動向中央戰場或敵軍縱深靠攏
+                        if (u.z > 13.0) {
+                            // 往跑道中央 (x = 0) 提供平滑向心力，形成兩翼包抄中路的震撼兵潮
+                            u.vx += (-u.x) * 1.6 * dt;
+                        }
+
+                        u.z += u.vz * dt;
+                        u.x += u.vx * dt;
+                        u.bounceTime += dt * 14.0;
+                        u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.18;
+
+                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx * 0.5; }
+                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx * 0.5; }
+
+                        if (u.z > 80) {
+                            u.active = false;
+                            _dummy.position.set(0, -999, 0);
+                        } else {
+                            _dummy.position.set(u.x, u.y, u.z);
+                            _dummy.rotation.set(0, 0, 0);
+                            _dummy.scale.set(1, 1, 1);
+                        }
+                        _dummy.updateMatrix();
+                        this.blueMesh.setMatrixAt(i, _dummy.matrix);
+                    }
+                }
+                if (activeBlues > 0) {
+                    this.blueMesh.instanceMatrix.needsUpdate = true;
+                }
+
+                // 2. 更新紅軍步兵
+                let activeReds = 0;
+                for (let i = 0; i < this.MAX_RED; i++) {
+                    const u = this.redList[i];
+                    if (u.active) {
+                        activeReds++;
+                        u.z += u.vz * dt;
+                        u.x += u.vx * dt;
+                        u.bounceTime += dt * 10.0;
+                        u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.14;
+
+                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx; }
+                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx; }
+
+                        _dummy.position.set(u.x, u.y, u.z);
+                        _dummy.rotation.set(0, 0, 0);
+                        _dummy.scale.set(1, 1, 1);
+                        _dummy.updateMatrix();
+                        this.redMesh.setMatrixAt(i, _dummy.matrix);
+                    }
+                }
+                if (activeReds > 0) {
+                    this.redMesh.instanceMatrix.needsUpdate = true;
+                }
+
+                // 3. 更新石像鬼
+                let activeGargoyles = 0;
+                for (let i = 0; i < this.MAX_GARGOYLES; i++) {
+                    const u = this.gargoyleList[i];
+                    if (u.active) {
+                        activeGargoyles++;
+                        u.z += u.vz * dt;
+                        u.x += u.vx * dt;
+                        u.wingTime = (u.wingTime || 0) + dt * 18.0;
+                        u.y = 1.5 + Math.sin(u.wingTime) * 0.3;
+
+                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx; }
+                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx; }
+
+                        _dummy.position.set(u.x, u.y, u.z);
+                        _dummy.rotation.set(0.35, Math.PI, 0);
+                        _dummy.scale.set(1, 1, 1);
+                        _dummy.updateMatrix();
+                        this.gargoyleMesh.setMatrixAt(i, _dummy.matrix);
+                    }
+                }
+                if (activeGargoyles > 0) {
+                    this.gargoyleMesh.instanceMatrix.needsUpdate = true;
+                }
+
+                // 4. 更新 Boss
+                if (this.boss.active) {
+                    this.boss.z += this.boss.vz * dt;
+                    this.bossGroup.position.set(this.boss.x, 0, this.boss.z);
+                }
+
+                // 5. 更新粒子
+                let activeParticles = 0;
+                for (let i = 0; i < this.MAX_PARTICLES; i++) {
+                    const p = this.particleList[i];
+                    if (p.active) {
+                        activeParticles++;
+                        p.life += dt;
+                        if (p.life >= p.maxLife) {
+                            p.active = false;
+                            _dummy.position.set(0, -999, 0);
+                        } else {
+                            p.x += p.vx * dt;
+                            p.y += p.vy * dt;
+                            p.z += p.vz * dt;
+                            p.vy -= 9.8 * dt;
+                            if (p.y < 0) p.y = 0;
+
+                            const s = (1 - p.life / p.maxLife);
+                            _dummy.position.set(p.x, p.y, p.z);
+                            _dummy.rotation.x += dt * 6.0;
+                            _dummy.scale.set(s, s, s);
+                        }
+                        _dummy.updateMatrix();
+                        this.particleMesh.setMatrixAt(i, _dummy.matrix);
+                    }
+                }
+                if (activeParticles > 0) {
+                    this.particleMesh.instanceMatrix.needsUpdate = true;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 6. 數學倍率門管理器 (GateManager)
+        // 解決相機面向角度問題：使用面向相機且 DoubleSide 之文字面板，加裝頂部旋轉幾何體
+        // =========================================================================
+        class GateManager {
+            constructor(scene) {
+                this.scene = scene;
+                this.gateObjects = [];
+            }
+
+            clear() {
+                for (const g of this.gateObjects) {
+                    this.scene.remove(g.mesh);
+                    if (g.texture) g.texture.dispose();
+                }
+                this.gateObjects = [];
+            }
+
+            createGate(config, gateId) {
+                const gateWidth = 2.5;
+                const gateHeight = 2.4;
+
+                const group = new THREE.Group();
+
+                const isPositive = (config.type === 'add' || config.type === 'mult');
+                const themeColor = isPositive ? 0x00d4ff : 0xff3366;
+
+                // 1. 半透明能量光幕
+                const curtainGeo = new THREE.PlaneGeometry(gateWidth, gateHeight);
+                const curtainMat = new THREE.MeshBasicMaterial({
+                    color: themeColor,
+                    transparent: true,
+                    opacity: 0.28,
+                    side: THREE.DoubleSide
+                });
+                const curtain = new THREE.Mesh(curtainGeo, curtainMat);
+                curtain.position.y = gateHeight / 2;
+                group.add(curtain);
+
+                // 2. 邊框外線條立體光柱
+                const pillarGeo = new THREE.BoxGeometry(0.18, gateHeight, 0.18);
+                const pillarMat = new THREE.MeshLambertMaterial({ color: themeColor });
+
+                const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                leftPillar.position.set(-gateWidth / 2, gateHeight / 2, 0);
+                group.add(leftPillar);
+
+                const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                rightPillar.position.set(gateWidth / 2, gateHeight / 2, 0);
+                group.add(rightPillar);
+
+                const topBarGeo = new THREE.BoxGeometry(gateWidth, 0.18, 0.18);
+                const topBar = new THREE.Mesh(topBarGeo, pillarMat);
+                topBar.position.set(0, gateHeight, 0);
+                group.add(topBar);
+
+                // 3. 高對比 Canvas 紋理貼圖
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+
+                // 背景厚重膠囊卡片
+                ctx.fillStyle = isPositive ? 'rgba(0, 180, 216, 0.95)' : 'rgba(255, 51, 102, 0.95)';
+                ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 7;
+                ctx.stroke();
+
+                // 文字標籤
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 68px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let labelText = '';
+                if (config.type === 'add') labelText = `+${config.value}`;
+                else if (config.type === 'mult') labelText = `×${config.value}`;
+                else if (config.type === 'sub') labelText = `-${config.value}`;
+                else if (config.type === 'div') labelText = `÷${config.value}`;
+
+                ctx.fillText(labelText, 128, 64);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const labelMat = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+                const labelGeo = new THREE.PlaneGeometry(2.3, 1.15);
+                const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+                // 旋轉 180 度使其正面朝向相機 (Z-)，保證文字不鏡像反轉
+                labelMesh.rotation.y = Math.PI;
+                labelMesh.position.set(0, gateHeight / 2, -0.05);
+                group.add(labelMesh);
+
+                group.position.set(config.x, 0, config.z);
+                this.scene.add(group);
+
+                const gateObj = {
+                    id: gateId,
+                    bitmask: (1 << gateId),
+                    config: config,
+                    mesh: group,
+                    texture: texture,
+                    width: gateWidth,
+                    baseX: config.x,
+                    z: config.z,
+                    timeOffset: config.phase || 0,
+                    scaleAnim: 1.0
+                };
+
+                this.gateObjects.push(gateObj);
+                return gateObj;
+            }
+
+            setupLevelGates(gatesConfig) {
+                this.clear();
+                if (!gatesConfig) return;
+                gatesConfig.forEach((cfg, idx) => {
+                    this.createGate(cfg, idx);
+                });
+            }
+
+            update(time, dt) {
+                for (const g of this.gateObjects) {
+                    if (g.config.moving) {
+                        const amp = g.config.amplitude || 2.0;
+                        const spd = g.config.speed || 2.0;
+                        g.mesh.position.x = g.baseX + Math.sin(time * spd + g.timeOffset) * amp;
+                    }
+                    if (g.scaleAnim > 1.0) {
+                        g.scaleAnim = Math.max(1.0, g.scaleAnim - dt * 3.5);
+                        g.mesh.scale.set(g.scaleAnim, g.scaleAnim, g.scaleAnim);
+                    }
+                }
+            }
+
+            checkTroopPass(troop, spawnCallback) {
+                for (const g of this.gateObjects) {
+                    if ((troop.passedGateMask & g.bitmask) !== 0) continue;
+
+                    const gateX = g.mesh.position.x;
+                    const halfW = g.width / 2;
+                    if (troop.x >= gateX - halfW && troop.x <= gateX + halfW) {
+                        if (Math.abs(troop.z - g.z) < 0.65) {
+                            troop.passedGateMask |= g.bitmask;
+                            g.scaleAnim = 1.3;
+                            soundFX.playGateChime();
+
+                            const cfg = g.config;
+                            if (cfg.type === 'add') {
+                                for (let i = 0; i < cfg.value; i++) {
+                                    const newTroop = spawnCallback(troop.x, troop.z, 0.5, 2.2);
+                                    if (newTroop) newTroop.passedGateMask |= g.bitmask;
+                                }
+                            } else if (cfg.type === 'mult') {
+                                const count = cfg.value - 1;
+                                for (let i = 0; i < count; i++) {
+                                    const newTroop = spawnCallback(troop.x, troop.z, 0.5, 2.5);
+                                    if (newTroop) newTroop.passedGateMask |= g.bitmask;
+                                }
+                            } else if (cfg.type === 'sub') {
+                                troop.active = false;
+                            } else if (cfg.type === 'div') {
+                                if (Math.random() < 0.5) {
+                                    troop.active = false;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // 7. 遊戲主控制器 (GameController)
+        // 整合鍵盤+觸控雙操作、2.5D 高效碰撞檢測、波次排程與 LocalStorage 存檔
+        // =========================================================================
+        class GameController {
+            constructor() {
+                this.container = document.getElementById('canvas-container');
+                this.threeScene = new ThreeGameScene(this.container);
+                this.entityMgr = new EntityManager(this.threeScene.scene);
+                this.gateMgr = new GateManager(this.threeScene.scene);
+
+                this.state = 'MENU';
+                this.mode = 'STAGE';
+                this.currentStageId = 1;
+                this.gameTime = 0;
+                this.killsCount = 0;
+                this.coinsEarned = 0;
+                this.shieldHp = 3;
+                this.maxShieldHp = 3;
+
+                this.cannonX = 0;
+                this.targetCannonX = 0;
+                this.lastShootTime = 0;
+
+                this.stageWaves = [];
+                this.nextWaveIdx = 0;
+                this.waveTime = 0;
+
+                this.endlessSpawnTimer = 0;
+                this.endlessDifficultyTimer = 0;
+                this.endlessInterval = 1.6;
+
+                this.shakeAmount = 0;
+                this.keyMoveLeft = false;
+                this.keyMoveRight = false;
+
+                this.bindUI();
+                this.bindInputs();
+                this.renderMenu();
+
+                this.clock = new THREE.Clock();
+                this.threeScene.renderer.setAnimationLoop(() => this.loop());
+            }
+
+            bindUI() {
+                this.hudCoins = document.getElementById('hud-coins');
+                this.hudShield = document.getElementById('hud-shield');
+                this.hudModeTitle = document.getElementById('hud-mode-title');
+                this.hudSwarmCount = document.getElementById('hud-swarm-count');
+                this.levelProgressBar = document.getElementById('level-progress-bar');
+                this.bossWarning = document.getElementById('boss-warning');
+                this.debugStats = document.getElementById('debug-stats');
+
+                this.mainMenuModal = document.getElementById('main-menu-modal');
+                this.gameOverModal = document.getElementById('game-over-modal');
+
+                // 音效開關切換
+                const btnSound = document.getElementById('btn-sound-toggle');
+                btnSound.addEventListener('click', () => {
+                    const isSoundOn = soundFX.toggleMute();
+                    btnSound.innerText = isSoundOn ? '🔊' : '🔇';
+                });
+
+                // 模式切換按鈕
+                const btnStage = document.getElementById('btn-mode-stage');
+                const btnEndless = document.getElementById('btn-mode-endless');
+                const stageSec = document.getElementById('stage-select-section');
+                const endlessSec = document.getElementById('endless-info-section');
+
+                btnStage.addEventListener('click', () => {
+                    this.mode = 'STAGE';
+                    btnStage.classList.add('active');
+                    btnEndless.classList.remove('active');
+                    stageSec.style.display = 'block';
+                    endlessSec.style.display = 'none';
+                });
+
+                btnEndless.addEventListener('click', () => {
+                    this.mode = 'ENDLESS';
+                    btnEndless.classList.add('active');
+                    btnStage.classList.remove('active');
+                    stageSec.style.display = 'none';
+                    endlessSec.style.display = 'block';
+                });
+
+                document.getElementById('btn-start-game').addEventListener('click', () => {
+                    soundFX.init();
+                    this.startGame();
+                });
+
+                document.getElementById('btn-res-action').addEventListener('click', () => {
+                    soundFX.init();
+                    if (this.mode === 'STAGE' && this.lastResultWon && this.currentStageId < 10) {
+                        this.currentStageId++;
+                    }
+                    this.startGame();
+                });
+
+                document.getElementById('btn-res-menu').addEventListener('click', () => {
+                    this.state = 'MENU';
+                    this.gameOverModal.classList.add('hidden');
+                    this.mainMenuModal.classList.remove('hidden');
+                    this.renderMenu();
+                });
+
+                document.getElementById('btn-upg-rate').addEventListener('click', () => {
+                    if (gameStorage.upgrade('fireRate')) this.renderMenu();
+                });
+                document.getElementById('btn-upg-troops').addEventListener('click', () => {
+                    if (gameStorage.upgrade('initialTroops')) this.renderMenu();
+                });
+                document.getElementById('btn-upg-coins').addEventListener('click', () => {
+                    if (gameStorage.upgrade('coinMultiplier')) this.renderMenu();
+                });
+            }
+
+            renderMenu() {
+                this.hudCoins.innerText = gameStorage.data.coins;
+
+                const lvlRate = gameStorage.data.upgrades.fireRate;
+                const costRate = gameStorage.getUpgradeCost('fireRate');
+                document.getElementById('lvl-fire-rate').innerText = lvlRate;
+                document.getElementById('desc-fire-rate').innerText = `每秒 ${(1 / gameStorage.getFireInterval()).toFixed(1)} 發`;
+                const btnRate = document.getElementById('btn-upg-rate');
+                document.getElementById('cost-fire-rate').innerText = costRate;
+                btnRate.disabled = (gameStorage.data.coins < costRate);
+
+                const lvlTroops = gameStorage.data.upgrades.initialTroops;
+                const costTroops = gameStorage.getUpgradeCost('initialTroops');
+                document.getElementById('lvl-initial-troops').innerText = lvlTroops;
+                document.getElementById('desc-initial-troops').innerText = `開局守護者 ${gameStorage.getInitialTroopsCount()} 名`;
+                const btnTroops = document.getElementById('btn-upg-troops');
+                document.getElementById('cost-initial-troops').innerText = costTroops;
+                btnTroops.disabled = (gameStorage.data.coins < costTroops);
+
+                const lvlCoins = gameStorage.data.upgrades.coinMultiplier;
+                const costCoins = gameStorage.getUpgradeCost('coinMultiplier');
+                document.getElementById('lvl-coin-mult').innerText = lvlCoins;
+                document.getElementById('desc-coin-mult').innerText = `金幣收益 +${Math.round((gameStorage.getCoinBonusMultiplier() - 1) * 100)}%`;
+                const btnCoins = document.getElementById('btn-upg-coins');
+                document.getElementById('cost-coin-mult').innerText = costCoins;
+                btnCoins.disabled = (gameStorage.data.coins < costCoins);
+
+                const grid = document.getElementById('stage-grid');
+                grid.innerHTML = '';
+                for (let i = 1; i <= 10; i++) {
+                    const badge = document.createElement('div');
+                    badge.className = `stage-badge ${i === this.currentStageId ? 'selected' : ''} ${i > gameStorage.data.unlockedStage ? 'locked' : ''}`;
+                    badge.innerText = `${i}`;
+                    if (i <= gameStorage.data.unlockedStage) {
+                        badge.addEventListener('click', () => {
+                            this.currentStageId = i;
+                            this.renderMenu();
+                        });
+                    }
+                    grid.appendChild(badge);
+                }
+
+                document.getElementById('endless-record-text').innerText =
+                    `最高生存時間：${Math.floor(gameStorage.data.highSurvivalTime)} 秒 | 總擊殺：${gameStorage.data.highKills}`;
+            }
+
+            bindInputs() {
+                let isDragging = false;
+                const halfW = 4.8;
+
+                const updateCannonPos = (clientX) => {
+                    const normX = (clientX / window.innerWidth) * 2 - 1;
+                    // 相機從 -Z 望向 +Z 時，螢幕向右對應世界座標 -X，因此取反保證操作直覺一致
+                    this.targetCannonX = -normX * halfW;
+                    const guide = document.getElementById('drag-guide');
+                    if (guide) guide.style.opacity = '0';
+                };
+
+                window.addEventListener('pointerdown', (e) => {
+                    if (this.state !== 'PLAYING') return;
+                    isDragging = true;
+                    updateCannonPos(e.clientX);
+                });
+
+                window.addEventListener('pointermove', (e) => {
+                    if (isDragging && this.state === 'PLAYING') {
+                        updateCannonPos(e.clientX);
+                    }
+                });
+
+                window.addEventListener('pointerup', () => { isDragging = false; });
+                window.addEventListener('pointercancel', () => { isDragging = false; });
+
+                // 鍵盤 A/D / 左右箭頭控制
+                window.addEventListener('keydown', (e) => {
+                    if (this.state !== 'PLAYING') return;
+                    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                        this.keyMoveLeft = true;
+                    }
+                    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                        this.keyMoveRight = true;
+                    }
+                    const guide = document.getElementById('drag-guide');
+                    if (guide) guide.style.opacity = '0';
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                        this.keyMoveLeft = false;
+                    }
+                    if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                        this.keyMoveRight = false;
+                    }
+                });
+            }
+
+            startGame() {
+                this.state = 'PLAYING';
+                this.gameTime = 0;
+                this.killsCount = 0;
+                this.coinsEarned = 0;
+                this.shieldHp = 3;
+                this.maxShieldHp = 3;
+                this.cannonX = 0;
+                this.targetCannonX = 0;
+                this.lastShootTime = 0;
+                this.shakeAmount = 0;
+                this.entityMgr.resetAll();
+
+                this.mainMenuModal.classList.add('hidden');
+                this.gameOverModal.classList.add('hidden');
+                this.bossWarning.classList.remove('show');
+
+                // 開局預備部隊
+                const initTroops = gameStorage.getInitialTroopsCount();
+                for (let i = 0; i < initTroops; i++) {
+                    const spreadX = (i - (initTroops - 1) / 2) * 0.45;
+                    this.entityMgr.spawnBlueTroop(spreadX, 2.5);
+                }
+
+                if (this.mode === 'STAGE') {
+                    const cfg = STAGE_CONFIGS[this.currentStageId - 1];
+                    this.stageCfg = cfg;
+                    this.hudModeTitle.innerText = cfg.name;
+                    this.gateMgr.setupLevelGates(cfg.gates);
+                    this.stageWaves = cfg.waves.slice();
+                    this.nextWaveIdx = 0;
+                    this.waveTime = 0;
+                } else {
+                    this.hudModeTitle.innerText = '無盡生存模式';
+                    this.gateMgr.setupLevelGates([
+                        { x: -2.0, z: 14, type: 'mult', value: 2, moving: true, amplitude: 1.5, speed: 2.0 },
+                        { x: 2.0, z: 14, type: 'add', value: 20, moving: true, amplitude: 1.5, speed: 2.0, phase: Math.PI }
+                    ]);
+                    this.endlessSpawnTimer = 0;
+                    this.endlessDifficultyTimer = 0;
+                    this.endlessInterval = 1.6;
+                }
+
+                this.updateHUD();
+            }
+
+            endGame(isVictory) {
+                this.state = 'GAMEOVER';
+                this.lastResultWon = isVictory;
+
+                if (isVictory) {
+                    soundFX.playVictory();
+                    if (this.currentStageId === gameStorage.data.unlockedStage && gameStorage.data.unlockedStage < 10) {
+                        gameStorage.data.unlockedStage++;
+                    }
+                    this.coinsEarned += Math.round(150 * gameStorage.getCoinBonusMultiplier());
+                } else {
+                    soundFX.playDefeat();
+                }
+
+                if (this.mode === 'ENDLESS') {
+                    if (this.gameTime > gameStorage.data.highSurvivalTime) {
+                        gameStorage.data.highSurvivalTime = this.gameTime;
+                    }
+                    if (this.killsCount > gameStorage.data.highKills) {
+                        gameStorage.data.highKills = this.killsCount;
+                    }
+                }
+
+                gameStorage.data.coins += this.coinsEarned;
+                gameStorage.save();
+
+                const resTitle = document.getElementById('result-title');
+                const resSubtitle = document.getElementById('result-subtitle');
+                const resBtn = document.getElementById('btn-res-action');
+
+                if (this.mode === 'STAGE') {
+                    if (isVictory) {
+                        resTitle.innerText = '🎉 戰鬥勝利！';
+                        resTitle.style.color = '#00b4d8';
+                        resSubtitle.innerText = `恭喜順利通關 ${this.stageCfg.name}！`;
+                        resBtn.innerText = (this.currentStageId < 10) ? '繼續下一關' : '重新挑戰';
+                    } else {
+                        resTitle.innerText = '💥 防線崩潰！';
+                        resTitle.style.color = '#ff3366';
+                        resSubtitle.innerText = '敵軍衝破了最後能量盾，再試一次吧！';
+                        resBtn.innerText = '重新挑戰';
+                    }
+                } else {
+                    resTitle.innerText = '🏆 生存挑戰結束';
+                    resTitle.style.color = '#ffd166';
+                    resSubtitle.innerText = `你在敵軍狂潮中堅持了 ${Math.floor(this.gameTime)} 秒！`;
+                    resBtn.innerText = '再次挑戰無盡';
+                }
+
+                document.getElementById('res-kills').innerText = this.killsCount;
+                document.getElementById('res-time').innerText = (this.mode === 'STAGE') ? '100%' : `${Math.floor(this.gameTime)} 秒`;
+                document.getElementById('res-coins').innerText = `+${this.coinsEarned} 🪙`;
+
+                this.gameOverModal.classList.remove('hidden');
+                this.bossWarning.classList.remove('show');
+            }
+
+            takeShieldDamage(dmg = 1) {
+                this.shieldHp = Math.max(0, this.shieldHp - dmg);
+                this.shakeAmount = 0.5;
+                soundFX.playHit();
+                this.updateHUD();
+
+                if (this.shieldHp <= 0) {
+                    this.endGame(false);
+                }
+            }
+
+            updateHUD() {
+                this.hudCoins.innerText = gameStorage.data.coins + this.coinsEarned;
+                this.hudShield.innerText = `${this.shieldHp} / ${this.maxShieldHp}`;
+                this.hudSwarmCount.innerText = this.entityMgr.getActiveBlueCount();
+
+                if (this.mode === 'STAGE') {
+                    const totalWaves = this.stageCfg.waves.length;
+                    const progress = Math.min(100, (this.nextWaveIdx / totalWaves) * 100);
+                    this.levelProgressBar.style.width = `${progress}%`;
+                } else {
+                    this.levelProgressBar.style.width = '100%';
+                }
+            }
+
+            handleCollisions() {
+                const blueList = this.entityMgr.blueList;
+                const redList = this.entityMgr.redList;
+                const gargoyleList = this.entityMgr.gargoyleList;
+                const boss = this.entityMgr.boss;
+
+                // 1. 藍軍 vs 倍率門
+                for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
+                    const b = blueList[i];
+                    if (b.active) {
+                        this.gateMgr.checkTroopPass(b, (x, z, sX, sVx) => {
+                            return this.entityMgr.spawnBlueTroop(x, z, sX, sVx);
+                        });
+                    }
+                }
+
+                // 2. 藍軍 vs 紅軍步兵 (1:1 對撞消滅，使用歐氏距離平方判定)
+                for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
+                    const b = blueList[i];
+                    if (!b.active) continue;
+
+                    for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                        const r = redList[j];
+                        if (!r.active) continue;
+
+                        const dx = b.x - r.x;
+                        const dz = b.z - r.z;
+                        if (dx * dx + dz * dz < 0.56) { // 約 0.75 接觸半徑
+                            b.active = false;
+                            r.active = false;
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+                            this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+
+                            this.killsCount++;
+                            this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                            this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 3);
+                            soundFX.playHit();
+                            break;
+                        }
+                    }
+                }
+
+                // 3. 藍軍 vs 石像鬼 (空對地攔截)
+                for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
+                    const b = blueList[i];
+                    if (!b.active) continue;
+
+                    for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                        const g = gargoyleList[k];
+                        if (!g.active) continue;
+
+                        const dz = Math.abs(b.z - g.z);
+                        if (dz < 0.85) {
+                            const dx = Math.abs(b.x - g.x);
+                            if (dx < 0.65) {
+                                b.active = false;
+                                _tempMatrix.makeTranslation(0, -999, 0);
+                                this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+
+                                g.hp--;
+                                this.entityMgr.spawnExplosion(g.x, g.y, g.z, 4);
+                                soundFX.playHit();
+                                if (g.hp <= 0) {
+                                    g.active = false;
+                                    this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
+                                    this.killsCount++;
+                                    this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 4. 藍軍 vs 巨型 Boss
+                if (boss.active) {
+                    for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
+                        const b = blueList[i];
+                        if (!b.active) continue;
+
+                        const dz = Math.abs(b.z - boss.z);
+                        if (dz < 1.4) {
+                            const dx = Math.abs(b.x - boss.x);
+                            if (dx < 1.25) {
+                                b.active = false;
+                                _tempMatrix.makeTranslation(0, -999, 0);
+                                this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+
+                                boss.hp--;
+                                boss.z += 0.05; // 微擊退
+                                this.entityMgr.spawnExplosion(b.x, 0.8, b.z, 2);
+                                this.entityMgr.updateBossHpBar();
+                                soundFX.playHit();
+
+                                if (boss.hp <= 0) {
+                                    boss.active = false;
+                                    this.entityMgr.bossGroup.position.set(0, -999, 0);
+                                    this.killsCount++;
+                                    this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                                    this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
+                                    this.shakeAmount = 0.8;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 5. 敵軍突破底線判定
+                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                    const r = redList[j];
+                    if (r.active && r.z <= 0.2) {
+                        r.active = false;
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+                        this.takeShieldDamage(1);
+                    }
+                }
+
+                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                    const g = gargoyleList[k];
+                    if (g.active && g.z <= 0.2) {
+                        g.active = false;
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
+                        this.takeShieldDamage(1);
+                    }
+                }
+
+                if (boss.active && boss.z <= 0.5) {
+                    boss.active = false;
+                    this.entityMgr.bossGroup.position.set(0, -999, 0);
+                    this.takeShieldDamage(3);
+                }
+            }
+
+            loop() {
+                const dt = Math.min(this.clock.getDelta(), 0.1);
+                const time = this.clock.getElapsedTime();
+
+                if (this.state === 'PLAYING') {
+                    this.gameTime += dt;
+
+                    // 鍵盤操控補償 (相機朝 +Z 望去時，螢幕向左為 +X，向右為 -X)
+                    const keySpeed = 12.0 * dt;
+                    if (this.keyMoveLeft) this.targetCannonX = Math.min(4.8, this.targetCannonX + keySpeed);
+                    if (this.keyMoveRight) this.targetCannonX = Math.max(-4.8, this.targetCannonX - keySpeed);
+
+                    // 砲台水平平滑位移
+                    this.cannonX += (this.targetCannonX - this.cannonX) * 18.0 * dt;
+                    this.threeScene.cannonGroup.position.x = this.cannonX;
+
+                    // 連續發射藍軍
+                    const fireInterval = gameStorage.getFireInterval();
+                    if (time - this.lastShootTime >= fireInterval) {
+                        this.lastShootTime = time;
+                        this.entityMgr.spawnBlueTroop(this.cannonX, 0.8);
+                        soundFX.playShoot();
+                    }
+
+                    // 波次生成
+                    if (this.mode === 'STAGE') {
+                        this.waveTime += dt;
+                        if (this.nextWaveIdx < this.stageWaves.length) {
+                            const wave = this.stageWaves[this.nextWaveIdx];
+                            if (this.waveTime >= wave.time) {
+                                this.nextWaveIdx++;
+                                if (wave.type === 'red') {
+                                    const span = wave.xSpan || 3.5;
+                                    for (let i = 0; i < wave.count; i++) {
+                                        const x = (Math.random() - 0.5) * span;
+                                        this.entityMgr.spawnRedTroop(x, 45 + Math.random() * 6.0);
+                                    }
+                                } else if (wave.type === 'gargoyle') {
+                                    const span = wave.xSpan || 3.0;
+                                    for (let i = 0; i < wave.count; i++) {
+                                        const x = (Math.random() - 0.5) * span;
+                                        this.entityMgr.spawnGargoyle(x, 48 + i * 2.0);
+                                    }
+                                } else if (wave.type === 'boss') {
+                                    this.entityMgr.spawnBoss(50, wave.hp || 50);
+                                    this.bossWarning.classList.add('show');
+                                    setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
+                                }
+                            }
+                        } else {
+                            let enemiesRemaining = 0;
+                            if (this.entityMgr.boss.active) enemiesRemaining++;
+                            for (let i = 0; i < this.entityMgr.MAX_RED; i++) {
+                                if (this.entityMgr.redList[i].active) enemiesRemaining++;
+                            }
+                            for (let i = 0; i < this.entityMgr.MAX_GARGOYLES; i++) {
+                                if (this.entityMgr.gargoyleList[i].active) enemiesRemaining++;
+                            }
+
+                            if (enemiesRemaining === 0) {
+                                this.endGame(true);
+                            }
+                        }
+                    } else {
+                        // 無盡生存模式
+                        this.endlessSpawnTimer += dt;
+                        this.endlessDifficultyTimer += dt;
+
+                        if (this.endlessDifficultyTimer > 20) {
+                            this.endlessDifficultyTimer = 0;
+                            this.endlessInterval = Math.max(0.6, this.endlessInterval * 0.88);
+                        }
+
+                        if (this.endlessSpawnTimer >= this.endlessInterval) {
+                            this.endlessSpawnTimer = 0;
+                            const randType = Math.random();
+                            if (randType < 0.65) {
+                                const count = 6 + Math.floor(this.gameTime * 0.15);
+                                for (let i = 0; i < count; i++) {
+                                    const x = (Math.random() - 0.5) * 6.0;
+                                    this.entityMgr.spawnRedTroop(x, 45 + Math.random() * 8.0);
+                                }
+                            } else if (randType < 0.9) {
+                                const count = 2 + Math.floor(this.gameTime * 0.05);
+                                for (let i = 0; i < count; i++) {
+                                    const x = (Math.random() - 0.5) * 5.0;
+                                    this.entityMgr.spawnGargoyle(x, 48 + i * 2.0);
+                                }
+                            } else if (!this.entityMgr.boss.active) {
+                                const hp = 30 + Math.floor(this.gameTime * 0.8);
+                                this.entityMgr.spawnBoss(50, hp);
+                                this.bossWarning.classList.add('show');
+                                setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
+                            }
+                        }
+                    }
+
+                    this.gateMgr.update(time, dt);
+                    this.entityMgr.update(dt);
+                    this.handleCollisions();
+
+                    this.updateHUD();
+                } else {
+                    this.gateMgr.update(time, dt);
+                    this.entityMgr.update(dt);
+                }
+
+                // 相機震動
+                if (this.shakeAmount > 0) {
+                    this.threeScene.camera.position.x = (Math.random() - 0.5) * this.shakeAmount;
+                    this.shakeAmount = Math.max(0, this.shakeAmount - dt * 2.5);
+                } else {
+                    this.threeScene.camera.position.x = 0;
+                }
+
+                this.threeScene.renderer.render(this.threeScene.scene, this.threeScene.camera);
+
+                const totalEntities = this.entityMgr.getActiveBlueCount();
+                this.debugStats.innerText = `Calls: ${this.threeScene.renderer.info.render.calls} | Blues: ${totalEntities} | State: ${this.state}`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.gameApp = new GameController();
+        });
+    </script>
+</body>
+</html>

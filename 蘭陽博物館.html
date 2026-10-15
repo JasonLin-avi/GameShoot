@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 蘭陽博物館 極致還原</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050a15; font-family: sans-serif; }
+        #loading {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0b111e; color: #fff; display: flex; justify-content: center;
+            align-items: center; font-size: 20px; z-index: 10; transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">讀取寫實場景中...</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Sky } from 'three/addons/objects/Sky.js';
+
+        let scene, camera, renderer, controls;
+        const loadingEl = document.getElementById('loading');
+
+        function init() {
+            // 1. 基本設定
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x8fa9c4, 0.008);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.set(-15, 12, 50);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // 避免穿透地面
+            controls.target.set(10, 2, 0);
+
+            // 2. 光源與天空 (Sky Shader 模擬真實日照)
+            const ambient = new THREE.AmbientLight(0xddeeff, 0.6);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0xfff8f0, 1.8);
+            sun.position.set(120, 80, 50);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 4096;
+            sun.shadow.mapSize.height = 4096;
+            sun.shadow.camera.near = 0.5;
+            sun.shadow.camera.far = 300;
+            const d = 60;
+            sun.shadow.camera.left = -d;
+            sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d;
+            sun.shadow.camera.bottom = -d;
+            sun.shadow.bias = -0.0005;
+            scene.add(sun);
+
+            // 天空盒
+            const sky = new Sky();
+            sky.scale.setScalar(450000);
+            scene.add(sky);
+            const effectController = { turbodity: 4, rayleigh: 1.5, mieCoefficient: 0.005, mieDirectionalG: 0.8, elevation: 22, azimuth: 145 };
+            const uniforms = sky.material.uniforms;
+            uniforms['turbidity'].value = effectController.turbodity;
+            uniforms['rayleigh'].value = effectController.rayleigh;
+            uniforms['mieCoefficient'].value = effectController.mieCoefficient;
+            uniforms['mieDirectionalG'].value = effectController.mieDirectionalG;
+            const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
+            const theta = THREE.MathUtils.degToRad(effectController.azimuth);
+            sun.position.setFromSphericalCoords(1, phi, theta);
+            uniforms['sunPosition'].value.copy(sun.position);
+
+            // 3. 地形、草地與水面
+            // 大地與草岸
+            const terrainGeo = new THREE.PlaneGeometry(300, 300, 64, 64);
+            // 簡單製造起伏地形
+            const pos = terrainGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const vx = pos.getX(i);
+                const vy = pos.getY(i);
+                if (vx > 10 && vy < -10) {
+                    pos.setZ(i, Math.sin(vx*0.1)*1.5 + Math.cos(vy*0.1)*1.5 + 2); // 右後方山丘
+                }
+            }
+            terrainGeo.computeVertexNormals();
+            const terrainMat = new THREE.MeshStandardMaterial({ color: 0x3d5c2a, roughness: 0.9, metalness: 0.05 });
+            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.position.y = -0.5;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+
+            // 前方水體：使用更真實的物理材質和細緻紋理
+            const waterGeo = new THREE.PlaneGeometry(280, 140);
+            const waterMat = new THREE.MeshStandardMaterial({
+                color: 0x1d3a4d,
+                roughness: 0.08,
+                metalness: 0.9,
+                flatShading: false,
+                transparent: true,
+                opacity: 0.95
+            });
+            const water = new THREE.Mesh(waterGeo, waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.position.set(0, 0.05, 30);
+            water.receiveShadow = true;
+            scene.add(water);
+
+            // 4. 建造蘭陽博物館 (多塊細緻、不規則傾斜量體拼貼)
+            const buildingGroup = new THREE.Group();
+            
+            // 模擬特有的傾斜結構，採用複合幾何體與不同材質（石材 vs 玻璃帷幕）
+            const tiltAngle = -Math.PI / 8.5; // 約 21 度傾斜
+
+            // 石塊大牆
+            const stoneGeo = new THREE.BoxGeometry(16, 16, 45);
+            // 產生幾何雜色外觀以還原石板拼貼
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x4a4947, roughness: 0.85, metalness: 0.1 });
+            const stonePart = new THREE.Mesh(stoneGeo, stoneMat);
+            stonePart.position.set(6, 6, -5);
+            stonePart.castShadow = true;
+            stonePart.receiveShadow = true;
+            buildingGroup.add(stonePart);
+
+            // 斜面交錯石塊（中段）
+            const midStoneGeo = new THREE.BoxGeometry(12, 14, 30);
+            const midStoneMat = new THREE.MeshStandardMaterial({ color: 0x6e6a62, roughness: 0.75 });
+            const midStone = new THREE.Mesh(midStoneGeo, midStoneMat);
+            midStone.position.set(10, 4.5, 5);
+            midStone.castShadow = true;
+            buildingGroup.add(midStone);
+
+            // 藍色玻璃帷幕 section 1 (最左側陡峭面)
+            const glassGeo1 = new THREE.BoxGeometry(6, 17, 35);
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0x3d648c, roughness: 0.05, metalness: 0.95,
+                transmission: 0.2, thickness: 1.0, envMapIntensity: 2.0,
+                clearcoat: 1.0, clearcoatRoughness: 0.02
+            });
+            const glassPart1 = new THREE.Mesh(glassGeo1, glassMat);
+            glassPart1.position.set(1, 8.5, -12);
+            glassPart1.castShadow = true;
+            buildingGroup.add(glassPart1);
+
+            // 藍色玻璃帷幕 section 2 (最右側平緩延伸面)
+            const glassGeo2 = new THREE.BoxGeometry(10, 8, 25);
+            const glassPart2 = new THREE.Mesh(glassGeo2, glassMat);
+            glassPart2.position.set(13, 2, 20);
+            glassPart2.castShadow = true;
+            buildingGroup.add(glassPart2);
+
+            // 進行主體傾斜
+            buildingGroup.rotation.z = tiltAngle;
+            buildingGroup.position.set(-2, 1, 0);
+            scene.add(buildingGroup);
+
+            // 5. 連接步道與橋樑
+            const bridgeGeo = new THREE.BoxGeometry(45, 0.4, 2);
+            const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x2a241e, roughness: 0.9 });
+            const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
+            bridge.position.set(-2, 0.2, 8);
+            bridge.rotation.y = 0.08;
+            scene.add(bridge);
+
+            // 6. 右側地標旗幟區與護岸
+            const embankmentGeo = new THREE.BoxGeometry(60, 2.5, 30);
+            const embankmentMat = new THREE.MeshStandardMaterial({ color: 0x4a453e, roughness: 0.9 });
+            const embankment = new THREE.Mesh(embankmentGeo, embankmentMat);
+            embankment.position.set(40, -0.2, 5);
+            embankment.receiveShadow = true;
+            scene.add(embankment);
+
+            // 斜向陣列旗幟
+            for (let i = 0; i < 9; i++) {
+                const flagGroup = new THREE.Group();
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6), new THREE.MeshStandardMaterial({ color: 0x666666 }));
+                pole.position.y = 3;
+                pole.rotation.z = -Math.PI / 5;
+                flagGroup.add(pole);
+
+                const flagColors = [0xd11a1a, 0xe06a10, 0xf0eeeb, 0xd11a1a, 0xe06a10, 0xf0eeeb, 0xd11a1a];
+                const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), new THREE.MeshStandardMaterial({ color: flagColors[i % flagColors.length], side: THREE.DoubleSide }));
+                flag.position.set(0.6, 5.2, 0);
+                flag.rotation.z = -Math.PI / 5;
+                flagGroup.add(flag);
+
+                flagGroup.position.set(22 + i*2.2, 0.8, -i*0.4 - 2);
+                scene.add(flagGroup);
+            }
+
+            // 7. 遠景山脈（分層與大氣效果）
+            const mMat = new THREE.MeshStandardMaterial({ color: 0x1f3624, roughness: 0.95 });
+            const mountainChain = new THREE.Group();
+            const peaks = [
+                { r: 40, h: 25, x: 50, z: -70 },
+                { r: 60, h: 32, x: 90, z: -90 },
+                { r: 55, h: 28, x: 10, z: -85 },
+                { r: 70, h: 40, x: -40, z: -100 }
+            ];
+            peaks.forEach(p => {
+                const mountain = new THREE.Mesh(new THREE.ConeGeometry(p.r, p.h, 5), mMat);
+                mountain.position.set(p.x, p.h/2 - 5, p.z);
+                mountainChain.add(mountain);
+            });
+            scene.add(mountainChain);
+
+            // 關閉讀取畫面
+            loadingEl.style.opacity = 0;
+            setTimeout(() => loadingEl.remove(), 500);
+        }
+
+        let clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 水波微動效果
+            scene.children.forEach(child => {
+                if (child.geometry && child.geometry.type === "PlaneGeometry" && child.position.z > 10) {
+                    child.position.y = 0.05 + Math.sin(time * 0.8) * 0.015;
+                }
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
