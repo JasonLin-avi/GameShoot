@@ -1379,17 +1379,17 @@
                 }
             }
 
-            // 發射藍軍 (微調離散度以確保並排齊射時維持整齊方陣橫隊)
-            spawnBlueTroop(x, z, spreadX = 0.04, spreadVx = 0.08, baseVz = 9.2) {
+            // 發射藍軍 (嚴格直線推進，零橫向偏角，不轉彎)
+            spawnBlueTroop(x, z, spreadX = 0, spreadVx = 0, baseVz = 9.2) {
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (!u.active) {
                         u.active = true;
-                        u.x = x + (Math.random() - 0.5) * spreadX;
+                        u.x = x + (spreadX > 0 ? (Math.random() - 0.5) * spreadX : 0);
                         u.y = 0.4;
                         u.z = z;
-                        u.vx = (Math.random() - 0.5) * spreadVx;
-                        u.vz = baseVz + (Math.random() - 0.5) * 0.15; // 速度高度一致，形成一排排平推浪潮
+                        u.vx = 0; // 絕對直線前進，不轉彎
+                        u.vz = baseVz; // 速度一致，形成一排排平推浪潮
                         u.passedGateMask = 0;
                         return u;
                     }
@@ -1397,16 +1397,16 @@
                 return null;
             }
 
-            // 生成紅軍步兵
+            // 生成紅軍步兵 (嚴格直線向下推進，不轉彎)
             spawnRedTroop(x, z) {
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
                     if (!u.active) {
                         u.active = true;
-                        u.x = x + (Math.random() - 0.5) * 0.35;
+                        u.x = x;
                         u.y = 0.4;
                         u.z = z;
-                        u.vx = (Math.random() - 0.5) * 0.4;
+                        u.vx = 0; // 絕對直線下壓，不轉彎
                         u.vz = -4.5 - Math.random() * 0.6; // 穩健向下壓境
                         u.hp = 1;
                         return u;
@@ -1415,7 +1415,7 @@
                 return null;
             }
 
-            // 生成石像鬼
+            // 生成石像鬼 (嚴格直線突襲，不轉彎)
             spawnGargoyle(x, z) {
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
@@ -1424,7 +1424,7 @@
                         u.x = x;
                         u.y = 1.5;
                         u.z = z;
-                        u.vx = (Math.random() - 0.5) * 0.6;
+                        u.vx = 0; // 絕對直線直突，不轉彎
                         u.vz = -8.2;
                         u.hp = 3;
                         return u;
@@ -1437,6 +1437,7 @@
             spawnBoss(z, hp = 50) {
                 this.boss.active = true;
                 this.boss.x = 0;
+                this.boss.vx = 0; // 嚴格直線下壓，不轉彎
                 this.boss.y = 0;
                 this.boss.z = z;
                 this.boss.hp = hp;
@@ -1510,26 +1511,22 @@
             update(dt) {
                 const trackHalfWidth = 5.0;
 
-                // 1. 更新藍軍
+                // 1. 更新藍軍 (嚴格直直向前推進，零轉彎)
                 let activeBlues = 0;
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (u.active) {
                         activeBlues++;
                         
-                        // 集群流體導向：穿過門後 (z > 14) 自動向中央戰場或敵軍縱深靠攏
-                        if (u.z > 13.0) {
-                            // 往跑道中央 (x = 0) 提供平滑向心力，形成兩翼包抄中路的震撼兵潮
-                            u.vx += (-u.x) * 1.6 * dt;
-                        }
-
+                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 +Z 推進
+                        u.vx = 0;
                         u.z += u.vz * dt;
-                        u.x += u.vx * dt;
+
+                        if (u.x < -trackHalfWidth) u.x = -trackHalfWidth;
+                        if (u.x > trackHalfWidth) u.x = trackHalfWidth;
+
                         u.bounceTime += dt * 14.0;
                         u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.18;
-
-                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx * 0.5; }
-                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx * 0.5; }
 
                         if (u.z > 80) {
                             u.active = false;
@@ -1547,19 +1544,21 @@
                     this.blueMesh.instanceMatrix.needsUpdate = true;
                 }
 
-                // 2. 更新紅軍步兵
+                // 2. 更新紅軍步兵 (嚴格直直向下推進，零轉彎)
                 let activeReds = 0;
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
                     if (u.active) {
                         activeReds++;
+                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 -Z 推進
+                        u.vx = 0;
                         u.z += u.vz * dt;
-                        u.x += u.vx * dt;
+
+                        if (u.x < -trackHalfWidth) u.x = -trackHalfWidth;
+                        if (u.x > trackHalfWidth) u.x = trackHalfWidth;
+
                         u.bounceTime += dt * 10.0;
                         u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.14;
-
-                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx; }
-                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx; }
 
                         _dummy.position.set(u.x, u.y, u.z);
                         _dummy.rotation.set(0, 0, 0);
@@ -1572,19 +1571,21 @@
                     this.redMesh.instanceMatrix.needsUpdate = true;
                 }
 
-                // 3. 更新石像鬼
+                // 3. 更新石像鬼 (嚴格直直向下推進，零轉彎)
                 let activeGargoyles = 0;
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
                     if (u.active) {
                         activeGargoyles++;
+                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 -Z 推進
+                        u.vx = 0;
                         u.z += u.vz * dt;
-                        u.x += u.vx * dt;
+
+                        if (u.x < -trackHalfWidth) u.x = -trackHalfWidth;
+                        if (u.x > trackHalfWidth) u.x = trackHalfWidth;
+
                         u.wingTime = (u.wingTime || 0) + dt * 18.0;
                         u.y = 1.5 + Math.sin(u.wingTime) * 0.3;
-
-                        if (u.x < -trackHalfWidth) { u.x = -trackHalfWidth; u.vx = -u.vx; }
-                        if (u.x > trackHalfWidth) { u.x = trackHalfWidth; u.vx = -u.vx; }
 
                         _dummy.position.set(u.x, u.y, u.z);
                         _dummy.rotation.set(0.35, Math.PI, 0);
@@ -1790,13 +1791,21 @@
                             const cfg = g.config;
                             if (cfg.type === 'add') {
                                 for (let i = 0; i < cfg.value; i++) {
-                                    const newTroop = spawnCallback(troop.x, troop.z, 0.5, 2.2);
+                                    // 平行直排對稱展開，嚴格直直向前推進 (零橫向偏角，不轉彎)
+                                    const sign = (i % 2 === 0 ? 1 : -1);
+                                    const layer = Math.floor(i / 2) + 1;
+                                    const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
+                                    const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
                                     if (newTroop) newTroop.passedGateMask |= g.bitmask;
                                 }
                             } else if (cfg.type === 'mult') {
                                 const count = cfg.value - 1;
                                 for (let i = 0; i < count; i++) {
-                                    const newTroop = spawnCallback(troop.x, troop.z, 0.5, 2.5);
+                                    // 平行直排對稱展開，嚴格直直向前推進 (零橫向偏角，不轉彎)
+                                    const sign = (i % 2 === 0 ? 1 : -1);
+                                    const layer = Math.floor(i / 2) + 1;
+                                    const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
+                                    const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
                                     if (newTroop) newTroop.passedGateMask |= g.bitmask;
                                 }
                             } else if (cfg.type === 'sub') {
@@ -2321,7 +2330,7 @@
                         const spacing = 0.4;
                         for (let s = 0; s < streamCount; s++) {
                             const offset = (s - (streamCount - 1) / 2) * spacing;
-                            this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.8, 0.04, 0.08);
+                            this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.8, 0, 0);
                         }
                         soundFX.playShoot();
                     }
