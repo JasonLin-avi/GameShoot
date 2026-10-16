@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綠巨人 (Giant.jpg 3D UV 投影貼圖版) 檢視器 — giant2.html</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.88);
+            --border-color: rgba(148, 163, 184, 0.22);
+            --accent-green: #7cb342;
+            --accent-purple: #7e57c2;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            color: var(--text-main);
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 左上標題與規格資訊面板 */
+        .hud-header {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px 18px;
+            max-width: 375px;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        .hud-header h1 {
+            margin: 0 0 6px 0;
+            font-size: 18px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a3e635;
+        }
+
+        .hud-header p {
+            margin: 0;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .spec-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(124, 179, 66, 0.18);
+            color: #bef264;
+            border: 1px solid rgba(163, 230, 53, 0.3);
+        }
+
+        .badge.purple {
+            background: rgba(126, 87, 194, 0.22);
+            color: #d8b4fe;
+            border-color: rgba(192, 132, 252, 0.35);
+        }
+
+        .badge.blue {
+            background: rgba(14, 165, 233, 0.2);
+            color: #7dd3fc;
+            border-color: rgba(56, 189, 248, 0.35);
+        }
+
+        /* 右側控制面板 */
+        .control-panel {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 310px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #cbd5e1;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-bottom: 2px;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .btn-group.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        button {
+            background: rgba(30, 41, 59, 0.9);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        button:hover {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: #94a3b8;
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #4d7c0f, #65a30d);
+            border-color: #bef264;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(132, 204, 22, 0.4);
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .slider-label span:last-child {
+            color: #a3e635;
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #84cc16;
+            cursor: pointer;
+        }
+
+        /* 左下原圖與去背擴邊貼圖對照浮窗 */
+        .ref-card {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            display: flex;
+            gap: 10px;
+        }
+
+        .ref-card.hidden {
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ref-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ref-card-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ref-card img,
+        .ref-card canvas {
+            width: 135px;
+            height: 135px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #ffffff;
+            display: block;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* 底部狀態列 */
+        .telemetry-bar {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 8px 20px;
+            font-size: 12px;
+            color: #cbd5e1;
+            display: flex;
+            gap: 18px;
+            z-index: 15;
+            white-space: nowrap;
+        }
+
+        .telemetry-bar strong {
+            color: #a3e635;
+            font-family: Consolas, monospace;
+        }
+
+        @media (max-width: 768px) {
+            .hud-header {
+                max-width: 240px;
+                padding: 10px 12px;
+            }
+            .control-panel {
+                width: 220px;
+                padding: 12px;
+            }
+            .ref-card img,
+            .ref-card canvas {
+                width: 90px;
+                height: 90px;
+            }
+        }
+    </style>
+
+    <!-- 遵循 three-best-practices: setup-use-import-maps -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+
+    <!-- 左上角標題與規格資訊 -->
+    <div class="hud-header">
+        <h1>🧌 綠巨人 (3D 模型 + 原圖 UV 投影貼圖)</h1>
+        <p>採用<strong>方案 3（UV Projective Texture Mapping）</strong>：自動將 <code>Giant.jpg</code> 去背並進行形態學邊緣色彩擴張（消除白邊），依解剖部位精準投影烘焙至 3D 關節骨骼模型上。</p>
+        <div class="spec-badges">
+            <span class="badge blue">方案 3: 3D UV 投影貼圖</span>
+            <span class="badge">GDD 3.2: 3.5x 巨型體型</span>
+            <span class="badge purple">GDD 4.1: Vx = 0 直線壓境</span>
+        </div>
+    </div>
+
+    <!-- 右側互動控制面板 -->
+    <div class="control-panel">
+        <div class="section-title">動作與行軍模式 (GDD 規格)</div>
+        <div class="btn-group three-col">
+            <button id="btn-mode-inplace" class="active">原地行走</button>
+            <button id="btn-mode-advance">直線壓境</button>
+            <button id="btn-mode-bind">原圖站姿</button>
+        </div>
+        <div class="btn-group">
+            <button id="btn-toggle-walk" class="active">⏸ 暫停 / 播放行走</button>
+            <button id="btn-roar-pose">💢 憤怒咆哮姿勢</button>
+        </div>
+
+        <div class="section-title">UV 投影貼圖與光影設定</div>
+        <div class="btn-group">
+            <button id="btn-tex-projected" class="active">🎨 原圖 UV 貼圖</button>
+            <button id="btn-tex-solid">🧱 純 3D 幾何色</button>
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                <span>原圖貼圖立體光影融合度</span>
+                <span id="val-unlit">35% 自發光還原</span>
+            </div>
+            <input type="range" id="slider-unlit" min="0.0" max="0.85" step="0.05" value="0.35">
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                <span>行走步伐速度 (Speed)</span>
+                <span id="val-speed">1.0x</span>
+            </div>
+            <input type="range" id="slider-speed" min="0.2" max="2.5" step="0.1" value="1.0">
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                <span>步伐沉重擺幅 (Stride Intensity)</span>
+                <span id="val-stride">1.0x</span>
+            </div>
+            <input type="range" id="slider-stride" min="0.4" max="1.6" step="0.1" value="1.0">
+        </div>
+
+        <div class="section-title">快速檢視視角 (Camera Presets)</div>
+        <div class="btn-group">
+            <button id="cam-front" class="active">正面對照視角</button>
+            <button id="cam-side">側面步伐視角</button>
+            <button id="cam-back">背面背肌視角</button>
+            <button id="cam-game">遊戲俯視視角</button>
+        </div>
+
+        <div class="section-title">輔助檢視與對比</div>
+        <div class="btn-group">
+            <button id="btn-toggle-ref" class="active">🖼 貼圖對照窗</button>
+            <button id="btn-toggle-troop" class="active">🔵 1x 小兵比例尺</button>
+            <button id="btn-toggle-hp" class="active">❤️ Boss 血條</button>
+            <button id="btn-toggle-turntable">🔄 慢速自轉展示</button>
+        </div>
+    </div>
+
+    <!-- 左下角 Giant.jpg 原圖與去背擴邊 UV 貼圖對照 -->
+    <div class="ref-card" id="ref-card">
+        <div class="ref-col">
+            <div class="ref-card-header">
+                <span>原始圖片 (Giant.jpg)</span>
+            </div>
+            <img id="raw-ref-img" src="./Giant.jpg" alt="Giant Reference">
+        </div>
+        <div class="ref-col">
+            <div class="ref-card-header">
+                <span>UV 擴邊去白邊貼圖</span>
+                <span style="color:#a3e635;">Dilated</span>
+            </div>
+            <canvas id="dilated-preview-canvas" width="224" height="224"></canvas>
+        </div>
+    </div>
+
+    <!-- 底部即時運動學數據列 -->
+    <div class="telemetry-bar">
+        <span>模式: <strong id="tel-mode">原地行走 (UV 投影貼圖)</strong></span>
+        <span>座標 X: <strong id="tel-x">0.00</strong></span>
+        <span>座標 Z: <strong id="tel-z">0.00</strong></span>
+        <span>橫向速度 Vx: <strong id="tel-vx">0.00 (零轉彎鎖定)</strong></span>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 內嵌 Giant.jpg Base64 Data URI 確保即使在 file:// 協定下也能進行 Canvas 像素去背與擴邊處理，零 CORS 限制
+        const GIANT_IMAGE_DATA_URI = "data:image/jpeg;base64,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";
+
+        // =========================================================================
+        // 1. 預配置暫存變數 (遵循 three-best-practices: render-avoid-allocations)
+        // =========================================================================
+        const clock = new THREE.Clock();
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const _tempVec3 = new THREE.Vector3();
+        const _tempNormal = new THREE.Vector3();
+        const _normalMatrix = new THREE.Matrix3();
+
+        const state = {
+            isWalking: true,
+            bindPoseMode: false,
+            roarMode: false,
+            roarTimer: 0,
+            advanceMode: false,
+            useProjectedTexture: true,
+            emissiveStrength: 0.35,
+            walkSpeed: 1.0,
+            strideScale: 1.0,
+            walkPhase: 0,
+            turntable: false,
+            showTroopCompare: true,
+            showHpBar: true,
+            bossZ: 0,
+            bossVz: 2.6,
+            lastLeftStomp: false,
+            lastRightStomp: false
+        };
+
+        // =========================================================================
+        // 2. 建立場景、相機與渲染器 (遵循 three-best-practices)
+        // =========================================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x131c2e);
+        scene.fog = new THREE.FogExp2(0x131c2e, 0.018);
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.2, 120);
+        camera.position.set(0, 3.0, 8.8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.target.set(0, 2.30, 0);
+        controls.minDistance = 3.0;
+        controls.maxDistance = 35.0;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+        // =========================================================================
+        // 3. 燈光配置 (遵循 lighting-limit-lights <= 3)
+        // =========================================================================
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1.35);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfffef8, 1.65);
+        dirLight.position.set(4.5, 10.0, 8.5);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 1.0;
+        dirLight.shadow.camera.far = 30.0;
+        const shadowExtent = 7.5;
+        dirLight.shadow.camera.left = -shadowExtent;
+        dirLight.shadow.camera.right = shadowExtent;
+        dirLight.shadow.camera.top = shadowExtent;
+        dirLight.shadow.camera.bottom = -shadowExtent;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.55);
+        rimLight.position.set(-6, 6, -8);
+        scene.add(rimLight);
+
+        // =========================================================================
+        // 4. 戰場跑道環境與踏步震波環 (GDD 5.2)
+        // =========================================================================
+        const arenaGroup = new THREE.Group();
+        scene.add(arenaGroup);
+
+        const trackWidth = 11;
+        const trackLength = 50;
+        const groundGeo = new THREE.PlaneGeometry(trackWidth, trackLength);
+        groundGeo.rotateX(-Math.PI / 2);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x1e293b,
+            roughness: 0.85,
+            metalness: 0.1
+        });
+        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh.receiveShadow = true;
+        arenaGroup.add(groundMesh);
+
+        const gridHelper = new THREE.GridHelper(trackWidth, 11, 0x38bdf8, 0x334155);
+        gridHelper.position.y = 0.01;
+        gridHelper.scale.z = trackLength / trackWidth;
+        arenaGroup.add(gridHelper);
+
+        const railGeo = new THREE.BoxGeometry(0.22, 0.35, trackLength);
+        const railMat = new THREE.MeshStandardMaterial({
+            color: 0x0284c7,
+            emissive: 0x0369a1,
+            roughness: 0.3
+        });
+        const leftRail = new THREE.Mesh(railGeo, railMat);
+        leftRail.position.set(-trackWidth / 2 - 0.11, 0.175, 0);
+        arenaGroup.add(leftRail);
+
+        const rightRail = new THREE.Mesh(railGeo, railMat);
+        rightRail.position.set(trackWidth / 2 + 0.11, 0.175, 0);
+        arenaGroup.add(rightRail);
+
+        const stompRings = [];
+        const ringGeo = new THREE.RingGeometry(0.18, 0.36, 28);
+        ringGeo.rotateX(-Math.PI / 2);
+        for (let i = 0; i < 6; i++) {
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0xa3e635,
+                transparent: true,
+                opacity: 0,
+                side: THREE.DoubleSide
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.position.y = 0.02;
+            ringMesh.visible = false;
+            scene.add(ringMesh);
+            stompRings.push({ mesh: ringMesh, active: false, life: 0 });
+        }
+
+        function spawnStompRing(x, z) {
+            for (const r of stompRings) {
+                if (!r.active) {
+                    r.active = true;
+                    r.life = 0;
+                    r.mesh.visible = true;
+                    r.mesh.position.set(x, 0.025, z);
+                    r.mesh.scale.setScalar(1);
+                    r.mesh.material.opacity = 0.65;
+                    break;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 5. Giant.jpg 形態學去白邊與色彩外擴處理器 (Morphological Edge Dilation)
+        // 目的：
+        // 1. 保留角色臉部內的白牙與眼白 (Flood-fill 僅標記外部與腋下白色背景)
+        // 2. 將角色邊緣像素向外擴張 40px 填滿白色背景，徹底杜絕 3D 曲面邊緣取樣到白邊！
+        // 3. 產生背面專用無五官/柔和背肌貼圖區塊，讓 3D 模型轉到背面時呈現自然黑髮、背肌與紫褲背面。
+        // =========================================================================
+        function buildDilatedTextures(img) {
+            const w = img.width;
+            const h = img.height;
+
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = w;
+            srcCanvas.height = h;
+            const srcCtx = srcCanvas.getContext('2d');
+            srcCtx.drawImage(img, 0, 0);
+            const srcData = srcCtx.getImageData(0, 0, w, h);
+            const pixels = srcData.data;
+
+            // 建立高純度前景遮罩：1 = 角色純淨內部像素, 0 = 白色背景與邊緣 JPEG 灰白抗鋸齒光暈
+            const mask = new Uint8Array(w * h);
+            for (let y = 0; y < h; y++) {
+                const yp = y / h;
+                for (let x = 0; x < w; x++) {
+                    const xp = x / w;
+                    const idx = (y * w + x) * 4;
+                    const r = pixels[idx];
+                    const g = pixels[idx + 1];
+                    const b = pixels[idx + 2];
+
+                    const maxC = Math.max(r, g, b);
+                    const minC = Math.min(r, g, b);
+                    const sat = maxC - minC;
+                    const luma = (r + g + b) / 3;
+
+                    // 臉部五官中心區 (保留白牙與眼白)
+                    const inFaceCore = (yp > 0.065 && yp < 0.145 && xp > 0.462 && xp < 0.532);
+
+                    // 判斷是否為飽和草綠膚色、深紫褲色或深黑髮色
+                    const isGreenSkin = (g > r + 8 && g > b + 12 && luma < 210);
+                    const isPurplePants = (r > g + 6 && b > g + 2 && luma < 175);
+                    const isDarkFeature = (luma < 95);
+
+                    if (inFaceCore || isGreenSkin || isPurplePants || isDarkFeature || (sat > 26 && luma < 200)) {
+                        mask[y * w + x] = 1;
+                    } else {
+                        mask[y * w + x] = 0;
+                    }
+                }
+            }
+
+            // 額外向內侵蝕 3px (Erosion)，徹底剝離輪廓外圍殘留的 JPEG 淺灰/淺白過渡像素
+            const erodedMask = new Uint8Array(mask);
+            for (let pass = 0; pass < 3; pass++) {
+                const prev = new Uint8Array(erodedMask);
+                for (let y = 1; y < h - 1; y++) {
+                    const yp = y / h;
+                    for (let x = 1; x < w - 1; x++) {
+                        const xp = x / w;
+                        // 臉部中心不侵蝕，確保眼白與牙齒清晰
+                        if (yp > 0.065 && yp < 0.145 && xp > 0.462 && xp < 0.532) continue;
+                        const i = y * w + x;
+                        if (prev[i] === 1) {
+                            if (prev[i - 1] === 0 || prev[i + 1] === 0 || prev[i - w] === 0 || prev[i + w] === 0) {
+                                erodedMask[i] = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 執行 60 次最近鄰形態學外擴 (Nearest-Neighbor Color Dilation)
+            // 讓純淨的草綠肌肉與深紫短褲色彩往外平滑延伸，完全消除任何白邊！
+            const outPixels = new Uint8ClampedArray(pixels);
+            const currMask = new Uint8Array(erodedMask);
+            const nextMask = new Uint8Array(erodedMask);
+
+            const dirs = [
+                [-1, 0], [1, 0], [0, -1], [0, 1],
+                [-1, -1], [1, -1], [-1, 1], [1, 1]
+            ];
+
+            for (let iter = 0; iter < 60; iter++) {
+                nextMask.set(currMask);
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = y * w + x;
+                        if (currMask[i] === 0) {
+                            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+                            for (let d = 0; d < 8; d++) {
+                                const nx = x + dirs[d][0];
+                                const ny = y + dirs[d][1];
+                                const ni = ny * w + nx;
+                                if (currMask[ni] === 1) {
+                                    const nIdx = ni * 4;
+                                    sumR += outPixels[nIdx];
+                                    sumG += outPixels[nIdx + 1];
+                                    sumB += outPixels[nIdx + 2];
+                                    count++;
+                                }
+                            }
+                            if (count > 0) {
+                                const idx = i * 4;
+                                outPixels[idx] = Math.round(sumR / count);
+                                outPixels[idx + 1] = Math.round(sumG / count);
+                                outPixels[idx + 2] = Math.round(sumB / count);
+                                outPixels[idx + 3] = 255;
+                                nextMask[i] = 1;
+                            }
+                        }
+                    }
+                }
+                currMask.set(nextMask);
+            }
+
+            // 剩餘最外圍背景填入巨人標準草綠色
+            for (let i = 0; i < w * h; i++) {
+                if (currMask[i] === 0) {
+                    const idx = i * 4;
+                    outPixels[idx] = 108;
+                    outPixels[idx + 1] = 158;
+                    outPixels[idx + 2] = 56;
+                    outPixels[idx + 3] = 255;
+                }
+            }
+
+            const frontCanvas = document.createElement('canvas');
+            frontCanvas.width = w;
+            frontCanvas.height = h;
+            const frontCtx = frontCanvas.getContext('2d');
+            frontCtx.putImageData(new ImageData(outPixels, w, h), 0, 0);
+
+            const previewCanvas = document.getElementById('dilated-preview-canvas');
+            if (previewCanvas) {
+                const pCtx = previewCanvas.getContext('2d');
+                pCtx.drawImage(frontCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+            }
+
+            const texture = new THREE.CanvasTexture(frontCanvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.flipY = true;
+            texture.needsUpdate = true;
+
+            return texture;
+        }
+
+        // =========================================================================
+        // 6. 建立支援 Giant.jpg 投影貼圖與純色切換之材質系統
+        // =========================================================================
+        const solidMaterials = {
+            skinMain: new THREE.MeshStandardMaterial({ color: 0x6ea33b, roughness: 0.56, metalness: 0.04 }),
+            skinDark: new THREE.MeshStandardMaterial({ color: 0x4e7926, roughness: 0.65, metalness: 0.04 }),
+            skinLight: new THREE.MeshStandardMaterial({ color: 0x7ab044, roughness: 0.50, metalness: 0.04 }),
+            pantsPurple: new THREE.MeshStandardMaterial({ color: 0x4e2a50, roughness: 0.72, metalness: 0.06 }),
+            pantsDark: new THREE.MeshStandardMaterial({ color: 0x371b39, roughness: 0.78, metalness: 0.06 }),
+            hairBlack: new THREE.MeshStandardMaterial({ color: 0x1c201d, roughness: 0.78, metalness: 0.05 })
+        };
+
+        const projectedMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.58,
+            metalness: 0.04,
+            emissive: 0xffffff,
+            emissiveIntensity: state.emissiveStrength
+        });
+
+        // =========================================================================
+        // 7. 建立 3D 綠巨人關節模型並進行解剖部位對齊之 Bind-Pose UV 投影烘焙
+        // =========================================================================
+        const uvBakeTargets = [];
+
+        function registerMeshForUV(mesh, partType, fallbackMat) {
+            mesh.geometry = mesh.geometry.clone();
+            mesh.userData.partType = partType;
+            mesh.userData.fallbackMat = fallbackMat;
+            mesh.material = projectedMaterial;
+            uvBakeTargets.push(mesh);
+            return mesh;
+        }
+
+        function createGiantBoss() {
+            const root = new THREE.Group();
+            root.name = 'GiantBossRoot';
+
+            // 骨盆根節點 (中心高度 Y = 2.18)
+            const pelvisGroup = new THREE.Group();
+            pelvisGroup.position.set(0, 2.18, 0);
+            root.add(pelvisGroup);
+
+            // -----------------------------------------------------------------
+            // A. 骨盆與紫褲腰頭區 (Pelvis & Purple Waistband)
+            // -----------------------------------------------------------------
+            const pelvisCore = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.66, 24, 18), solidMaterials.pantsPurple),
+                'pelvis', solidMaterials.pantsPurple
+            );
+            pelvisCore.scale.set(1.16, 0.72, 0.82);
+            pelvisCore.position.y = -0.05;
+            pelvisCore.castShadow = true;
+            pelvisCore.receiveShadow = true;
+            pelvisGroup.add(pelvisCore);
+
+            [-0.34, 0.34].forEach(xOff => {
+                const glute = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 14), solidMaterials.pantsPurple),
+                    'back_pants', solidMaterials.pantsPurple
+                );
+                glute.scale.set(1.0, 0.96, 0.88);
+                glute.position.set(xOff, -0.08, -0.18);
+                glute.castShadow = true;
+                pelvisGroup.add(glute);
+            });
+
+            const beltBand = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.69, 0.13, 24), solidMaterials.pantsDark),
+                'pelvis', solidMaterials.pantsDark
+            );
+            beltBand.scale.set(1.14, 1.0, 0.78);
+            beltBand.position.y = 0.20;
+            pelvisGroup.add(beltBand);
+
+            // -----------------------------------------------------------------
+            // B. 軀幹、六塊腹肌、厚實胸肌與背闊肌 (Torso Hierarchy)
+            // -----------------------------------------------------------------
+            const spineGroup = new THREE.Group();
+            spineGroup.position.set(0, 0.24, 0);
+            pelvisGroup.add(spineGroup);
+
+            const abdomenCore = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.76, 0.66, 0.78, 24, 8), solidMaterials.skinMain),
+                'torso', solidMaterials.skinMain
+            );
+            abdomenCore.scale.set(1.10, 1.0, 0.74);
+            abdomenCore.position.y = 0.38;
+            abdomenCore.castShadow = true;
+            abdomenCore.receiveShadow = true;
+            spineGroup.add(abdomenCore);
+
+            const chestGroup = new THREE.Group();
+            chestGroup.position.set(0, 0.66, 0);
+            spineGroup.add(chestGroup);
+
+            const ribcageCore = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.88, 28, 22), solidMaterials.skinMain),
+                'torso', solidMaterials.skinMain
+            );
+            ribcageCore.scale.set(1.22, 0.94, 0.76);
+            ribcageCore.position.set(0, 0.42, -0.02);
+            ribcageCore.castShadow = true;
+            ribcageCore.receiveShadow = true;
+            chestGroup.add(ribcageCore);
+
+            [-1, 1].forEach(side => {
+                const pec = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.50, 22, 18), solidMaterials.skinLight),
+                    'torso', solidMaterials.skinLight
+                );
+                pec.scale.set(1.16, 0.78, 0.46);
+                pec.position.set(side * 0.40, 0.47, 0.35);
+                pec.rotation.z = side * -0.10;
+                pec.rotation.y = side * 0.16;
+                pec.castShadow = true;
+                pec.receiveShadow = true;
+                chestGroup.add(pec);
+            });
+
+            const abRows = [
+                { y: 0.66, w: 0.20, h: 0.145, z: 0.48 },
+                { y: 0.45, w: 0.19, h: 0.145, z: 0.49 },
+                { y: 0.24, w: 0.175, h: 0.135, z: 0.47 }
+            ];
+            abRows.forEach(row => {
+                [-1, 1].forEach(side => {
+                    const abBlock = registerMeshForUV(
+                        new THREE.Mesh(new THREE.SphereGeometry(row.w, 16, 12), solidMaterials.skinLight),
+                        'torso', solidMaterials.skinLight
+                    );
+                    abBlock.scale.set(1.18, row.h / row.w, 0.42);
+                    abBlock.position.set(side * 0.18, row.y, row.z);
+                    abBlock.castShadow = true;
+                    spineGroup.add(abBlock);
+                });
+            });
+
+            [-1, 1].forEach(side => {
+                const latMesh = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.56, 16, 14), solidMaterials.skinMain),
+                    'back_skin', solidMaterials.skinMain
+                );
+                latMesh.scale.set(0.95, 1.25, 0.68);
+                latMesh.position.set(side * 0.55, 0.38, -0.24);
+                latMesh.rotation.z = side * 0.24;
+                latMesh.castShadow = true;
+                chestGroup.add(latMesh);
+
+                const trapSlope = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.54, 12, 16), solidMaterials.skinMain),
+                    'torso', solidMaterials.skinMain
+                );
+                trapSlope.rotation.z = side * 1.08;
+                trapSlope.scale.set(1.0, 1.0, 0.82);
+                trapSlope.position.set(side * 0.42, 0.84, -0.03);
+                trapSlope.castShadow = true;
+                chestGroup.add(trapSlope);
+            });
+
+            // -----------------------------------------------------------------
+            // C. 頭部、立體五官浮雕與亂髮 (Head)
+            // -----------------------------------------------------------------
+            const neckGroup = new THREE.Group();
+            neckGroup.position.set(0, 0.98, 0.06);
+            chestGroup.add(neckGroup);
+
+            const neckCyl = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.44, 0.40, 18), solidMaterials.skinMain),
+                'torso', solidMaterials.skinMain
+            );
+            neckCyl.position.y = 0.12;
+            neckGroup.add(neckCyl);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 0.34, 0.06);
+            neckGroup.add(headGroup);
+
+            // 使用高細分單一立體頭顱模型承接 Giant.jpg 臉部五官投影，讓眼睛、濃眉、鼻子與咬牙嘴型 100% 清晰無接縫
+            const cranium = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.45, 36, 32), solidMaterials.skinMain),
+                'head', solidMaterials.skinMain
+            );
+            cranium.scale.set(0.84, 1.10, 0.92);
+            cranium.position.set(0, 0.14, 0.04);
+            cranium.castShadow = true;
+            headGroup.add(cranium);
+
+            [-1, 1].forEach(side => {
+                const ear = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), solidMaterials.skinMain),
+                    'back_skin', solidMaterials.skinMain
+                );
+                ear.scale.set(0.42, 1.12, 0.70);
+                ear.position.set(side * 0.38, 0.11, 0.02);
+                headGroup.add(ear);
+            });
+
+            // 頭頂與後腦勺立體黑髮量體
+            const hairVolume = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.44, 22, 18), solidMaterials.hairBlack),
+                'hair', solidMaterials.hairBlack
+            );
+            hairVolume.scale.set(0.88, 0.85, 0.94);
+            hairVolume.position.set(0, 0.30, -0.03);
+            headGroup.add(hairVolume);
+
+            const hairLocks = [
+                { x: 0.0, y: 0.56, z: 0.08, rx: -0.55, ry: 0.0, rz: 0.0, sx: 1.4, sy: 0.9, sz: 0.7 },
+                { x: -0.16, y: 0.54, z: 0.06, rx: -0.45, ry: 0.2, rz: 0.42, sx: 1.3, sy: 0.85, sz: 0.7 },
+                { x: 0.16, y: 0.54, z: 0.06, rx: -0.45, ry: -0.2, rz: -0.42, sx: 1.3, sy: 0.85, sz: 0.7 },
+                { x: -0.28, y: 0.47, z: 0.04, rx: -0.3, ry: 0.3, rz: 0.75, sx: 1.2, sy: 0.8, sz: 0.65 },
+                { x: 0.28, y: 0.47, z: 0.04, rx: -0.3, ry: -0.3, rz: -0.75, sx: 1.2, sy: 0.8, sz: 0.65 }
+            ];
+            const lockGeo = new THREE.ConeGeometry(0.14, 0.28, 6);
+            hairLocks.forEach(cfg => {
+                const lock = registerMeshForUV(
+                    new THREE.Mesh(lockGeo, solidMaterials.hairBlack),
+                    'hair', solidMaterials.hairBlack
+                );
+                lock.position.set(cfg.x, cfg.y, cfg.z);
+                lock.rotation.set(cfg.rx, cfg.ry, cfg.rz);
+                lock.scale.set(cfg.sx, cfg.sy, cfg.sz);
+                headGroup.add(lock);
+            });
+
+            // -----------------------------------------------------------------
+            // D. 雙臂與巨拳系統
+            // -----------------------------------------------------------------
+            function createArm(side) {
+                const partTag = (side === -1) ? 'right_arm' : 'left_arm';
+                const shoulderPivot = new THREE.Group();
+                shoulderPivot.position.set(side * 1.06, 0.68, 0.0);
+                chestGroup.add(shoulderPivot);
+
+                const deltoid = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 18), solidMaterials.skinMain),
+                    partTag, solidMaterials.skinMain
+                );
+                deltoid.scale.set(1.02, 1.14, 0.96);
+                deltoid.position.set(side * 0.12, -0.06, 0);
+                deltoid.castShadow = true;
+                shoulderPivot.add(deltoid);
+
+                const upperArm = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.42, 14, 18), solidMaterials.skinMain),
+                    partTag, solidMaterials.skinMain
+                );
+                upperArm.position.set(side * 0.22, -0.44, 0.01);
+                upperArm.rotation.z = side * 0.16;
+                upperArm.castShadow = true;
+                shoulderPivot.add(upperArm);
+
+                const bicep = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.30, 16, 14), solidMaterials.skinLight),
+                    partTag, solidMaterials.skinLight
+                );
+                bicep.scale.set(0.92, 1.22, 1.05);
+                bicep.position.set(side * 0.20, -0.42, 0.13);
+                bicep.castShadow = true;
+                shoulderPivot.add(bicep);
+
+                const elbowPivot = new THREE.Group();
+                elbowPivot.position.set(side * 0.28, -0.78, 0.03);
+                shoulderPivot.add(elbowPivot);
+
+                const forearmShaft = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.46, 14, 18), solidMaterials.skinMain),
+                    partTag, solidMaterials.skinMain
+                );
+                forearmShaft.position.set(side * 0.04, -0.34, 0.10);
+                forearmShaft.rotation.x = 0.22;
+                forearmShaft.rotation.z = side * -0.08;
+                forearmShaft.castShadow = true;
+                elbowPivot.add(forearmShaft);
+
+                const forearmBulge = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 14), solidMaterials.skinLight),
+                    partTag, solidMaterials.skinLight
+                );
+                forearmBulge.scale.set(0.96, 1.28, 0.95);
+                forearmBulge.position.set(side * 0.06, -0.20, 0.06);
+                forearmBulge.rotation.x = 0.20;
+                forearmBulge.castShadow = true;
+                elbowPivot.add(forearmBulge);
+
+                const fistGroup = new THREE.Group();
+                fistGroup.position.set(side * 0.01, -0.74, 0.20);
+                fistGroup.rotation.x = 0.15;
+                fistGroup.rotation.y = side * -0.35;
+                elbowPivot.add(fistGroup);
+
+                const palmCore = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.27, 18, 16), solidMaterials.skinMain),
+                    partTag, solidMaterials.skinMain
+                );
+                palmCore.scale.set(0.95, 0.92, 1.05);
+                palmCore.castShadow = true;
+                fistGroup.add(palmCore);
+
+                for (let f = 0; f < 4; f++) {
+                    const zOff = (f - 1.5) * 0.095;
+                    const fingerRoll = registerMeshForUV(
+                        new THREE.Mesh(new THREE.CapsuleGeometry(0.056, 0.16, 8, 10), solidMaterials.skinLight),
+                        partTag, solidMaterials.skinLight
+                    );
+                    fingerRoll.rotation.z = Math.PI / 2;
+                    fingerRoll.position.set(side * -0.10, -0.06, zOff);
+                    fistGroup.add(fingerRoll);
+                }
+
+                const thumb = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.072, 0.18, 8, 10), solidMaterials.skinLight),
+                    partTag, solidMaterials.skinLight
+                );
+                thumb.rotation.x = Math.PI / 2 - 0.2;
+                thumb.rotation.z = side * 0.35;
+                thumb.position.set(side * -0.10, 0.04, 0.19);
+                fistGroup.add(thumb);
+
+                return { shoulderPivot, elbowPivot, fistGroup };
+            }
+
+            const rightArm = createArm(-1);
+            const leftArm = createArm(1);
+
+            // -----------------------------------------------------------------
+            // E. 雙腿、破損紫褲 (含右膝破洞直接投影)、粗壯小腿與五趾大腳
+            // -----------------------------------------------------------------
+            function createLeg(side) {
+                const legPantsTag = (side === -1) ? 'right_thigh' : 'left_thigh';
+                const legCalfTag = (side === -1) ? 'right_calf' : 'left_calf';
+
+                const hipPivot = new THREE.Group();
+                hipPivot.position.set(side * 0.48, -0.14, 0);
+                pelvisGroup.add(hipPivot);
+
+                const thighPants = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.41, 0.48, 18, 22), solidMaterials.pantsPurple),
+                    legPantsTag, solidMaterials.pantsPurple
+                );
+                thighPants.scale.set(1.04, 1.0, 0.96);
+                thighPants.position.set(side * 0.05, -0.42, 0.02);
+                thighPants.rotation.z = side * 0.07;
+                thighPants.castShadow = true;
+                thighPants.receiveShadow = true;
+                hipPivot.add(thighPants);
+
+                const quadContour = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 14), solidMaterials.pantsPurple),
+                    legPantsTag, solidMaterials.pantsPurple
+                );
+                quadContour.scale.set(0.92, 1.35, 0.88);
+                quadContour.position.set(side * 0.04, -0.38, 0.09);
+                hipPivot.add(quadContour);
+
+                const kneePivot = new THREE.Group();
+                kneePivot.position.set(side * 0.09, -0.88, 0.02);
+                hipPivot.add(kneePivot);
+
+                const lowerPants = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CylinderGeometry(0.39, 0.36, 0.38, 20), solidMaterials.pantsPurple),
+                    legPantsTag, solidMaterials.pantsPurple
+                );
+                lowerPants.position.set(0, -0.08, 0);
+                lowerPants.castShadow = true;
+                kneePivot.add(lowerPants);
+
+                const shredCount = 14;
+                const shredGeo = new THREE.ConeGeometry(0.09, 0.24, 4);
+                for (let s = 0; s < shredCount; s++) {
+                    const angle = (s / shredCount) * Math.PI * 2;
+                    const shred = registerMeshForUV(
+                        new THREE.Mesh(shredGeo, solidMaterials.pantsPurple),
+                        legPantsTag, solidMaterials.pantsPurple
+                    );
+                    const r = 0.352;
+                    const lenScale = (s % 2 === 0) ? 1.12 : 0.75;
+                    shred.scale.set(1.0, lenScale, 0.5);
+                    shred.position.set(
+                        Math.sin(angle) * r,
+                        -0.27 - (lenScale * 0.04),
+                        Math.cos(angle) * r
+                    );
+                    shred.rotation.x = Math.PI + Math.cos(angle) * 0.10;
+                    shred.rotation.z = -Math.sin(angle) * 0.10;
+                    shred.rotation.y = angle;
+                    kneePivot.add(shred);
+                }
+
+                const calfShaft = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.24, 0.76, 20), solidMaterials.skinMain),
+                    legCalfTag, solidMaterials.skinMain
+                );
+                calfShaft.position.set(0, -0.52, -0.02);
+                calfShaft.castShadow = true;
+                calfShaft.receiveShadow = true;
+                kneePivot.add(calfShaft);
+
+                const calfMuscle = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 14), solidMaterials.skinLight),
+                    legCalfTag, solidMaterials.skinLight
+                );
+                calfMuscle.scale.set(1.06, 1.22, 1.04);
+                calfMuscle.position.set(side * 0.02, -0.44, -0.07);
+                calfMuscle.castShadow = true;
+                kneePivot.add(calfMuscle);
+
+                const anklePivot = new THREE.Group();
+                anklePivot.position.set(0, -0.92, -0.02);
+                kneePivot.add(anklePivot);
+
+                const footGroup = new THREE.Group();
+                footGroup.rotation.y = side * -0.18;
+                anklePivot.add(footGroup);
+
+                const heelSphere = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 12), solidMaterials.skinMain),
+                    legCalfTag, solidMaterials.skinMain
+                );
+                heelSphere.scale.set(1.05, 0.65, 1.15);
+                heelSphere.position.set(0, -0.10, -0.06);
+                heelSphere.castShadow = true;
+                footGroup.add(heelSphere);
+
+                const footArch = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.34, 12, 14), solidMaterials.skinLight),
+                    legCalfTag, solidMaterials.skinLight
+                );
+                footArch.rotation.x = Math.PI / 2 + 0.24;
+                footArch.scale.set(1.18, 1.0, 0.68);
+                footArch.position.set(0, -0.08, 0.16);
+                footArch.castShadow = true;
+                footGroup.add(footArch);
+
+                const forefootPad = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 12), solidMaterials.skinMain),
+                    legCalfTag, solidMaterials.skinMain
+                );
+                forefootPad.scale.set(1.18, 0.45, 0.95);
+                forefootPad.position.set(0, -0.14, 0.34);
+                forefootPad.castShadow = true;
+                forefootPad.receiveShadow = true;
+                footGroup.add(forefootPad);
+
+                for (let t = 0; t < 5; t++) {
+                    const innerToOuter = (t - 2) * 0.112 * side;
+                    const isBigToe = (t === 0);
+                    const toeRadius = isBigToe ? 0.074 : Math.max(0.044, 0.064 - t * 0.004);
+                    const toeLen = isBigToe ? 0.15 : Math.max(0.085, 0.13 - t * 0.01);
+                    const zForward = 0.54 - t * 0.025;
+
+                    const toeMesh = registerMeshForUV(
+                        new THREE.Mesh(new THREE.CapsuleGeometry(toeRadius, toeLen, 8, 10), solidMaterials.skinLight),
+                        legCalfTag, solidMaterials.skinLight
+                    );
+                    toeMesh.rotation.x = Math.PI / 2;
+                    toeMesh.scale.set(1.0, 1.0, 0.78);
+                    toeMesh.position.set(innerToOuter, -0.16, zForward);
+                    toeMesh.castShadow = true;
+                    footGroup.add(toeMesh);
+                }
+
+                return { hipPivot, kneePivot, anklePivot };
+            }
+
+            const rightLeg = createLeg(-1);
+            const leftLeg = createLeg(1);
+
+            // -----------------------------------------------------------------
+            // F. 即時 Boss 血條 Sprite
+            // -----------------------------------------------------------------
+            const hpCanvas = document.createElement('canvas');
+            hpCanvas.width = 320;
+            hpCanvas.height = 64;
+            const hpCtx = hpCanvas.getContext('2d');
+
+            hpCtx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            hpCtx.beginPath();
+            hpCtx.roundRect(4, 4, 312, 56, 14);
+            hpCtx.fill();
+            hpCtx.lineWidth = 3;
+            hpCtx.strokeStyle = '#a3e635';
+            hpCtx.stroke();
+
+            hpCtx.fillStyle = '#65a30d';
+            hpCtx.beginPath();
+            hpCtx.roundRect(12, 12, 296, 40, 9);
+            hpCtx.fill();
+
+            hpCtx.fillStyle = '#ffffff';
+            hpCtx.font = '900 22px "Segoe UI", sans-serif';
+            hpCtx.textAlign = 'center';
+            hpCtx.textBaseline = 'middle';
+            hpCtx.fillText('GIANT BOSS  100 / 100', 160, 33);
+
+            const hpTex = new THREE.CanvasTexture(hpCanvas);
+            const hpSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpTex, transparent: true }));
+            hpSprite.position.set(0, 5.25, 0);
+            hpSprite.scale.set(2.9, 0.58, 1);
+            root.add(hpSprite);
+
+            return {
+                root,
+                pelvisGroup,
+                spineGroup,
+                chestGroup,
+                neckGroup,
+                headGroup,
+                rightArm,
+                leftArm,
+                rightLeg,
+                leftLeg,
+                hpSprite
+            };
+        }
+
+        const giant = createGiantBoss();
+        scene.add(giant.root);
+
+        // =========================================================================
+        // 8. 依據各部位實際 3D 包圍盒 (Measured 3D BBox) 自動對齊映射至 Giant.jpg UV 區塊
+        // =========================================================================
+        function applyBindPoseForUVBaking(g) {
+            g.root.position.set(0, 0, 0);
+            g.root.rotation.set(0, 0, 0);
+            g.pelvisGroup.position.set(0, 2.18, 0);
+            g.pelvisGroup.rotation.set(0, 0, 0);
+            g.spineGroup.rotation.set(0, 0, 0);
+            g.chestGroup.rotation.set(0, 0, 0);
+            g.headGroup.rotation.set(0, 0, 0);
+
+            g.rightArm.shoulderPivot.rotation.set(0.0, 0, -0.18);
+            g.rightArm.elbowPivot.rotation.set(-0.18, 0, 0.08);
+            g.leftArm.shoulderPivot.rotation.set(0.0, 0, 0.16);
+            g.leftArm.elbowPivot.rotation.set(-0.22, 0, -0.10);
+
+            g.rightLeg.hipPivot.rotation.set(0, 0, -0.05);
+            g.rightLeg.kneePivot.rotation.set(0, 0, 0.03);
+            g.rightLeg.anklePivot.rotation.set(0, 0, 0);
+
+            g.leftLeg.hipPivot.rotation.set(0, 0, 0.08);
+            g.leftLeg.kneePivot.rotation.set(0, 0, -0.02);
+            g.leftLeg.anklePivot.rotation.set(0, 0, 0);
+        }
+
+        function bakeProjectiveUVs() {
+            applyBindPoseForUVBaking(giant);
+            giant.root.updateMatrixWorld(true);
+
+            // 第一步：自動量測每個解剖部位在 3D 世界空間中的實際 [minX, maxX, minY, maxY] 包圍盒
+            const bbox3D = {};
+            for (const mesh of uvBakeTargets) {
+                const pType = mesh.userData.partType;
+                if (!bbox3D[pType]) {
+                    bbox3D[pType] = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+                }
+                const b = bbox3D[pType];
+                const posAttr = mesh.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    _tempVec3.fromBufferAttribute(posAttr, i).applyMatrix4(mesh.matrixWorld);
+                    if (_tempVec3.x < b.minX) b.minX = _tempVec3.x;
+                    if (_tempVec3.x > b.maxX) b.maxX = _tempVec3.x;
+                    if (_tempVec3.y < b.minY) b.minY = _tempVec3.y;
+                    if (_tempVec3.y > b.maxY) b.maxY = _tempVec3.y;
+                }
+            }
+
+            // 第二步：定義各部位對應至 Giant.jpg 內部純淨像素的目標 UV 範圍 [uMin, uMax, vMin, vMax]
+            const targetUV = {
+                head:        { uMin: 0.442, uMax: 0.552, vMin: 0.825, vMax: 0.982 },
+                hair:        { uMin: 0.455, uMax: 0.540, vMin: 0.945, vMax: 0.982 },
+                torso:       { uMin: 0.392, uMax: 0.625, vMin: 0.535, vMax: 0.825 },
+                pelvis:      { uMin: 0.378, uMax: 0.642, vMin: 0.405, vMax: 0.535 },
+                right_arm:   { uMin: 0.195, uMax: 0.352, vMin: 0.415, vMax: 0.790 },
+                left_arm:    { uMin: 0.675, uMax: 0.805, vMin: 0.425, vMax: 0.790 },
+                right_thigh: { uMin: 0.318, uMax: 0.478, vMin: 0.245, vMax: 0.445 },
+                left_thigh:  { uMin: 0.555, uMax: 0.702, vMin: 0.240, vMax: 0.445 },
+                right_calf:  { uMin: 0.295, uMax: 0.440, vMin: 0.022, vMax: 0.245 },
+                left_calf:   { uMin: 0.620, uMax: 0.742, vMin: 0.018, vMax: 0.235 },
+                back_skin:   { uMin: 0.535, uMax: 0.605, vMin: 0.715, vMax: 0.785 },
+                back_pants:  { uMin: 0.565, uMax: 0.645, vMin: 0.350, vMax: 0.435 }
+            };
+
+            // 第三步：將每個部位的 3D 頂點正規化比例 (tx, ty) 精準映射至目標 UV 區塊
+            for (const mesh of uvBakeTargets) {
+                const geo = mesh.geometry;
+                const posAttr = geo.attributes.position;
+                const normAttr = geo.attributes.normal;
+                const uvAttr = geo.attributes.uv;
+                const partType = mesh.userData.partType;
+                const b3d = bbox3D[partType];
+                const tuv = targetUV[partType] || targetUV.torso;
+
+                _normalMatrix.getNormalMatrix(mesh.matrixWorld);
+
+                const spanX = Math.max(0.001, b3d.maxX - b3d.minX);
+                const spanY = Math.max(0.001, b3d.maxY - b3d.minY);
+
+                for (let i = 0; i < posAttr.count; i++) {
+                    _tempVec3.fromBufferAttribute(posAttr, i).applyMatrix4(mesh.matrixWorld);
+                    _tempNormal.fromBufferAttribute(normAttr, i).applyMatrix3(_normalMatrix).normalize();
+
+                    const tx = THREE.MathUtils.clamp((_tempVec3.x - b3d.minX) / spanX, 0, 1);
+                    const ty = THREE.MathUtils.clamp((_tempVec3.y - b3d.minY) / spanY, 0, 1);
+
+                    let u = tuv.uMin + tx * (tuv.uMax - tuv.uMin);
+                    let v = tuv.vMin + ty * (tuv.vMax - tuv.vMin);
+
+                    // 針對右臂與左臂：隨高度 ty 自動沿著 Giant.jpg 彎曲的手臂中心軌跡插值，確保整條手臂與拳頭都在綠膚色內部
+                    if (partType === 'right_arm') {
+                        // ty=1 為肩膀 (uCenter ~ 0.34), ty=0.5 為手肘 (uCenter ~ 0.28), ty=0 為拳頭 (uCenter ~ 0.225)
+                        const armCenterU = 0.225 + ty * 0.115;
+                        const armHalfWidth = 0.046;
+                        u = armCenterU + (tx - 0.5) * 2.0 * armHalfWidth;
+                    } else if (partType === 'left_arm') {
+                        // ty=1 為肩膀 (uCenter ~ 0.68), ty=0.5 為手肘 (uCenter ~ 0.76), ty=0 為拳頭 (uCenter ~ 0.76)
+                        const armCenterU = 0.758 - Math.pow(ty, 1.6) * 0.075;
+                        const armHalfWidth = 0.045;
+                        u = armCenterU + (tx - 0.5) * 2.0 * armHalfWidth;
+                    } else if (partType === 'head') {
+                        // 後腦勺頂點自動映射至黑髮與後頸綠膚，避免後腦出現第二張臉
+                        if (_tempNormal.z < -0.10) {
+                            if (ty > 0.42) {
+                                u = 0.496 + (tx - 0.5) * 0.05;
+                                v = 0.955;
+                            } else {
+                                u = 0.470;
+                                v = 0.835;
+                            }
+                        }
+                    } else if (partType === 'torso') {
+                        // 背部頂點映射至平滑草綠背肌區
+                        if (_tempNormal.z < -0.25) {
+                            u = 0.555 + (tx - 0.5) * 0.06;
+                            v = 0.720 + ty * 0.07;
+                        }
+                    } else if (partType === 'pelvis') {
+                        if (_tempNormal.z < -0.25) {
+                            u = 0.595 + (tx - 0.5) * 0.06;
+                            v = 0.360 + ty * 0.07;
+                        }
+                    }
+
+                    uvAttr.setXY(i, u, v);
+                }
+                uvAttr.needsUpdate = true;
+            }
+        }
+
+        // 先執行一次 UV 烘焙
+        bakeProjectiveUVs();
+
+        // 載入內嵌 Giant.jpg 並產生擴邊無白邊貼圖
+        const rawImg = new Image();
+        rawImg.onload = () => {
+            const dilatedTex = buildDilatedTextures(rawImg);
+            projectedMaterial.map = dilatedTex;
+            projectedMaterial.emissiveMap = dilatedTex;
+            projectedMaterial.needsUpdate = true;
+        };
+        rawImg.src = GIANT_IMAGE_DATA_URI;
+
+        // 同步替換左下角原圖 img src 以確保離線/任何環境皆顯示
+        document.getElementById('raw-ref-img').src = GIANT_IMAGE_DATA_URI;
+
+        // =========================================================================
+        // 9. 建立 1x 藍軍小兵比例尺對照物 (GDD 3.2)
+        // =========================================================================
+        const troopCompareGroup = new THREE.Group();
+        troopCompareGroup.position.set(-2.35, 0, 0.5);
+        scene.add(troopCompareGroup);
+
+        const blueTroopMat = new THREE.MeshStandardMaterial({
+            color: 0x0ea5e9,
+            emissive: 0x0369a1,
+            roughness: 0.35
+        });
+        const blueTroopMesh = new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.32, 0.45, 10, 16),
+            blueTroopMat
+        );
+        blueTroopMesh.position.y = 0.55;
+        blueTroopMesh.castShadow = true;
+        troopCompareGroup.add(blueTroopMesh);
+
+        const tagCanvas = document.createElement('canvas');
+        tagCanvas.width = 240;
+        tagCanvas.height = 48;
+        const tagCtx = tagCanvas.getContext('2d');
+        tagCtx.fillStyle = 'rgba(2, 132, 199, 0.90)';
+        tagCtx.beginPath();
+        tagCtx.roundRect(4, 4, 232, 40, 10);
+        tagCtx.fill();
+        tagCtx.fillStyle = '#ffffff';
+        tagCtx.font = 'bold 19px sans-serif';
+        tagCtx.textAlign = 'center';
+        tagCtx.textBaseline = 'middle';
+        tagCtx.fillText('1x 藍軍小兵 (比例尺)', 120, 25);
+        const tagSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(tagCanvas),
+            transparent: true
+        }));
+        tagSprite.position.set(0, 1.4, 0);
+        tagSprite.scale.set(2.0, 0.40, 1);
+        troopCompareGroup.add(tagSprite);
+
+        // =========================================================================
+        // 10. 綠巨人沉重行走與咆哮動畫解算器 (遵循 render-delta-time)
+        // =========================================================================
+        function updateGiantAnimation(dt, elapsed) {
+            const g = giant;
+
+            if (state.bindPoseMode) {
+                applyBindPoseForUVBaking(g);
+                if (state.turntable) {
+                    g.root.rotation.y = elapsed * 0.45;
+                }
+                return;
+            }
+
+            if (state.roarMode) {
+                state.roarTimer += dt * 3.5;
+                const roarWave = Math.sin(state.roarTimer * 2.5);
+
+                g.pelvisGroup.position.y = 2.12;
+                g.pelvisGroup.rotation.set(0, 0, 0);
+                g.spineGroup.rotation.set(-0.12, 0, 0);
+                g.chestGroup.rotation.set(-0.16 + roarWave * 0.05, 0, 0);
+                g.headGroup.rotation.set(-0.20 + roarWave * 0.07, Math.sin(state.roarTimer * 6) * 0.08, 0);
+
+                g.rightArm.shoulderPivot.rotation.set(-0.75 + roarWave * 0.22, 0, -0.45);
+                g.rightArm.elbowPivot.rotation.set(-1.05, 0, 0);
+                g.leftArm.shoulderPivot.rotation.set(-0.75 - roarWave * 0.22, 0, 0.45);
+                g.leftArm.elbowPivot.rotation.set(-1.05, 0, 0);
+
+                g.rightLeg.hipPivot.rotation.set(-0.16, 0, -0.05);
+                g.rightLeg.kneePivot.rotation.set(0.30, 0, 0);
+                g.leftLeg.hipPivot.rotation.set(-0.16, 0, 0.05);
+                g.leftLeg.kneePivot.rotation.set(0.30, 0, 0);
+                return;
+            }
+
+            if (!state.isWalking) {
+                const breath = Math.sin(elapsed * 2.4);
+                g.pelvisGroup.position.set(0, 2.18 + breath * 0.015, 0);
+                g.pelvisGroup.rotation.set(0, 0, 0);
+                g.spineGroup.rotation.set(0.02, 0, 0);
+                g.chestGroup.rotation.set(breath * 0.02, 0, 0);
+                g.headGroup.rotation.set(0.02, Math.sin(elapsed * 0.8) * 0.04, 0);
+
+                g.rightArm.shoulderPivot.rotation.set(0.04, 0, -0.18 - breath * 0.015);
+                g.rightArm.elbowPivot.rotation.set(-0.22, 0, 0.08);
+                g.leftArm.shoulderPivot.rotation.set(0.04, 0, 0.16 + breath * 0.015);
+                g.leftArm.elbowPivot.rotation.set(-0.22, 0, -0.10);
+
+                g.rightLeg.hipPivot.rotation.set(0, 0, -0.05);
+                g.rightLeg.kneePivot.rotation.set(0, 0, 0.03);
+                g.rightLeg.anklePivot.rotation.set(0, 0, 0);
+                g.leftLeg.hipPivot.rotation.set(0, 0, 0.08);
+                g.leftLeg.kneePivot.rotation.set(0, 0, -0.02);
+                g.leftLeg.anklePivot.rotation.set(0, 0, 0);
+                return;
+            }
+
+            // 推進步行相位
+            const cycleFreq = 3.2 * state.walkSpeed;
+            state.walkPhase += dt * cycleFreq;
+            const p = state.walkPhase;
+            const s = state.strideScale;
+
+            const sinP = Math.sin(p);
+            const cosP = Math.cos(p);
+
+            // 1. 骨盆重心上下起伏與左右重心轉移搖擺
+            const bounce = Math.abs(cosP) * 0.09 * s;
+            const lateralShift = sinP * 0.08 * s;
+            g.pelvisGroup.position.set(lateralShift, 2.18 - bounce, 0);
+            g.pelvisGroup.rotation.z = -sinP * 0.055 * s;
+            g.pelvisGroup.rotation.y = sinP * 0.08 * s;
+            g.pelvisGroup.rotation.x = 0.05;
+
+            // 2. 胸腔與上身反向扭轉
+            g.spineGroup.rotation.y = -sinP * 0.10 * s;
+            g.spineGroup.rotation.z = sinP * 0.045 * s;
+            g.chestGroup.rotation.y = -sinP * 0.11 * s;
+            g.chestGroup.rotation.x = 0.04 + Math.abs(sinP) * 0.035 * s;
+
+            // 3. 頭部穩定凝視前方
+            g.headGroup.rotation.y = sinP * 0.13 * s;
+            g.headGroup.rotation.z = -sinP * 0.035 * s;
+            g.headGroup.rotation.x = 0.02 + Math.cos(p * 2) * 0.03 * s;
+
+            // 4. 大腿、膝蓋與腳踝步態循環 (帶著烘焙好的 Giant.jpg 紫褲、右膝破洞與綠色小腿貼圖一起邁步！)
+            const rightSwing = Math.sin(p);
+            const leftSwing = Math.sin(p + Math.PI);
+
+            const rightLift = Math.max(0, Math.cos(p));
+            const leftLift = Math.max(0, Math.cos(p + Math.PI));
+
+            g.rightLeg.hipPivot.rotation.x = -rightSwing * 0.44 * s - rightLift * 0.12 * s;
+            g.rightLeg.hipPivot.rotation.z = -0.04;
+            g.leftLeg.hipPivot.rotation.x = -leftSwing * 0.44 * s - leftLift * 0.12 * s;
+            g.leftLeg.hipPivot.rotation.z = 0.06;
+
+            g.rightLeg.kneePivot.rotation.x = (rightLift * 0.65 + Math.max(0, -rightSwing) * 0.16) * s;
+            g.leftLeg.kneePivot.rotation.x = (leftLift * 0.65 + Math.max(0, -leftSwing) * 0.16) * s;
+
+            g.rightLeg.anklePivot.rotation.x = (rightSwing * 0.22 - rightLift * 0.32) * s;
+            g.leftLeg.anklePivot.rotation.x = (leftSwing * 0.22 - leftLift * 0.32) * s;
+
+            // 5. 雙臂與巨拳反向揮動
+            g.rightArm.shoulderPivot.rotation.x = leftSwing * 0.40 * s + 0.04;
+            g.rightArm.shoulderPivot.rotation.z = -0.18 - Math.abs(sinP) * 0.04;
+            g.rightArm.elbowPivot.rotation.x = -0.32 - Math.max(0, -leftSwing) * 0.35 * s;
+
+            g.leftArm.shoulderPivot.rotation.x = rightSwing * 0.40 * s + 0.04;
+            g.leftArm.shoulderPivot.rotation.z = 0.16 + Math.abs(sinP) * 0.04;
+            g.leftArm.elbowPivot.rotation.x = -0.32 - Math.max(0, -rightSwing) * 0.35 * s;
+
+            // 6. 踏步震波環
+            const rightStompNow = (rightSwing > 0.85);
+            if (rightStompNow && !state.lastRightStomp) {
+                spawnStompRing(g.root.position.x - 0.56, g.root.position.z + 0.45);
+            }
+            state.lastRightStomp = rightStompNow;
+
+            const leftStompNow = (leftSwing > 0.85);
+            if (leftStompNow && !state.lastLeftStomp) {
+                spawnStompRing(g.root.position.x + 0.56, g.root.position.z + 0.45);
+            }
+            state.lastLeftStomp = leftStompNow;
+
+            // 7. GDD 4.1 直向運動學約束公式 (Vx = 0)
+            if (state.advanceMode) {
+                state.bossZ += state.bossVz * state.walkSpeed * dt;
+                if (state.bossZ > 12.0) {
+                    state.bossZ = -16.0;
+                }
+                g.root.position.set(0, 0, state.bossZ);
+                g.root.rotation.y = 0;
+            } else {
+                gridHelper.position.z = ((elapsed * state.bossVz * state.walkSpeed) % (trackWidth / 11));
+                g.root.position.set(0, 0, 0);
+                if (state.turntable) {
+                    g.root.rotation.y += dt * 0.45;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 11. UI 事件綁定
+        // =========================================================================
+        const elTelMode = document.getElementById('tel-mode');
+        const elTelX = document.getElementById('tel-x');
+        const elTelZ = document.getElementById('tel-z');
+
+        const btnInplace = document.getElementById('btn-mode-inplace');
+        const btnAdvance = document.getElementById('btn-mode-advance');
+        const btnBind = document.getElementById('btn-mode-bind');
+        const btnToggleWalk = document.getElementById('btn-toggle-walk');
+        const btnRoarPose = document.getElementById('btn-roar-pose');
+
+        function setModeActive(activeBtn) {
+            [btnInplace, btnAdvance, btnBind].forEach(b => b.classList.toggle('active', b === activeBtn));
+        }
+
+        btnInplace.addEventListener('click', () => {
+            state.advanceMode = false;
+            state.bindPoseMode = false;
+            state.isWalking = true;
+            state.bossZ = 0;
+            giant.root.position.set(0, 0, 0);
+            setModeActive(btnInplace);
+            btnToggleWalk.classList.add('active');
+            elTelMode.textContent = '原地行走 (UV 投影貼圖)';
+            controls.target.set(0, 2.30, 0);
+        });
+
+        btnAdvance.addEventListener('click', () => {
+            state.advanceMode = true;
+            state.bindPoseMode = false;
+            state.roarMode = false;
+            state.isWalking = true;
+            state.bossZ = -12.0;
+            setModeActive(btnAdvance);
+            btnToggleWalk.classList.add('active');
+            btnRoarPose.classList.remove('active');
+            elTelMode.textContent = 'GDD 直線壓境 (Vx=0)';
+        });
+
+        btnBind.addEventListener('click', () => {
+            state.bindPoseMode = true;
+            state.advanceMode = false;
+            state.roarMode = false;
+            state.bossZ = 0;
+            setModeActive(btnBind);
+            btnToggleWalk.classList.remove('active');
+            btnRoarPose.classList.remove('active');
+            elTelMode.textContent = 'Giant.jpg 1:1 烘焙站姿對照';
+        });
+
+        btnToggleWalk.addEventListener('click', () => {
+            state.bindPoseMode = false;
+            state.roarMode = false;
+            btnRoarPose.classList.remove('active');
+            state.isWalking = !state.isWalking;
+            btnToggleWalk.classList.toggle('active', state.isWalking);
+            btnToggleWalk.textContent = state.isWalking ? '⏸ 暫停 / 播放行走' : '▶️ 繼續播放行走';
+        });
+
+        btnRoarPose.addEventListener('click', () => {
+            state.bindPoseMode = false;
+            state.roarMode = !state.roarMode;
+            btnRoarPose.classList.toggle('active', state.roarMode);
+            if (state.roarMode) {
+                btnToggleWalk.classList.remove('active');
+            } else {
+                state.isWalking = true;
+                btnToggleWalk.classList.add('active');
+            }
+        });
+
+        // 切換「原圖 UV 貼圖」與「純 3D 幾何色」
+        const btnTexProjected = document.getElementById('btn-tex-projected');
+        const btnTexSolid = document.getElementById('btn-tex-solid');
+
+        btnTexProjected.addEventListener('click', () => {
+            state.useProjectedTexture = true;
+            btnTexProjected.classList.add('active');
+            btnTexSolid.classList.remove('active');
+            for (const mesh of uvBakeTargets) {
+                mesh.material = projectedMaterial;
+            }
+        });
+
+        btnTexSolid.addEventListener('click', () => {
+            state.useProjectedTexture = false;
+            btnTexSolid.classList.add('active');
+            btnTexProjected.classList.remove('active');
+            for (const mesh of uvBakeTargets) {
+                mesh.material = mesh.userData.fallbackMat;
+            }
+        });
+
+        // 原圖自發光融合度滑桿
+        const sliderUnlit = document.getElementById('slider-unlit');
+        const valUnlit = document.getElementById('val-unlit');
+        sliderUnlit.addEventListener('input', (e) => {
+            state.emissiveStrength = parseFloat(e.target.value);
+            projectedMaterial.emissiveIntensity = state.emissiveStrength;
+            valUnlit.textContent = `${Math.round(state.emissiveStrength * 100)}% 自發光還原`;
+        });
+
+        const sliderSpeed = document.getElementById('slider-speed');
+        const valSpeed = document.getElementById('slider-speed');
+        sliderSpeed.addEventListener('input', (e) => {
+            state.walkSpeed = parseFloat(e.target.value);
+            valSpeed.textContent = `${state.walkSpeed.toFixed(1)}x`;
+        });
+
+        const sliderStride = document.getElementById('slider-stride');
+        const valStride = document.getElementById('slider-stride');
+        sliderStride.addEventListener('input', (e) => {
+            state.strideScale = parseFloat(e.target.value);
+            valStride.textContent = `${state.strideScale.toFixed(1)}x`;
+        });
+
+        // 相機預設視角
+        const camButtons = ['cam-front', 'cam-side', 'cam-back', 'cam-game'];
+        function setActiveCamBtn(id) {
+            camButtons.forEach(cid => {
+                document.getElementById(cid).classList.toggle('active', cid === id);
+            });
+        }
+
+        document.getElementById('cam-front').addEventListener('click', () => {
+            setActiveCamBtn('cam-front');
+            camera.position.set(0, 2.8, 8.6);
+            controls.target.set(0, 2.30, giant.root.position.z);
+        });
+
+        document.getElementById('cam-side').addEventListener('click', () => {
+            setActiveCamBtn('cam-side');
+            camera.position.set(7.8, 2.6, giant.root.position.z + 1.5);
+            controls.target.set(0, 2.2, giant.root.position.z);
+        });
+
+        document.getElementById('cam-back').addEventListener('click', () => {
+            setActiveCamBtn('cam-back');
+            camera.position.set(0, 3.0, giant.root.position.z - 8.4);
+            controls.target.set(0, 2.30, giant.root.position.z);
+        });
+
+        document.getElementById('cam-game').addEventListener('click', () => {
+            setActiveCamBtn('cam-game');
+            camera.position.set(0, 11.5, 14.5);
+            controls.target.set(0, 1.5, -2.0);
+        });
+
+        const btnToggleRef = document.getElementById('btn-toggle-ref');
+        const refCard = document.getElementById('ref-card');
+        btnToggleRef.addEventListener('click', () => {
+            const hidden = refCard.classList.toggle('hidden');
+            btnToggleRef.classList.toggle('active', !hidden);
+        });
+
+        const btnToggleTroop = document.getElementById('btn-toggle-troop');
+        btnToggleTroop.addEventListener('click', () => {
+            state.showTroopCompare = !state.showTroopCompare;
+            troopCompareGroup.visible = state.showTroopCompare;
+            btnToggleTroop.classList.toggle('active', state.showTroopCompare);
+        });
+
+        const btnToggleHp = document.getElementById('btn-toggle-hp');
+        btnToggleHp.addEventListener('click', () => {
+            state.showHpBar = !state.showHpBar;
+            giant.hpSprite.visible = state.showHpBar;
+            btnToggleHp.classList.toggle('active', state.showHpBar);
+        });
+
+        const btnToggleTurntable = document.getElementById('btn-toggle-turntable');
+        btnToggleTurntable.addEventListener('click', () => {
+            state.turntable = !state.turntable;
+            btnToggleTurntable.classList.toggle('active', state.turntable);
+        });
+
+        // =========================================================================
+        // 12. 主渲染迴圈 (遵循 setup-animation-loop 與 render-delta-time)
+        // =========================================================================
+        function animate() {
+            const dt = Math.min(clock.getDelta(), 0.1);
+            const elapsed = clock.getElapsedTime();
+
+            updateGiantAnimation(dt, elapsed);
+
+            if (state.showTroopCompare) {
+                blueTroopMesh.position.y = 0.55 + Math.abs(Math.sin(elapsed * 8.0)) * 0.14;
+            }
+
+            for (const r of stompRings) {
+                if (r.active) {
+                    r.life += dt;
+                    if (r.life >= 0.55) {
+                        r.active = false;
+                        r.mesh.visible = false;
+                    } else {
+                        const progress = r.life / 0.55;
+                        r.mesh.scale.setScalar(1 + progress * 4.2);
+                        r.mesh.material.opacity = 0.65 * (1 - progress);
+                    }
+                }
+            }
+
+            elTelX.textContent = giant.root.position.x.toFixed(2);
+            elTelZ.textContent = giant.root.position.z.toFixed(2);
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        renderer.setAnimationLoop(animate);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        });
+    </script>
+</body>
+</html>
