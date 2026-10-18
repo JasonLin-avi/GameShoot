@@ -253,7 +253,7 @@
         #hero-skill-bar {
             position: absolute;
             right: 18px;
-            bottom: 26px;
+            bottom: max(26px, env(safe-area-inset-bottom, 26px));
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -4129,6 +4129,9 @@
                 const gargoyleList = this.entityMgr.gargoyleList;
                 const boss = this.entityMgr.boss;
                 const beamX = this.cannonX;
+                let hitSoundTriggered = false;
+                let killedReds = false;
+                let killedGargoyles = false;
 
                 // 1. 貫穿消滅射線路徑上的所有紅軍步兵
                 for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
@@ -4140,7 +4143,11 @@
                         this.killsCount++;
                         this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
                         this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 6);
-                        soundFX.playHit();
+                        killedReds = true;
+                        if (!hitSoundTriggered) {
+                            soundFX.playHit();
+                            hitSoundTriggered = true;
+                        }
                     }
                 }
 
@@ -4157,7 +4164,11 @@
                             this.killsCount++;
                             this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
                             this.entityMgr.spawnExplosion(g.x, g.y, g.z, 6);
-                            soundFX.playHit();
+                            killedGargoyles = true;
+                            if (!hitSoundTriggered) {
+                                soundFX.playHit();
+                                hitSoundTriggered = true;
+                            }
                         }
                     }
                 }
@@ -4175,9 +4186,16 @@
                         this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
                         this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
                         this.shakeAmount = 0.8;
-                        soundFX.playHit();
+                        if (!hitSoundTriggered) {
+                            soundFX.playHit();
+                            hitSoundTriggered = true;
+                        }
                     }
                 }
+
+                // 確保 GPU InstancedBuffer 同步（即使全屏清空亦能及時更新）
+                if (killedReds) this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
+                if (killedGargoyles) this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
             }
 
             /**
@@ -4322,6 +4340,7 @@
                     // 5. 命中解算與爆破傷害 (30 點傷害)
                     if (hit) {
                         m.active = false;
+                        m.targetEnemy = null;
                         m.mesh.visible = false;
                         this.entityMgr.spawnExplosion(m.x, m.y, m.z, 6);
                         if (soundFX.playMissileHit) soundFX.playMissileHit();
@@ -4346,6 +4365,7 @@
                                 hitRef.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
+                                this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
                                 this.killsCount++;
                                 this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
                             }
@@ -4353,6 +4373,7 @@
                             hitRef.active = false;
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
+                            this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
                             this.killsCount++;
                             this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
                         }
