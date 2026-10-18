@@ -1121,34 +1121,100 @@
             }
 
             // 胸口集束巨砲高能雷射充能與貫穿音效 (Unibeam Blast FX)
+            // 包含瞬間蓄能重低音 (70Hz 鋸齒波向下掃描至 30Hz) 與高能能量貫穿共振音
             playUnibeam() {
                 if (!this.ctx || this.muted) return;
                 const t = this.ctx.currentTime;
-                // 1. 低頻次聲波轟鳴
+
+                // 1. 瞬間蓄能重低音 (70Hz 鋸齒波向下掃描至 30Hz)
                 const oscBass = this.ctx.createOscillator();
                 const gainBass = this.ctx.createGain();
                 oscBass.type = 'sawtooth';
-                oscBass.frequency.setValueAtTime(320, t);
-                oscBass.frequency.exponentialRampToValueAtTime(75, t + 1.2);
-                gainBass.gain.setValueAtTime(0.35, t);
+                oscBass.frequency.setValueAtTime(70, t);
+                oscBass.frequency.exponentialRampToValueAtTime(30, t + 1.2);
+                gainBass.gain.setValueAtTime(0.40, t);
                 gainBass.gain.linearRampToValueAtTime(0.001, t + 1.2);
                 oscBass.connect(gainBass);
                 gainBass.connect(this.ctx.destination);
                 oscBass.start(t);
                 oscBass.stop(t + 1.2);
 
-                // 2. 高頻高能離子撕裂音
+                // 2. 高能能量貫穿共振撕裂音 (880Hz -> 330Hz 搭配帶通濾波共振)
                 const oscBeam = this.ctx.createOscillator();
+                const filterBeam = this.ctx.createBiquadFilter();
                 const gainBeam = this.ctx.createGain();
-                oscBeam.type = 'triangle';
+
+                oscBeam.type = 'sawtooth';
                 oscBeam.frequency.setValueAtTime(880, t);
-                oscBeam.frequency.exponentialRampToValueAtTime(440, t + 1.1);
+                oscBeam.frequency.exponentialRampToValueAtTime(330, t + 1.1);
+
+                filterBeam.type = 'bandpass';
+                filterBeam.frequency.setValueAtTime(950, t);
+                filterBeam.Q.setValueAtTime(4.0, t);
+
                 gainBeam.gain.setValueAtTime(0.25, t);
                 gainBeam.gain.linearRampToValueAtTime(0.001, t + 1.1);
-                oscBeam.connect(gainBeam);
+
+                oscBeam.connect(filterBeam);
+                filterBeam.connect(gainBeam);
                 gainBeam.connect(this.ctx.destination);
+
                 oscBeam.start(t);
                 oscBeam.stop(t + 1.1);
+            }
+
+            // 微型導彈發射推進音效：短促清脆的推進器點火呼嘯音 (頻率由 200Hz 迅速滑升至 700Hz)
+            playMissileLaunch() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, t);
+                osc.frequency.exponentialRampToValueAtTime(700, t + 0.14);
+
+                gain.gain.setValueAtTime(0.02, t);
+                gain.gain.linearRampToValueAtTime(0.18, t + 0.025);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.16);
+            }
+
+            // 微型導彈命中爆裂轟鳴：低頻衝擊與金屬破片立體打擊感
+            playMissileHit() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+
+                // 1. 低頻重擊衝擊波
+                const oscThud = this.ctx.createOscillator();
+                const gainThud = this.ctx.createGain();
+                oscThud.type = 'triangle';
+                oscThud.frequency.setValueAtTime(120, t);
+                oscThud.frequency.exponentialRampToValueAtTime(28, t + 0.25);
+                gainThud.gain.setValueAtTime(0.35, t);
+                gainThud.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                oscThud.connect(gainThud);
+                gainThud.connect(this.ctx.destination);
+                oscThud.start(t);
+                oscThud.stop(t + 0.25);
+
+                // 2. 高能量金屬爆裂碎片感
+                const oscBurst = this.ctx.createOscillator();
+                const gainBurst = this.ctx.createGain();
+                oscBurst.type = 'sawtooth';
+                oscBurst.frequency.setValueAtTime(240, t);
+                oscBurst.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+                gainBurst.gain.setValueAtTime(0.20, t);
+                gainBurst.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                oscBurst.connect(gainBurst);
+                gainBurst.connect(this.ctx.destination);
+                oscBurst.start(t);
+                oscBurst.stop(t + 0.12);
             }
 
             // 通關勝利奏鳴
@@ -1447,6 +1513,27 @@
          * 建立高質感純金屬 PBR 材質庫 (免外部圖片依賴，100% 離線相容)
          */
         function createIronManMaterials() {
+            // 掌心閃光紋理 (Canvas Texture，離線 0 依賴，支援主題色彩動態著色)
+            const flashCanvas = document.createElement('canvas');
+            flashCanvas.width = 128;
+            flashCanvas.height = 128;
+            const fCtx = flashCanvas.getContext('2d');
+            const grad = fCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.35, '#ffffff');
+            grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            fCtx.fillStyle = grad;
+            fCtx.fillRect(0, 0, 128, 128);
+
+            const flashTex = new THREE.CanvasTexture(flashCanvas);
+            const flashMat = new THREE.SpriteMaterial({
+                map: flashTex,
+                color: 0x00f0ff,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+
             return {
                 armorRed: new THREE.MeshStandardMaterial({
                     color: 0xb91c1c,
@@ -1465,7 +1552,8 @@
                 }),
                 arcGlow: new THREE.MeshBasicMaterial({
                     color: 0x00f0ff
-                })
+                }),
+                flashMat
             };
         }
 
@@ -1690,25 +1778,8 @@
                 headGroup.add(earPuck);
             });
 
-            // 5. 掌心閃光紋理 (Canvas Texture，離線 0 依賴)
-            const flashCanvas = document.createElement('canvas');
-            flashCanvas.width = 128;
-            flashCanvas.height = 128;
-            const fCtx = flashCanvas.getContext('2d');
-            const grad = fCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-            grad.addColorStop(0, '#ffffff');
-            grad.addColorStop(0.3, '#38bdf8');
-            grad.addColorStop(0.7, 'rgba(2, 132, 199, 0.5)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            fCtx.fillStyle = grad;
-            fCtx.fillRect(0, 0, 128, 128);
-
-            const flashTex = new THREE.CanvasTexture(flashCanvas);
-            const flashMat = new THREE.SpriteMaterial({
-                map: flashTex,
-                transparent: true,
-                blending: THREE.AdditiveBlending
-            });
+            // 5. 掌心閃光材質 (取自 materials，支援主題動態適配)
+            const flashMat = materials.flashMat;
 
             // 6. 雙臂與掌心脈衝砲 (Arms Hierarchy)
             function createArm(side) {
@@ -2181,7 +2252,7 @@
                     metalness: 0.85,
                     roughness: 0.3
                 });
-                const missileFlameMat = new THREE.MeshBasicMaterial({
+                this.missileFlameMat = new THREE.MeshBasicMaterial({
                     color: 0x00f0ff,
                     transparent: true,
                     opacity: 0.85
@@ -2196,7 +2267,7 @@
                     head.position.set(0, 0, 0.25);
                     mMesh.add(head);
 
-                    const flame = new THREE.Mesh(missileFlameGeo, missileFlameMat);
+                    const flame = new THREE.Mesh(missileFlameGeo, this.missileFlameMat);
                     flame.position.set(0, 0, -0.28);
                     mMesh.add(flame);
 
@@ -2244,6 +2315,10 @@
                     this.shieldBarMat.color.set(theme.railColor);
                     this.shieldBarMat.needsUpdate = true;
                 }
+                if (this.ringMat) {
+                    this.ringMat.color.set(theme.railColor || theme.blueTroopColor);
+                    this.ringMat.needsUpdate = true;
+                }
                 if (this.baseMat) {
                     this.baseMat.color.set(theme.cannonBaseColor);
                     this.baseMat.emissive.set(theme.cannonBaseEmissive);
@@ -2259,11 +2334,27 @@
                     this.aimMat.opacity = theme.aimLineOpacity;
                     this.aimMat.needsUpdate = true;
                 }
+                if (this.ironManMaterials) {
+                    if (this.ironManMaterials.arcGlow) {
+                        this.ironManMaterials.arcGlow.color.set(theme.blueTroopColor || theme.railColor);
+                        this.ironManMaterials.arcGlow.needsUpdate = true;
+                    }
+                    if (this.ironManMaterials.flashMat) {
+                        this.ironManMaterials.flashMat.color.set(theme.blueTroopColor || theme.railColor);
+                        this.ironManMaterials.flashMat.needsUpdate = true;
+                    }
+                }
                 if (this.unibeamOuterMat) {
-                    this.unibeamOuterMat.color.set(theme.railColor);
+                    this.unibeamOuterMat.color.set(theme.blueTroopColor || theme.railColor);
+                    this.unibeamOuterMat.needsUpdate = true;
                 }
                 if (this.unibeamRingMat) {
-                    this.unibeamRingMat.color.set(theme.railColor);
+                    this.unibeamRingMat.color.set(theme.blueTroopColor || theme.railColor);
+                    this.unibeamRingMat.needsUpdate = true;
+                }
+                if (this.missileFlameMat) {
+                    this.missileFlameMat.color.set(theme.blueTroopColor || theme.railColor);
+                    this.missileFlameMat.needsUpdate = true;
                 }
                 if (this.gridHelper) {
                     this.scene.remove(this.gridHelper);
@@ -3255,6 +3346,13 @@
                     }
                 };
 
+                // 尋標目標快取槽 (100% 零 GC 記憶體分配，避免陣列或物件配置)
+                this._targetSlots = Array.from({ length: 16 }, () => ({
+                    type: null,
+                    ref: null,
+                    index: -1
+                }));
+
                 this.bindUI();
                 this.bindInputs();
                 this.initTheme();
@@ -3888,44 +3986,73 @@
                     }
                 }
 
-                soundFX.playShoot();
+                if (soundFX.playMissileLaunch) soundFX.playMissileLaunch();
+                else soundFX.playShoot();
+
                 this.updateHeroSkillsHUD();
             }
 
             /**
              * 微型導彈自動導航搜尋前方活動敵軍（優先鎖定 Boss，其次石像鬼，其次紅軍步兵）
+             * 單次線性迴圈遍歷 (Single-pass scan)，100% 零 GC 記憶體配置，避免任何臨時陣列或物件配置
              * @param {number} missileIndex 導彈索引，用於群體分散鎖定目標
              */
             findMissileTarget(missileIndex = 0) {
+                const slot = this._targetSlots[missileIndex % this._targetSlots.length];
+
                 // 1. 優先鎖定活躍且在射程內的 Boss
-                if (this.entityMgr.boss.active && this.entityMgr.boss.z > 0.5) {
-                    return { type: 'boss', ref: this.entityMgr.boss };
+                const boss = this.entityMgr.boss;
+                if (boss.active && boss.z > 0.5) {
+                    slot.type = 'boss';
+                    slot.ref = boss;
+                    slot.index = 0;
+                    return slot;
                 }
 
-                // 2. 其次鎖定石像鬼 (按 z 由近到遠排序)
-                const activeGargoyles = [];
+                // 2. 其次單次線性遍歷石像鬼，尋找距離最近者 (最小 z)
+                let bestGargoyle = null;
+                let bestGargoyleIdx = -1;
+                let minGargoyleScore = Infinity;
+
                 for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
                     const g = this.entityMgr.gargoyleList[k];
                     if (g.active && g.z > 0.5) {
-                        activeGargoyles.push({ type: 'gargoyle', ref: g, index: k });
+                        const score = g.z + ((k + missileIndex) % 3) * 0.4;
+                        if (score < minGargoyleScore) {
+                            minGargoyleScore = score;
+                            bestGargoyle = g;
+                            bestGargoyleIdx = k;
+                        }
                     }
                 }
-                if (activeGargoyles.length > 0) {
-                    activeGargoyles.sort((a, b) => a.ref.z - b.ref.z);
-                    return activeGargoyles[missileIndex % activeGargoyles.length];
+                if (bestGargoyle) {
+                    slot.type = 'gargoyle';
+                    slot.ref = bestGargoyle;
+                    slot.index = bestGargoyleIdx;
+                    return slot;
                 }
 
-                // 3. 其次鎖定紅軍步兵 (按 z 由近到遠排序)
-                const activeReds = [];
+                // 3. 其次單次線性遍歷紅軍步兵，尋找距離最近者 (最小 z)
+                let bestRed = null;
+                let bestRedIdx = -1;
+                let minRedScore = Infinity;
+
                 for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
                     const r = this.entityMgr.redList[j];
                     if (r.active && r.z > 0.5) {
-                        activeReds.push({ type: 'red', ref: r, index: j });
+                        const score = r.z + ((j + missileIndex * 3) % 5) * 0.5;
+                        if (score < minRedScore) {
+                            minRedScore = score;
+                            bestRed = r;
+                            bestRedIdx = j;
+                        }
                     }
                 }
-                if (activeReds.length > 0) {
-                    activeReds.sort((a, b) => a.ref.z - b.ref.z);
-                    return activeReds[missileIndex % activeReds.length];
+                if (bestRed) {
+                    slot.type = 'red';
+                    slot.ref = bestRed;
+                    slot.index = bestRedIdx;
+                    return slot;
                 }
 
                 return null;
@@ -4197,7 +4324,8 @@
                         m.active = false;
                         m.mesh.visible = false;
                         this.entityMgr.spawnExplosion(m.x, m.y, m.z, 6);
-                        soundFX.playHit();
+                        if (soundFX.playMissileHit) soundFX.playMissileHit();
+                        else soundFX.playHit();
 
                         if (hitType === 'boss') {
                             const boss = this.entityMgr.boss;
