@@ -700,7 +700,7 @@
 
         <div class="drag-guide" id="drag-guide">
             <span>↔️</span>
-            <span>左右滑動或使用 A/D 鍵操控砲台</span>
+            <span>左右滑動或使用 A/D 操控 | [E] 胸口集束砲 | [Q] 追蹤導彈</span>
         </div>
 
         <!-- 鋼鐵人英雄技能 HUD -->
@@ -1118,6 +1118,37 @@
 
                 osc.start(t);
                 osc.stop(t + 0.5);
+            }
+
+            // 胸口集束巨砲高能雷射充能與貫穿音效 (Unibeam Blast FX)
+            playUnibeam() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                // 1. 低頻次聲波轟鳴
+                const oscBass = this.ctx.createOscillator();
+                const gainBass = this.ctx.createGain();
+                oscBass.type = 'sawtooth';
+                oscBass.frequency.setValueAtTime(320, t);
+                oscBass.frequency.exponentialRampToValueAtTime(75, t + 1.2);
+                gainBass.gain.setValueAtTime(0.35, t);
+                gainBass.gain.linearRampToValueAtTime(0.001, t + 1.2);
+                oscBass.connect(gainBass);
+                gainBass.connect(this.ctx.destination);
+                oscBass.start(t);
+                oscBass.stop(t + 1.2);
+
+                // 2. 高頻高能離子撕裂音
+                const oscBeam = this.ctx.createOscillator();
+                const gainBeam = this.ctx.createGain();
+                oscBeam.type = 'triangle';
+                oscBeam.frequency.setValueAtTime(880, t);
+                oscBeam.frequency.exponentialRampToValueAtTime(440, t + 1.1);
+                gainBeam.gain.setValueAtTime(0.25, t);
+                gainBeam.gain.linearRampToValueAtTime(0.001, t + 1.1);
+                oscBeam.connect(gainBeam);
+                gainBeam.connect(this.ctx.destination);
+                oscBeam.start(t);
+                oscBeam.stop(t + 1.1);
             }
 
             // 通關勝利奏鳴
@@ -1919,6 +1950,7 @@
                 // 建立跑道與底座
                 this.createTrack();
                 this.createPlayerCannon();
+                this.initHeroSkillsFX();
 
                 window.addEventListener('resize', () => this.onWindowResize());
             }
@@ -2072,6 +2104,118 @@
                 this.cannonGroup.add(this.barrelsGroup);
             }
 
+            /**
+             * 構建鋼鐵人專屬英雄技能 3D 視覺物件池與特效
+             * 遵循 three-best-practices：啟動時預先分配 12 枚導彈與集束砲，循環中 0 GC 記憶體分配
+             */
+            initHeroSkillsFX() {
+                // 1. 胸口集束巨砲 (Unibeam Blast 3D 群組)
+                this.unibeamGroup = new THREE.Group();
+                this.unibeamGroup.position.set(0, 1.55, 0); // 鋼鐵人方舟反應爐胸口高度
+
+                // 外層高亮青藍能量光柱
+                const outerGeo = new THREE.CylinderGeometry(0.5, 0.5, 75, 16);
+                outerGeo.rotateX(Math.PI / 2);
+                this.unibeamOuterMat = new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending
+                });
+                this.unibeamOuterMesh = new THREE.Mesh(outerGeo, this.unibeamOuterMat);
+                this.unibeamOuterMesh.position.set(0, 0, 37.5);
+                this.unibeamGroup.add(this.unibeamOuterMesh);
+
+                // 內核心超能純白激光柱
+                const innerGeo = new THREE.CylinderGeometry(0.22, 0.22, 75, 16);
+                innerGeo.rotateX(Math.PI / 2);
+                this.unibeamInnerMat = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending
+                });
+                this.unibeamInnerMesh = new THREE.Mesh(innerGeo, this.unibeamInnerMat);
+                this.unibeamInnerMesh.position.set(0, 0, 37.5);
+                this.unibeamGroup.add(this.unibeamInnerMesh);
+
+                // 沿光柱分佈的同軸旋轉能量光環 (4~6 環)
+                this.unibeamRings = [];
+                this.unibeamRingMat = new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending
+                });
+                const ringDistances = [6, 18, 32, 48, 64];
+                for (let i = 0; i < ringDistances.length; i++) {
+                    const ringGeo = new THREE.TorusGeometry(0.8, 0.05, 8, 20);
+                    const ringMesh = new THREE.Mesh(ringGeo, this.unibeamRingMat);
+                    ringMesh.position.set(0, 0, ringDistances[i]);
+                    this.unibeamGroup.add(ringMesh);
+                    this.unibeamRings.push(ringMesh);
+                }
+
+                this.unibeamGroup.visible = false;
+                this.cannonGroup.add(this.unibeamGroup);
+
+                // 2. 肩部微型追蹤導彈物件池 (Missile Pool: 12 枚)
+                this.missileGroup = new THREE.Group();
+                this.scene.add(this.missileGroup);
+                this.missilePool = [];
+
+                const missileBodyGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.4, 8);
+                missileBodyGeo.rotateX(Math.PI / 2);
+                const missileHeadGeo = new THREE.ConeGeometry(0.06, 0.12, 8);
+                missileHeadGeo.rotateX(Math.PI / 2);
+                const missileFlameGeo = new THREE.ConeGeometry(0.04, 0.18, 6);
+                missileFlameGeo.rotateX(-Math.PI / 2);
+
+                const missileMatGold = new THREE.MeshStandardMaterial({
+                    color: 0xd4af37,
+                    metalness: 0.85,
+                    roughness: 0.25
+                });
+                const missileMatRed = new THREE.MeshStandardMaterial({
+                    color: 0xaa1818,
+                    metalness: 0.85,
+                    roughness: 0.3
+                });
+                const missileFlameMat = new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff,
+                    transparent: true,
+                    opacity: 0.85
+                });
+
+                for (let i = 0; i < 12; i++) {
+                    const mMesh = new THREE.Group();
+                    const body = new THREE.Mesh(missileBodyGeo, (i % 2 === 0) ? missileMatGold : missileMatRed);
+                    mMesh.add(body);
+
+                    const head = new THREE.Mesh(missileHeadGeo, (i % 2 === 0) ? missileMatRed : missileMatGold);
+                    head.position.set(0, 0, 0.25);
+                    mMesh.add(head);
+
+                    const flame = new THREE.Mesh(missileFlameGeo, missileFlameMat);
+                    flame.position.set(0, 0, -0.28);
+                    mMesh.add(flame);
+
+                    mMesh.visible = false;
+                    this.missileGroup.add(mMesh);
+
+                    this.missilePool.push({
+                        mesh: mMesh,
+                        flameMesh: flame,
+                        active: false,
+                        x: 0, y: 0, z: 0,
+                        vx: 0, vy: 0, vz: 0,
+                        targetEnemy: null,
+                        life: 0,
+                        maxLife: 3.5
+                    });
+                }
+            }
+
             applyTheme(theme) {
                 if (!theme) return;
                 this.scene.background.set(theme.sceneBg);
@@ -2115,6 +2259,12 @@
                     this.aimMat.opacity = theme.aimLineOpacity;
                     this.aimMat.needsUpdate = true;
                 }
+                if (this.unibeamOuterMat) {
+                    this.unibeamOuterMat.color.set(theme.railColor);
+                }
+                if (this.unibeamRingMat) {
+                    this.unibeamRingMat.color.set(theme.railColor);
+                }
                 if (this.gridHelper) {
                     this.scene.remove(this.gridHelper);
                     if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
@@ -2145,8 +2295,9 @@
              * @param {boolean} isFiring 當前幀是否觸發開火
              * @param {number} streamCount 彈道聯裝數 (2, 3, 4)
              * @param {boolean} [isPlaying=true] 是否處於戰鬥遊戲中
+             * @param {boolean} [isUnibeamActive=false] 胸口集束砲是否正在激發
              */
-            updateIronManKinematics(dt, time, isFiring, streamCount, isPlaying = true) {
+            updateIronManKinematics(dt, time, isFiring, streamCount, isPlaying = true, isUnibeamActive = false) {
                 if (!this.ironMan) return;
 
                 // 1. 水平跟隨與懸浮推進微浮動 (Bobbing)
@@ -2201,7 +2352,7 @@
                     if (this.recoilTimer < 0) this.recoilTimer = 0;
                 }
 
-                // 4. 多聯裝姿態目標角度判定 (Single vs Dual-Arm Stance vs Idle)
+                // 4. 多聯裝與英雄技能姿態目標角度判定 (Unibeam Stance vs Single vs Dual-Arm Stance vs Idle)
                 let targetRShoulderX = 0.12, targetRShoulderY = 0, targetRShoulderZ = -0.22;
                 let targetRElbowX = -0.25, targetRElbowY = 0, targetRElbowZ = 0.10;
                 let targetRHandX = 0, targetRHandY = 0, targetRHandZ = 0;
@@ -2211,7 +2362,16 @@
                 let targetLHandX = 0, targetLHandY = 0, targetLHandZ = 0;
 
                 if (isPlaying) {
-                    if (streamCount <= 2) {
+                    if (isUnibeamActive) {
+                        // 鋼鐵人胸口集束巨砲姿態：挺胸傲立，雙臂向後下沉蓄能穩定身體
+                        targetRShoulderX = 0.35; targetRShoulderY = 0; targetRShoulderZ = -0.38;
+                        targetRElbowX = -0.35;   targetRElbowY = 0;    targetRElbowZ = 0.15;
+                        targetRHandX = 0;        targetRHandY = 0;     targetRHandZ = 0;
+
+                        targetLShoulderX = 0.35; targetLShoulderY = 0; targetLShoulderZ = 0.38;
+                        targetLElbowX = -0.35;   targetLElbowY = 0;    targetLElbowZ = -0.15;
+                        targetLHandX = 0;        targetLHandY = 0;     targetLHandZ = 0;
+                    } else if (streamCount <= 2) {
                         // 雙聯裝：右手平舉瞄準 +Z，左手戒備微屈
                         targetRShoulderX = -1.45; targetRShoulderY = 0; targetRShoulderZ = 0;
                         targetRElbowX = -0.15;    targetRElbowY = 0;    targetRElbowZ = 0;
@@ -2274,10 +2434,38 @@
                 this.ironMan.leftArm.elbowPivot.rotation.set(this.lElbowX, this.lElbowY, this.lElbowZ);
                 this.ironMan.leftArm.handGroup.rotation.set(this.lHandX, this.lHandY, this.lHandZ);
 
-                // 胸部後座微後仰
-                const targetChestX = -kick * 0.4;
+                // 胸部挺起或後座微後仰
+                const targetChestX = isUnibeamActive ? 0.22 : (-kick * 0.4);
                 this.chestRotX += (targetChestX - this.chestRotX) * Math.min(1.0, dt * 18.0);
                 this.ironMan.chestGroup.rotation.x = this.chestRotX;
+
+                // 方舟反應爐高能充能脈衝與集束砲視覺連動
+                if (this.ironMan.reactorCore) {
+                    if (isUnibeamActive) {
+                        const pulse = 1.35 + Math.sin(time * 35.0) * 0.25;
+                        this.ironMan.reactorCore.scale.set(pulse, pulse, pulse);
+                    } else {
+                        this.ironMan.reactorCore.scale.set(1.0, 1.0, 1.0);
+                    }
+                }
+
+                // 胸口集束砲光柱動畫與旋轉同軸光環
+                if (this.unibeamGroup) {
+                    if (isUnibeamActive) {
+                        this.unibeamGroup.visible = true;
+                        const pulse = 0.75 + Math.sin(time * 30.0) * 0.2;
+                        if (this.unibeamOuterMat) this.unibeamOuterMat.opacity = Math.min(1.0, pulse * 0.75);
+                        if (this.unibeamInnerMat) this.unibeamInnerMat.opacity = Math.min(1.0, pulse * 0.95);
+                        if (this.unibeamRingMat) this.unibeamRingMat.opacity = Math.min(1.0, pulse * 0.85);
+                        if (this.unibeamRings) {
+                            for (let r = 0; r < this.unibeamRings.length; r++) {
+                                this.unibeamRings[r].rotation.z += dt * (8.0 + r * 2.5);
+                            }
+                        }
+                    } else {
+                        this.unibeamGroup.visible = false;
+                    }
+                }
 
                 // 7. 推進噴嘴火焰細節動畫
                 if (isPlaying) {
@@ -3052,6 +3240,21 @@
                 this.keyMoveLeft = false;
                 this.keyMoveRight = false;
 
+                // 英雄主動專屬技能資料結構 (遵守 Task 3 規格)
+                this.heroSkills = {
+                    unibeam: {
+                        cooldown: 12.0,
+                        timer: 0,
+                        duration: 1.2,
+                        activeTimer: 0,
+                        active: false
+                    },
+                    missiles: {
+                        cooldown: 8.0,
+                        timer: 0
+                    }
+                };
+
                 this.bindUI();
                 this.bindInputs();
                 this.initTheme();
@@ -3152,6 +3355,34 @@
                 document.getElementById('btn-upg-coins').addEventListener('click', () => {
                     if (gameStorage.upgrade('coinMultiplier')) this.renderMenu();
                 });
+
+                // 鋼鐵人英雄專屬技能 HUD 按鈕與遮罩 DOM 快取
+                this.btnSkillUnibeam = document.getElementById('btn-skill-unibeam');
+                this.cdMaskUnibeam = document.getElementById('cd-mask-unibeam');
+                this.cdTextUnibeam = document.getElementById('cd-text-unibeam');
+                this.btnSkillMissiles = document.getElementById('btn-skill-missiles');
+                this.cdMaskMissiles = document.getElementById('cd-mask-missiles');
+                this.cdTextMissiles = document.getElementById('cd-text-missiles');
+
+                if (this.btnSkillUnibeam) {
+                    const handleUnibeam = (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        this.triggerUnibeam();
+                    };
+                    this.btnSkillUnibeam.addEventListener('pointerdown', handleUnibeam);
+                    this.btnSkillUnibeam.addEventListener('click', handleUnibeam);
+                }
+
+                if (this.btnSkillMissiles) {
+                    const handleMissiles = (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        this.fireMicroMissiles();
+                    };
+                    this.btnSkillMissiles.addEventListener('pointerdown', handleMissiles);
+                    this.btnSkillMissiles.addEventListener('click', handleMissiles);
+                }
             }
 
             initTheme() {
@@ -3274,7 +3505,7 @@
                 window.addEventListener('pointerup', () => { isDragging = false; });
                 window.addEventListener('pointercancel', () => { isDragging = false; });
 
-                // 鍵盤 A/D / 左右箭頭控制
+                // 鍵盤 A/D / 左右箭頭操控 與 [E]/[Q] 英雄技能快捷鍵
                 window.addEventListener('keydown', (e) => {
                     if (this.state !== 'PLAYING') return;
                     if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
@@ -3282,6 +3513,12 @@
                     }
                     if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
                         this.keyMoveRight = true;
+                    }
+                    if (e.key === 'e' || e.key === 'E' || e.code === 'KeyE') {
+                        this.triggerUnibeam();
+                    }
+                    if (e.key === 'q' || e.key === 'Q' || e.code === 'KeyQ') {
+                        this.fireMicroMissiles();
                     }
                     const guide = document.getElementById('drag-guide');
                     if (guide) guide.style.opacity = '0';
@@ -3309,6 +3546,22 @@
                 this.lastShootTime = -999; // 立即觸發首波並排齊射
                 this.shakeAmount = 0;
                 this.entityMgr.resetAll();
+
+                // 重設英雄專屬主動技能狀態與物件池
+                this.heroSkills.unibeam.active = false;
+                this.heroSkills.unibeam.activeTimer = 0;
+                this.heroSkills.unibeam.timer = 0;
+                this.heroSkills.missiles.timer = 0;
+                if (this.threeScene.unibeamGroup) {
+                    this.threeScene.unibeamGroup.visible = false;
+                }
+                if (this.threeScene.missilePool) {
+                    this.threeScene.missilePool.forEach(m => {
+                        m.active = false;
+                        m.mesh.visible = false;
+                    });
+                }
+                this.updateHeroSkillsHUD();
 
                 // 同步當前等級的砲管外觀
                 this.threeScene.updateCannonBarrels(gameStorage.getStreamColumnCount());
@@ -3349,6 +3602,17 @@
             endGame(isVictory) {
                 this.state = 'GAMEOVER';
                 this.lastResultWon = isVictory;
+
+                // 關閉集束砲與導彈視覺效果
+                this.heroSkills.unibeam.active = false;
+                this.heroSkills.unibeam.activeTimer = 0;
+                if (this.threeScene.unibeamGroup) this.threeScene.unibeamGroup.visible = false;
+                if (this.threeScene.missilePool) {
+                    this.threeScene.missilePool.forEach(m => {
+                        m.active = false;
+                        m.mesh.visible = false;
+                    });
+                }
 
                 if (isVictory) {
                     soundFX.playVictory();
@@ -3565,6 +3829,409 @@
                 }
             }
 
+            /**
+             * 觸發胸口集束巨砲 [E] (Unibeam Blast)
+             * 冷卻 12 秒，持續 1.2 秒沿 +Z 貫穿整個戰場
+             */
+            triggerUnibeam() {
+                if (this.state !== 'PLAYING') return;
+                if (this.heroSkills.unibeam.timer > 0) return;
+
+                soundFX.init();
+                this.heroSkills.unibeam.active = true;
+                this.heroSkills.unibeam.activeTimer = this.heroSkills.unibeam.duration;
+                this.heroSkills.unibeam.timer = this.heroSkills.unibeam.cooldown;
+
+                this.shakeAmount = 0.6;
+                if (soundFX.playUnibeam) soundFX.playUnibeam();
+                else soundFX.playBossWarning();
+
+                this.updateHeroSkillsHUD();
+            }
+
+            /**
+             * 觸發肩部微型追蹤導彈 [Q] (Shoulder Micro-Missiles)
+             * 冷卻 8 秒，從左右雙肩發射 6 枚高動態弧線追蹤導彈
+             */
+            fireMicroMissiles() {
+                if (this.state !== 'PLAYING') return;
+                if (this.heroSkills.missiles.timer > 0) return;
+
+                soundFX.init();
+                this.heroSkills.missiles.timer = this.heroSkills.missiles.cooldown;
+                this.shakeAmount = Math.max(this.shakeAmount, 0.2);
+
+                const leftX = this.cannonX - 0.38;
+                const rightX = this.cannonX + 0.38;
+                const spawnY = 1.6;
+                const spawnZ = 0.3;
+
+                let launched = 0;
+                const needed = 6;
+                for (let i = 0; i < this.threeScene.missilePool.length && launched < needed; i++) {
+                    const m = this.threeScene.missilePool[i];
+                    if (!m.active) {
+                        m.active = true;
+                        m.mesh.visible = true;
+                        const isLeft = (launched < 3);
+                        m.x = isLeft ? leftX : rightX;
+                        m.y = spawnY;
+                        m.z = spawnZ;
+                        m.vx = (Math.random() - 0.5) * 3.0 + (isLeft ? -1.2 : 1.2);
+                        m.vy = 6.0 + Math.random() * 3.0;
+                        m.vz = 10.0 + Math.random() * 4.0;
+                        m.life = 0;
+                        m.maxLife = 3.5;
+                        m.targetEnemy = this.findMissileTarget(launched);
+                        m.mesh.position.set(m.x, m.y, m.z);
+                        launched++;
+                    }
+                }
+
+                soundFX.playShoot();
+                this.updateHeroSkillsHUD();
+            }
+
+            /**
+             * 微型導彈自動導航搜尋前方活動敵軍（優先鎖定 Boss，其次石像鬼，其次紅軍步兵）
+             * @param {number} missileIndex 導彈索引，用於群體分散鎖定目標
+             */
+            findMissileTarget(missileIndex = 0) {
+                // 1. 優先鎖定活躍且在射程內的 Boss
+                if (this.entityMgr.boss.active && this.entityMgr.boss.z > 0.5) {
+                    return { type: 'boss', ref: this.entityMgr.boss };
+                }
+
+                // 2. 其次鎖定石像鬼 (按 z 由近到遠排序)
+                const activeGargoyles = [];
+                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                    const g = this.entityMgr.gargoyleList[k];
+                    if (g.active && g.z > 0.5) {
+                        activeGargoyles.push({ type: 'gargoyle', ref: g, index: k });
+                    }
+                }
+                if (activeGargoyles.length > 0) {
+                    activeGargoyles.sort((a, b) => a.ref.z - b.ref.z);
+                    return activeGargoyles[missileIndex % activeGargoyles.length];
+                }
+
+                // 3. 其次鎖定紅軍步兵 (按 z 由近到遠排序)
+                const activeReds = [];
+                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                    const r = this.entityMgr.redList[j];
+                    if (r.active && r.z > 0.5) {
+                        activeReds.push({ type: 'red', ref: r, index: j });
+                    }
+                }
+                if (activeReds.length > 0) {
+                    activeReds.sort((a, b) => a.ref.z - b.ref.z);
+                    return activeReds[missileIndex % activeReds.length];
+                }
+
+                return null;
+            }
+
+            /**
+             * 每幀更新英雄技能倒數與 HUD 遮罩
+             */
+            updateHeroSkills(dt) {
+                // 胸口集束巨砲倒數
+                if (this.heroSkills.unibeam.timer > 0) {
+                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - dt);
+                }
+                if (this.heroSkills.unibeam.active) {
+                    this.heroSkills.unibeam.activeTimer = Math.max(0, this.heroSkills.unibeam.activeTimer - dt);
+                    if (this.heroSkills.unibeam.activeTimer <= 0) {
+                        this.heroSkills.unibeam.active = false;
+                        if (this.threeScene.unibeamGroup) {
+                            this.threeScene.unibeamGroup.visible = false;
+                        }
+                    }
+                }
+
+                // 肩部微型導彈倒數
+                if (this.heroSkills.missiles.timer > 0) {
+                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - dt);
+                }
+
+                this.updateHeroSkillsHUD();
+            }
+
+            /**
+             * 同步更新 HUD 上英雄技能冷卻遮罩與倒數數字
+             */
+            updateHeroSkillsHUD() {
+                // Unibeam HUD
+                if (this.btnSkillUnibeam && this.cdMaskUnibeam && this.cdTextUnibeam) {
+                    const u = this.heroSkills.unibeam;
+                    if (u.timer > 0) {
+                        this.btnSkillUnibeam.classList.add('on-cd', 'disabled');
+                        const pct = (u.timer / u.cooldown) * 100;
+                        this.cdMaskUnibeam.style.height = `${pct.toFixed(1)}%`;
+                        this.cdTextUnibeam.innerText = `${u.timer.toFixed(1)}s`;
+                    } else {
+                        this.btnSkillUnibeam.classList.remove('on-cd', 'disabled');
+                        this.cdMaskUnibeam.style.height = '0%';
+                        this.cdTextUnibeam.innerText = '';
+                    }
+                }
+
+                // Missiles HUD
+                if (this.btnSkillMissiles && this.cdMaskMissiles && this.cdTextMissiles) {
+                    const m = this.heroSkills.missiles;
+                    if (m.timer > 0) {
+                        this.btnSkillMissiles.classList.add('on-cd', 'disabled');
+                        const pct = (m.timer / m.cooldown) * 100;
+                        this.cdMaskMissiles.style.height = `${pct.toFixed(1)}%`;
+                        this.cdTextMissiles.innerText = `${m.timer.toFixed(1)}s`;
+                    } else {
+                        this.btnSkillMissiles.classList.remove('on-cd', 'disabled');
+                        this.cdMaskMissiles.style.height = '0%';
+                        this.cdTextMissiles.innerText = '';
+                    }
+                }
+            }
+
+            /**
+             * 胸口集束巨砲全跑道貫穿傷害判定 (Unibeam Collisions)
+             */
+            updateUnibeamCollisions(dt) {
+                if (!this.heroSkills.unibeam.active) return;
+
+                const redList = this.entityMgr.redList;
+                const gargoyleList = this.entityMgr.gargoyleList;
+                const boss = this.entityMgr.boss;
+                const beamX = this.cannonX;
+
+                // 1. 貫穿消滅射線路徑上的所有紅軍步兵
+                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                    const r = redList[j];
+                    if (r.active && r.z > 0 && Math.abs(r.x - beamX) < 1.3) {
+                        r.active = false;
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+                        this.killsCount++;
+                        this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                        this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 6);
+                        soundFX.playHit();
+                    }
+                }
+
+                // 2. 射線路徑上的石像鬼承受高額重創
+                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                    const g = gargoyleList[k];
+                    if (g.active && g.z > 0 && Math.abs(g.x - beamX) < 1.4) {
+                        g.hp -= 25.0 * dt;
+                        this.entityMgr.spawnExplosion(g.x, g.y, g.z, 2);
+                        if (g.hp <= 0) {
+                            g.active = false;
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
+                            this.killsCount++;
+                            this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                            this.entityMgr.spawnExplosion(g.x, g.y, g.z, 6);
+                            soundFX.playHit();
+                        }
+                    }
+                }
+
+                // 3. 巨型 Boss 處於集束射線中每秒承受 50 點重創並被擊退
+                if (boss.active && boss.z > 0 && Math.abs(boss.x - beamX) < 1.6) {
+                    boss.hp -= 50 * dt;
+                    boss.z += 1.5 * dt; // 持續向後推擠擊退
+                    this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 1.2, boss.z, 2);
+                    this.entityMgr.updateBossHpBar();
+                    if (boss.hp <= 0) {
+                        boss.active = false;
+                        this.entityMgr.bossGroup.position.set(0, -999, 0);
+                        this.killsCount++;
+                        this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                        this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
+                        this.shakeAmount = 0.8;
+                        soundFX.playHit();
+                    }
+                }
+            }
+
+            /**
+             * 推進微型追蹤導彈，進行 Lerp 弧線導航與爆破解算 (0 GC)
+             */
+            updateMicroMissiles(dt) {
+                const pool = this.threeScene.missilePool;
+                if (!pool) return;
+
+                for (let i = 0; i < pool.length; i++) {
+                    const m = pool[i];
+                    if (!m.active) continue;
+
+                    m.life += dt;
+                    if (m.life >= m.maxLife) {
+                        m.active = false;
+                        m.mesh.visible = false;
+                        this.entityMgr.spawnExplosion(m.x, m.y, m.z, 4);
+                        continue;
+                    }
+
+                    // 1. 獲取目標即時座標或重新鎖定
+                    let tx = m.x, ty = 1.0, tz = m.z + 20.0;
+                    let targetValid = false;
+
+                    if (m.targetEnemy) {
+                        const t = m.targetEnemy;
+                        if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
+                            tx = this.entityMgr.boss.x;
+                            ty = 1.5;
+                            tz = this.entityMgr.boss.z;
+                            targetValid = true;
+                        } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
+                            tx = t.ref.x;
+                            ty = t.ref.y;
+                            tz = t.ref.z;
+                            targetValid = true;
+                        } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
+                            tx = t.ref.x;
+                            ty = 0.4;
+                            tz = t.ref.z;
+                            targetValid = true;
+                        }
+                    }
+
+                    // 若原目標失效，嘗試動態重新捕獲新目標
+                    if (!targetValid) {
+                        m.targetEnemy = this.findMissileTarget(i);
+                        if (m.targetEnemy) {
+                            const t = m.targetEnemy;
+                            if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
+                                tx = this.entityMgr.boss.x; ty = 1.5; tz = this.entityMgr.boss.z; targetValid = true;
+                            } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
+                                tx = t.ref.x; ty = t.ref.y; tz = t.ref.z; targetValid = true;
+                            } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
+                                tx = t.ref.x; ty = 0.4; tz = t.ref.z; targetValid = true;
+                            }
+                        }
+                    }
+
+                    // 2. 平滑轉向目標推進 (Homing Steering with Lerp)
+                    if (targetValid) {
+                        const dx = tx - m.x;
+                        const dy = ty - m.y;
+                        const dz = tz - m.z;
+                        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        if (dist > 0.1) {
+                            const targetSpeed = 24.0;
+                            const desiredVx = (dx / dist) * targetSpeed;
+                            const desiredVy = (dy / dist) * targetSpeed;
+                            const desiredVz = (dz / dist) * targetSpeed;
+                            const steer = Math.min(1.0, dt * 7.5);
+                            m.vx += (desiredVx - m.vx) * steer;
+                            m.vy += (desiredVy - m.vy) * steer;
+                            m.vz += (desiredVz - m.vz) * steer;
+                        }
+                    }
+
+                    // 3. 更新位置與網格姿態 (朝向速度向量，0 GC)
+                    m.x += m.vx * dt;
+                    m.y += m.vy * dt;
+                    m.z += m.vz * dt;
+                    m.mesh.position.set(m.x, m.y, m.z);
+                    m.mesh.lookAt(m.x + m.vx, m.y + m.vy, m.z + m.vz);
+
+                    if (m.flameMesh) {
+                        m.flameMesh.scale.set(1, 1, 0.8 + Math.random() * 0.5);
+                    }
+
+                    // 4. 碰撞命中檢測 (歐式距離平方判定)
+                    let hit = false;
+                    let hitType = null;
+                    let hitRef = null;
+                    let hitIndex = -1;
+
+                    // 優先判定鎖定目標
+                    if (m.targetEnemy) {
+                        const t = m.targetEnemy;
+                        if (t.type === 'boss' && this.entityMgr.boss.active) {
+                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
+                            if (dsq < 2.25) { hit = true; hitType = 'boss'; }
+                        } else if (t.type === 'gargoyle' && t.ref.active) {
+                            const dsq = (m.x - t.ref.x)**2 + (m.y - t.ref.y)**2 + (m.z - t.ref.z)**2;
+                            if (dsq < 0.9) { hit = true; hitType = 'gargoyle'; hitRef = t.ref; hitIndex = t.index; }
+                        } else if (t.type === 'red' && t.ref.active) {
+                            const dsq = (m.x - t.ref.x)**2 + (m.y - 0.4)**2 + (m.z - t.ref.z)**2;
+                            if (dsq < 0.8) { hit = true; hitType = 'red'; hitRef = t.ref; hitIndex = t.index; }
+                        }
+                    }
+
+                    // 範圍擦碰檢測 (若未命中指定目標)
+                    if (!hit) {
+                        if (this.entityMgr.boss.active) {
+                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
+                            if (dsq < 2.25) { hit = true; hitType = 'boss'; }
+                        }
+                    }
+                    if (!hit) {
+                        for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                            const g = this.entityMgr.gargoyleList[k];
+                            if (g.active) {
+                                const dsq = (m.x - g.x)**2 + (m.y - g.y)**2 + (m.z - g.z)**2;
+                                if (dsq < 0.9) { hit = true; hitType = 'gargoyle'; hitRef = g; hitIndex = k; break; }
+                            }
+                        }
+                    }
+                    if (!hit) {
+                        for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                            const r = this.entityMgr.redList[j];
+                            if (r.active) {
+                                const dsq = (m.x - r.x)**2 + (m.y - 0.4)**2 + (m.z - r.z)**2;
+                                if (dsq < 0.8) { hit = true; hitType = 'red'; hitRef = r; hitIndex = j; break; }
+                            }
+                        }
+                    }
+
+                    // 接觸地面或超出場景邊界自爆
+                    if (!hit && (m.y <= 0.1 || m.z >= 75)) {
+                        hit = true;
+                    }
+
+                    // 5. 命中解算與爆破傷害 (30 點傷害)
+                    if (hit) {
+                        m.active = false;
+                        m.mesh.visible = false;
+                        this.entityMgr.spawnExplosion(m.x, m.y, m.z, 6);
+                        soundFX.playHit();
+
+                        if (hitType === 'boss') {
+                            const boss = this.entityMgr.boss;
+                            boss.hp -= 30;
+                            boss.z += 0.4; // 爆破推力擊退
+                            this.entityMgr.updateBossHpBar();
+                            if (boss.hp <= 0) {
+                                boss.active = false;
+                                this.entityMgr.bossGroup.position.set(0, -999, 0);
+                                this.killsCount++;
+                                this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                                this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
+                                this.shakeAmount = 0.8;
+                            }
+                        } else if (hitType === 'gargoyle' && hitRef) {
+                            hitRef.hp -= 30;
+                            if (hitRef.hp <= 0) {
+                                hitRef.active = false;
+                                _tempMatrix.makeTranslation(0, -999, 0);
+                                this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
+                                this.killsCount++;
+                                this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                            }
+                        } else if (hitType === 'red' && hitRef) {
+                            hitRef.active = false;
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
+                            this.killsCount++;
+                            this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                        }
+                    }
+                }
+            }
+
             loop() {
                 const dt = Math.min(this.clock.getDelta(), 0.1);
                 const time = this.clock.getElapsedTime();
@@ -3595,6 +4262,9 @@
                         }
                         soundFX.playShoot();
                     }
+
+                    // 英雄專屬技能冷卻倒數
+                    this.updateHeroSkills(dt);
 
                     // 波次生成
                     if (this.mode === 'STAGE') {
@@ -3672,15 +4342,26 @@
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
                     this.handleCollisions();
+                    this.updateUnibeamCollisions(dt);
+                    this.updateMicroMissiles(dt);
 
                     this.updateHUD();
                 } else {
+                    this.updateHeroSkills(dt);
+                    this.updateMicroMissiles(dt);
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
                 }
 
-                // 更新鋼鐵人運動學、後座力與多聯裝姿態切換 (零 GC)
-                this.threeScene.updateIronManKinematics(dt, time, isFiring, streamCount, this.state === 'PLAYING');
+                // 更新鋼鐵人運動學、後座力、多聯裝與英雄技能姿態切換 (零 GC)
+                this.threeScene.updateIronManKinematics(
+                    dt,
+                    time,
+                    isFiring,
+                    streamCount,
+                    this.state === 'PLAYING',
+                    this.heroSkills.unibeam.active
+                );
 
                 // 相機震動
                 if (this.shakeAmount > 0) {
