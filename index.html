@@ -249,6 +249,105 @@
             50% { opacity: 0.45; transform: translateX(-50%) scale(0.96); }
         }
 
+        /* 鋼鐵人英雄技能 HUD 樣式 */
+        #hero-skill-bar {
+            position: absolute;
+            right: 18px;
+            bottom: 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 25;
+            pointer-events: auto;
+        }
+
+        .hero-skill-btn {
+            position: relative;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(14, 23, 38, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(56, 189, 248, 0.55);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(56, 189, 248, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            outline: none;
+            transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hero-skill-btn:hover {
+            transform: scale(1.08);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.65), inset 0 0 16px rgba(56, 189, 248, 0.25);
+        }
+
+        .hero-skill-btn:active {
+            transform: scale(0.94);
+        }
+
+        .hero-skill-btn .skill-icon {
+            font-size: 24px;
+            line-height: 1;
+            pointer-events: none;
+            z-index: 2;
+            filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
+        }
+
+        .hero-skill-btn .skill-key {
+            position: absolute;
+            top: 2px;
+            right: 5px;
+            font-size: 10px;
+            font-weight: 800;
+            font-family: Consolas, monospace;
+            color: #38bdf8;
+            pointer-events: none;
+            z-index: 2;
+            text-shadow: 0 0 5px rgba(56, 189, 248, 0.9);
+        }
+
+        .hero-skill-btn .skill-cd-mask {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(15, 23, 42, 0.78);
+            pointer-events: none;
+            z-index: 3;
+            transition: height 0.1s linear;
+        }
+
+        .hero-skill-btn .skill-cd-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 15px;
+            font-weight: 900;
+            font-family: Consolas, monospace;
+            color: #ffffff;
+            pointer-events: none;
+            z-index: 4;
+            text-shadow: 0 0 6px #000;
+            display: none;
+        }
+
+        .hero-skill-btn.on-cd {
+            opacity: 0.75;
+            cursor: not-allowed;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-skill-btn.on-cd .skill-cd-text {
+            display: block;
+        }
+
         /* 模態彈窗 (主頁、升級、過關、失敗) */
         .modal-overlay {
             position: absolute;
@@ -602,6 +701,22 @@
         <div class="drag-guide" id="drag-guide">
             <span>↔️</span>
             <span>左右滑動或使用 A/D 鍵操控砲台</span>
+        </div>
+
+        <!-- 鋼鐵人英雄技能 HUD -->
+        <div id="hero-skill-bar">
+            <button class="hero-skill-btn" id="btn-skill-unibeam" title="胸口集束巨砲 [E]">
+                <div class="skill-icon">⚡</div>
+                <div class="skill-key">E</div>
+                <div class="skill-cd-mask" id="cd-mask-unibeam"></div>
+                <div class="skill-cd-text" id="cd-text-unibeam"></div>
+            </button>
+            <button class="hero-skill-btn" id="btn-skill-missiles" title="肩部微型導彈 [Q]">
+                <div class="skill-icon">🚀</div>
+                <div class="skill-key">Q</div>
+                <div class="skill-cd-mask" id="cd-mask-missiles"></div>
+                <div class="skill-cd-text" id="cd-text-missiles"></div>
+            </button>
         </div>
     </div>
 
@@ -1294,6 +1409,479 @@
         const _dummy = new THREE.Object3D();
 
         // =========================================================================
+        // 3.5 鋼鐵人 3D 英雄材質與關節模型構建系統 (IronMan Mark IV PBR Hero System)
+        // =========================================================================
+
+        /**
+         * 建立高質感純金屬 PBR 材質庫 (免外部圖片依賴，100% 離線相容)
+         */
+        function createIronManMaterials() {
+            return {
+                armorRed: new THREE.MeshStandardMaterial({
+                    color: 0xb91c1c,
+                    roughness: 0.28,
+                    metalness: 0.85
+                }),
+                armorGold: new THREE.MeshStandardMaterial({
+                    color: 0xf59e0b,
+                    roughness: 0.24,
+                    metalness: 0.90
+                }),
+                jointDark: new THREE.MeshStandardMaterial({
+                    color: 0x1f2937,
+                    roughness: 0.55,
+                    metalness: 0.70
+                }),
+                arcGlow: new THREE.MeshBasicMaterial({
+                    color: 0x00f0ff
+                })
+            };
+        }
+
+        /**
+         * 構建階層式 3D 鋼鐵人英雄模型 (面朝 +Z，等比例適配跑道，總高度約 2.0 單位)
+         */
+        function createIronManHero(materials = createIronManMaterials()) {
+            const root = new THREE.Group();
+            root.name = 'IronManHeroRoot';
+            // 面朝戰場前方 +Z 跑道 (背面朝向玩家相機 -Z)
+            root.rotation.y = 0;
+            // 縮放約 0.62，使總高度約 2.08 單位，完美適配 11 寬度直式跑道
+            root.scale.set(0.62, 0.62, 0.62);
+
+            // 1. 骨盆與下腹節點 (Pelvis Group，未縮放下基準高 Y = 1.62)
+            const pelvisGroup = new THREE.Group();
+            pelvisGroup.position.set(0, 1.62, 0);
+            root.add(pelvisGroup);
+
+            // 骨盆裝甲 (Codpiece)
+            const codPiece = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.36, 0.32, 0.32, 18),
+                materials.armorRed
+            );
+            codPiece.scale.set(1.12, 1.0, 0.88);
+            codPiece.position.y = -0.06;
+            pelvisGroup.add(codPiece);
+
+            // 骨盆兩側金色動力護板
+            [-0.34, 0.34].forEach(xOff => {
+                const hipPlate = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.12, 0.24, 0.28),
+                    materials.armorGold
+                );
+                hipPlate.position.set(xOff, -0.05, 0.02);
+                pelvisGroup.add(hipPlate);
+            });
+
+            // 2. 脊椎與腹部護板 (Spine Group)
+            const spineGroup = new THREE.Group();
+            spineGroup.position.set(0, 0.16, 0);
+            pelvisGroup.add(spineGroup);
+
+            // 腹部核心結構
+            const abdomenCore = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.40, 0.34, 0.44, 20),
+                materials.jointDark
+            );
+            abdomenCore.scale.set(1.08, 1.0, 0.82);
+            abdomenCore.position.y = 0.22;
+            spineGroup.add(abdomenCore);
+
+            // 腹部三段流線護板 (金紅相間)
+            const abPlates = [
+                { y: 0.34, w: 0.32, h: 0.10, d: 0.16, mat: materials.armorGold },
+                { y: 0.22, w: 0.30, h: 0.09, d: 0.15, mat: materials.armorRed },
+                { y: 0.10, w: 0.28, h: 0.08, d: 0.14, mat: materials.armorGold }
+            ];
+            abPlates.forEach(p => {
+                const abMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(p.w, p.h, p.d),
+                    p.mat
+                );
+                abMesh.position.set(0, p.y, 0.24);
+                spineGroup.add(abMesh);
+            });
+
+            // 3. 胸腔總成節點 (Chest Group)
+            const chestGroup = new THREE.Group();
+            chestGroup.position.set(0, 0.46, 0);
+            spineGroup.add(chestGroup);
+
+            // 胸甲紅底本體
+            const chestBase = new THREE.Mesh(
+                new THREE.SphereGeometry(0.56, 24, 20),
+                materials.armorRed
+            );
+            chestBase.scale.set(1.18, 0.95, 0.80);
+            chestBase.position.set(0, 0.24, -0.02);
+            chestGroup.add(chestBase);
+
+            // 左右胸肌飾板與金色領口飾板
+            [-1, 1].forEach(side => {
+                const pec = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.36, 0.34, 0.20),
+                    materials.armorRed
+                );
+                pec.position.set(side * 0.24, 0.28, 0.28);
+                pec.rotation.y = side * 0.18;
+                pec.rotation.z = side * -0.08;
+                chestGroup.add(pec);
+
+                const collarGold = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.08, 0.32, 8, 12),
+                    materials.armorGold
+                );
+                collarGold.rotation.z = side * 1.15;
+                collarGold.position.set(side * 0.26, 0.46, 0.18);
+                chestGroup.add(collarGold);
+            });
+
+            // 方舟反應爐 (Arc Reactor)
+            const reactorGroup = new THREE.Group();
+            reactorGroup.position.set(0, 0.28, 0.38);
+            chestGroup.add(reactorGroup);
+
+            const reactorRing = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.14, 0.15, 0.05, 24),
+                materials.jointDark
+            );
+            reactorRing.rotation.x = Math.PI / 2;
+            reactorGroup.add(reactorRing);
+
+            const reactorCore = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.11, 0.11, 0.06, 24),
+                materials.arcGlow
+            );
+            reactorCore.rotation.x = Math.PI / 2;
+            reactorGroup.add(reactorCore);
+
+            // 背部推進噴嘴與飛行擾流片 (Back Thrusters & Flaps，朝向相機 -Z)
+            const backGroup = new THREE.Group();
+            backGroup.position.set(0, 0.26, -0.32);
+            chestGroup.add(backGroup);
+
+            const spineVent = new THREE.Mesh(
+                new THREE.BoxGeometry(0.16, 0.52, 0.12),
+                materials.armorGold
+            );
+            backGroup.add(spineVent);
+
+            const leftFlap = new THREE.Mesh(
+                new THREE.BoxGeometry(0.24, 0.38, 0.05),
+                materials.armorRed
+            );
+            leftFlap.position.set(0.25, 0.05, -0.06);
+            leftFlap.rotation.y = 0.22;
+            backGroup.add(leftFlap);
+
+            const rightFlap = new THREE.Mesh(
+                new THREE.BoxGeometry(0.24, 0.38, 0.05),
+                materials.armorRed
+            );
+            rightFlap.position.set(-0.25, 0.05, -0.06);
+            rightFlap.rotation.y = -0.22;
+            backGroup.add(rightFlap);
+
+            const thrusterGeo = new THREE.CylinderGeometry(0.08, 0.10, 0.12, 16);
+            thrusterGeo.rotateX(Math.PI / 2);
+            const backFlames = [];
+            [-0.18, 0.18].forEach(x => {
+                const nozzle = new THREE.Mesh(thrusterGeo, materials.jointDark);
+                nozzle.position.set(x, 0.14, -0.08);
+                backGroup.add(nozzle);
+
+                const thrusterFlame = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.06, 0.35, 12),
+                    materials.arcGlow
+                );
+                thrusterFlame.rotation.x = -Math.PI / 2;
+                thrusterFlame.position.set(x, 0.14, -0.26);
+                thrusterFlame.visible = false;
+                backGroup.add(thrusterFlame);
+                backFlames.push(thrusterFlame);
+            });
+
+            // 4. 頸部與頭部 (Head Group)
+            const neckGroup = new THREE.Group();
+            neckGroup.position.set(0, 0.54, 0.03);
+            chestGroup.add(neckGroup);
+
+            const neckJoint = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.18, 0.24, 0.20, 16),
+                materials.jointDark
+            );
+            neckJoint.position.y = 0.06;
+            neckGroup.add(neckJoint);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 0.20, 0.02);
+            neckGroup.add(headGroup);
+
+            const helmetBase = new THREE.Mesh(
+                new THREE.SphereGeometry(0.28, 24, 20),
+                materials.armorRed
+            );
+            helmetBase.scale.set(0.86, 1.10, 0.98);
+            helmetBase.position.set(0, 0.10, 0);
+            headGroup.add(helmetBase);
+
+            const faceplate = new THREE.Mesh(
+                new THREE.BoxGeometry(0.32, 0.36, 0.16),
+                materials.armorGold
+            );
+            faceplate.position.set(0, 0.08, 0.18);
+            headGroup.add(faceplate);
+
+            const chinPlate = new THREE.Mesh(
+                new THREE.BoxGeometry(0.16, 0.12, 0.14),
+                materials.armorGold
+            );
+            chinPlate.position.set(0, -0.10, 0.18);
+            headGroup.add(chinPlate);
+
+            // 雙眼青藍發光目鏡
+            const eyeGeo = new THREE.BoxGeometry(0.07, 0.022, 0.04);
+            [-0.085, 0.085].forEach(x => {
+                const eye = new THREE.Mesh(eyeGeo, materials.arcGlow);
+                eye.position.set(x, 0.11, 0.26);
+                eye.rotation.z = (x < 0 ? 0.12 : -0.12);
+                headGroup.add(eye);
+            });
+
+            // 兩側耳部圓盤飾蓋
+            [-0.26, 0.26].forEach(x => {
+                const earPuck = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16),
+                    materials.armorGold
+                );
+                earPuck.rotation.z = Math.PI / 2;
+                earPuck.position.set(x, 0.08, 0.01);
+                headGroup.add(earPuck);
+            });
+
+            // 5. 掌心閃光紋理 (Canvas Texture，離線 0 依賴)
+            const flashCanvas = document.createElement('canvas');
+            flashCanvas.width = 128;
+            flashCanvas.height = 128;
+            const fCtx = flashCanvas.getContext('2d');
+            const grad = fCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.3, '#38bdf8');
+            grad.addColorStop(0.7, 'rgba(2, 132, 199, 0.5)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            fCtx.fillStyle = grad;
+            fCtx.fillRect(0, 0, 128, 128);
+
+            const flashTex = new THREE.CanvasTexture(flashCanvas);
+            const flashMat = new THREE.SpriteMaterial({
+                map: flashTex,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+
+            // 6. 雙臂與掌心脈衝砲 (Arms Hierarchy)
+            function createArm(side) {
+                const shoulderPivot = new THREE.Group();
+                shoulderPivot.position.set(side * 0.62, 0.44, 0.0);
+                chestGroup.add(shoulderPivot);
+
+                const pauldron = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.28, 18, 14),
+                    materials.armorRed
+                );
+                pauldron.scale.set(1.10, 1.25, 0.95);
+                pauldron.position.set(side * 0.08, 0.02, 0);
+                shoulderPivot.add(pauldron);
+
+                const upperArm = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.18, 0.32, 10, 14),
+                    materials.armorRed
+                );
+                upperArm.position.set(side * 0.05, -0.28, 0);
+                shoulderPivot.add(upperArm);
+
+                const bicepGold = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.14, 0.24, 0.14),
+                    materials.armorGold
+                );
+                bicepGold.position.set(side * 0.05, -0.28, 0.08);
+                shoulderPivot.add(bicepGold);
+
+                const elbowPivot = new THREE.Group();
+                elbowPivot.position.set(side * 0.06, -0.52, 0.02);
+                shoulderPivot.add(elbowPivot);
+
+                const elbowJoint = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.14, 12, 10),
+                    materials.jointDark
+                );
+                elbowPivot.add(elbowJoint);
+
+                const forearm = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.17, 0.36, 12, 14),
+                    materials.armorRed
+                );
+                forearm.position.set(0, -0.24, 0.04);
+                elbowPivot.add(forearm);
+
+                const gauntletGold = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.16, 0.28, 0.12),
+                    materials.armorGold
+                );
+                gauntletGold.position.set(0, -0.22, 0.12);
+                elbowPivot.add(gauntletGold);
+
+                const handGroup = new THREE.Group();
+                handGroup.position.set(0, -0.52, 0.08);
+                elbowPivot.add(handGroup);
+
+                const palmMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.18, 0.14, 0.12),
+                    materials.armorRed
+                );
+                handGroup.add(palmMesh);
+
+                const repulsorNode = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.065, 0.065, 0.03, 16),
+                    materials.arcGlow
+                );
+                repulsorNode.rotation.x = Math.PI / 2;
+                repulsorNode.position.set(0, 0, 0.07);
+                handGroup.add(repulsorNode);
+
+                const flashSprite = new THREE.Sprite(flashMat);
+                flashSprite.scale.set(0.75, 0.75, 1);
+                flashSprite.position.set(0, 0, 0.22);
+                flashSprite.visible = false;
+                handGroup.add(flashSprite);
+
+                for (let f = 0; f < 4; f++) {
+                    const xOff = (f - 1.5) * 0.045;
+                    const finger = new THREE.Mesh(
+                        new THREE.CapsuleGeometry(0.022, 0.09, 6, 6),
+                        materials.armorGold
+                    );
+                    finger.position.set(xOff, -0.10, 0.02);
+                    finger.rotation.x = 0.35;
+                    handGroup.add(finger);
+                }
+
+                return { shoulderPivot, elbowPivot, handGroup, flashSprite };
+            }
+
+            const rightArm = createArm(-1);
+            const leftArm = createArm(1);
+
+            // 初始自然戰鬥戒備站姿 (手臂微曲、雙手待發)
+            rightArm.shoulderPivot.rotation.set(0.12, 0, -0.22);
+            rightArm.elbowPivot.rotation.set(-0.25, 0, 0.10);
+            leftArm.shoulderPivot.rotation.set(0.12, 0, 0.22);
+            leftArm.elbowPivot.rotation.set(-0.25, 0, -0.10);
+
+            // 7. 雙腿與推進戰靴 (Legs Hierarchy)
+            function createLeg(side) {
+                const hipPivot = new THREE.Group();
+                hipPivot.position.set(side * 0.32, -0.12, 0);
+                pelvisGroup.add(hipPivot);
+
+                const thighGold = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.22, 0.44, 12, 16),
+                    materials.armorGold
+                );
+                thighGold.position.set(0, -0.32, 0.02);
+                hipPivot.add(thighGold);
+
+                const thighRedOuter = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.12, 0.42, 0.24),
+                    materials.armorRed
+                );
+                thighRedOuter.position.set(side * 0.14, -0.32, 0.01);
+                hipPivot.add(thighRedOuter);
+
+                const kneePivot = new THREE.Group();
+                kneePivot.position.set(0, -0.66, 0.02);
+                hipPivot.add(kneePivot);
+
+                const kneeCap = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.18, 0.18, 0.14),
+                    materials.armorGold
+                );
+                kneeCap.position.set(0, 0, 0.12);
+                kneePivot.add(kneeCap);
+
+                const calfShaft = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.19, 0.48, 12, 16),
+                    materials.armorRed
+                );
+                calfShaft.position.set(0, -0.34, -0.01);
+                kneePivot.add(calfShaft);
+
+                const calfFin = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.08, 0.28, 0.16),
+                    materials.armorGold
+                );
+                calfFin.position.set(0, -0.30, -0.16);
+                kneePivot.add(calfFin);
+
+                const anklePivot = new THREE.Group();
+                anklePivot.position.set(0, -0.68, 0);
+                kneePivot.add(anklePivot);
+
+                const bootBase = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.24, 0.14, 0.44),
+                    materials.armorRed
+                );
+                bootBase.position.set(0, -0.07, 0.08);
+                anklePivot.add(bootBase);
+
+                const bootThruster = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.06, 0.07, 0.04, 14),
+                    materials.arcGlow
+                );
+                bootThruster.position.set(0, -0.14, 0.08);
+                anklePivot.add(bootThruster);
+
+                const bootFlame = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.08, 0.45, 12),
+                    materials.arcGlow
+                );
+                bootFlame.rotation.x = Math.PI;
+                bootFlame.position.set(0, -0.38, 0.08);
+                bootFlame.visible = false;
+                anklePivot.add(bootFlame);
+
+                return { hipPivot, kneePivot, anklePivot, bootFlame };
+            }
+
+            const rightLeg = createLeg(-1);
+            const leftLeg = createLeg(1);
+
+            // 雙腿微開穩健站姿
+            rightLeg.hipPivot.rotation.set(0, 0, -0.06);
+            rightLeg.kneePivot.rotation.set(0, 0, 0.04);
+            leftLeg.hipPivot.rotation.set(0, 0, 0.06);
+            leftLeg.kneePivot.rotation.set(0, 0, -0.04);
+
+            return {
+                root,
+                pelvisGroup,
+                spineGroup,
+                chestGroup,
+                neckGroup,
+                headGroup,
+                leftArm,
+                rightArm,
+                leftLeg,
+                rightLeg,
+                reactorCore,
+                flashSprites: [leftArm.flashSprite, rightArm.flashSprite],
+                backFlames,
+                leftFlap,
+                rightFlap
+            };
+        }
+
+        // =========================================================================
         // 4. Three.js 場景與相機管理 (ThreeGameScene)
         // =========================================================================
         class ThreeGameScene {
@@ -1388,15 +1976,31 @@
             createPlayerCannon() {
                 this.cannonGroup = new THREE.Group();
 
-                // 砲台底盤 (加寬以容納多聯裝砲管)
-                const baseGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.45, 18);
-                this.baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
+                // 科技戰術圓盤底座 (Tactical Deployment Disc)
+                const baseGeo = new THREE.CylinderGeometry(1.05, 1.25, 0.20, 24);
+                this.baseMat = new THREE.MeshStandardMaterial({
+                    color: 0x111c2e,
+                    roughness: 0.35,
+                    metalness: 0.8
+                });
                 const base = new THREE.Mesh(baseGeo, this.baseMat);
-                base.position.y = 0.22;
+                base.position.y = 0.10;
                 this.cannonGroup.add(base);
 
-                // 砲管專用材質 (快取複用)
-                this.barrelMat = new THREE.MeshLambertMaterial({ color: 0x00f0ff, emissive: 0x003366 });
+                // 底座外圈青藍霓虹光環 (Tactical Energy Ring)
+                const ringGeo = new THREE.TorusGeometry(1.05, 0.025, 8, 32);
+                ringGeo.rotateX(Math.PI / 2);
+                this.ringMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+                const ringMesh = new THREE.Mesh(ringGeo, this.ringMat);
+                ringMesh.position.y = 0.20;
+                this.cannonGroup.add(ringMesh);
+
+                // 砲管/微型發射口專用材質 (快取複用)
+                this.barrelMat = new THREE.MeshStandardMaterial({
+                    color: 0x00f0ff,
+                    roughness: 0.3,
+                    metalness: 0.8
+                });
                 this.barrelsGroup = null;
 
                 // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
@@ -1408,13 +2012,19 @@
                     opacity: 0.22
                 });
                 const aimLine = new THREE.Mesh(aimGeo, this.aimMat);
-                aimLine.position.set(0, 0.06, 18.5);
+                aimLine.position.set(0, 0.04, 18.5);
                 this.cannonGroup.add(aimLine);
+
+                // 建立鋼鐵人 3D 英雄模型並掛載至戰術砲台節點
+                this.ironManMaterials = createIronManMaterials();
+                this.ironMan = createIronManHero(this.ironManMaterials);
+                this.ironMan.root.position.set(0, 0.20, 0); // 雙腳穩踩戰術基座頂部
+                this.cannonGroup.add(this.ironMan.root);
 
                 this.cannonGroup.position.set(0, 0, 0);
                 this.scene.add(this.cannonGroup);
 
-                // 預設建立雙聯裝砲管
+                // 預設建立雙聯裝微型發射埠
                 this.updateCannonBarrels(2);
             }
 
@@ -1432,15 +2042,15 @@
 
                 this.barrelsGroup = new THREE.Group();
                 const spacing = 0.4;
-                const radius = (streamCount >= 4) ? 0.15 : (streamCount === 3 ? 0.18 : 0.22);
 
+                // 隱蔽整合至戰術圓盤邊緣的微型能量發射埠 (提供多聯裝升級的微妙科技反饋，不遮擋鋼鐵人英姿)
                 for (let i = 0; i < streamCount; i++) {
                     const offset = (i - (streamCount - 1) / 2) * spacing;
-                    const barrelGeo = new THREE.CylinderGeometry(radius * 0.8, radius, 1.3, 12);
-                    barrelGeo.rotateX(Math.PI / 2);
-                    const barrel = new THREE.Mesh(barrelGeo, this.barrelMat);
-                    barrel.position.set(offset, 0.4, 0.55);
-                    this.barrelsGroup.add(barrel);
+                    const portGeo = new THREE.CylinderGeometry(0.045, 0.055, 0.12, 12);
+                    portGeo.rotateX(Math.PI / 2);
+                    const port = new THREE.Mesh(portGeo, this.barrelMat);
+                    port.position.set(offset, 0.12, 1.12);
+                    this.barrelsGroup.add(port);
                 }
 
                 this.cannonGroup.add(this.barrelsGroup);
