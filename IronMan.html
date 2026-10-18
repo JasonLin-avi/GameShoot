@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鋼鐵人 (IronMan.jpg 藍軍英雄 / 3D UV 投影越肩射擊檢視器) — IronMan.html</title>
+    <style>
+        :root {
+            --bg-dark: #050b14;
+            --panel-bg: rgba(8, 18, 36, 0.92);
+            --border-color: rgba(56, 189, 248, 0.32);
+            --accent-blue: #0284c7;
+            --accent-cyan: #38bdf8;
+            --accent-gold: #f59e0b;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            color: var(--text-main);
+        }
+
+        canvas#webgl-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 戰術瞄準準心 (TPS Tactical Crosshair) */
+        .crosshair-container {
+            position: fixed;
+            top: 48%;
+            left: 52%; /* 配合越肩視角，準心稍微偏右，位於射線命中點 */
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.85;
+            transition: opacity 0.2s ease, transform 0.08s ease;
+        }
+
+        .crosshair {
+            width: 42px;
+            height: 42px;
+            border: 2px solid rgba(56, 189, 248, 0.75);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+        }
+
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #38bdf8;
+        }
+
+        .crosshair::before {
+            top: 50%;
+            left: -8px;
+            right: -8px;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        .crosshair::after {
+            left: 50%;
+            top: -8px;
+            bottom: -8px;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+
+        .crosshair-dot {
+            width: 6px;
+            height: 6px;
+            background: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        .crosshair-tag {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10.5px;
+            font-family: Consolas, monospace;
+            color: #38bdf8;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+            text-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+        }
+
+        /* 左上標題與藍軍英雄規格資訊面板 */
+        .hud-header {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px 18px;
+            max-width: 395px;
+            z-index: 20;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), inset 0 0 20px rgba(56, 189, 248, 0.06);
+        }
+
+        .hud-header h1 {
+            margin: 0 0 6px 0;
+            font-size: 18px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38bdf8;
+            letter-spacing: 0.02em;
+        }
+
+        .hud-header p {
+            margin: 0;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .spec-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(14, 165, 233, 0.18);
+            color: #7dd3fc;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .badge.blue {
+            background: rgba(2, 132, 199, 0.28);
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.55);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+        }
+
+        .badge.gold {
+            background: rgba(245, 158, 11, 0.20);
+            color: #fde68a;
+            border-color: rgba(251, 191, 36, 0.40);
+        }
+
+        .badge.red {
+            background: rgba(239, 68, 68, 0.20);
+            color: #fca5a5;
+            border-color: rgba(248, 113, 113, 0.38);
+        }
+
+        /* 右側控制面板 */
+        .control-panel {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            z-index: 20;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), inset 0 0 20px rgba(56, 189, 248, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #93c5fd;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .btn-group.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .btn-group.single-col {
+            grid-template-columns: 1fr;
+        }
+
+        button {
+            background: rgba(15, 29, 53, 0.85);
+            color: var(--text-main);
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        button:hover {
+            background: rgba(30, 58, 98, 0.95);
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+        }
+
+        button.action-btn {
+            background: linear-gradient(135deg, #0f2b48, #0369a1);
+            border-color: #38bdf8;
+            color: #e0f2fe;
+        }
+
+        button.action-btn:hover {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: #070d18;
+            font-weight: 700;
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+
+        .slider-label span:last-child {
+            color: #38bdf8;
+            font-weight: 700;
+            font-family: Consolas, monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        /* 左下原圖與去灰底擴邊貼圖對照浮窗 */
+        .ref-card {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px;
+            z-index: 20;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            display: flex;
+            gap: 10px;
+        }
+
+        .ref-card.hidden {
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ref-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .ref-card-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ref-card img,
+        .ref-card canvas {
+            width: 135px;
+            height: 135px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #111827;
+            display: block;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* 底部即時戰鬥數據列 */
+        .telemetry-bar {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 8px 22px;
+            font-size: 12px;
+            color: #cbd5e1;
+            display: flex;
+            gap: 20px;
+            z-index: 15;
+            white-space: nowrap;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .telemetry-bar strong {
+            color: #38bdf8;
+            font-family: Consolas, monospace;
+        }
+
+        .telemetry-bar span.red strong {
+            color: #f87171;
+        }
+
+        .telemetry-bar span.gold strong {
+            color: #fbbf24;
+        }
+
+        /* 快捷鍵操作提示窗 */
+        .help-tip {
+            font-size: 10.5px;
+            color: #64748b;
+            line-height: 1.4;
+            margin-top: 2px;
+            background: rgba(2, 6, 23, 0.5);
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px dashed rgba(56, 189, 248, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .hud-header {
+                max-width: 250px;
+                padding: 10px 12px;
+            }
+            .control-panel {
+                width: 230px;
+                padding: 12px;
+            }
+            .ref-card img,
+            .ref-card canvas {
+                width: 90px;
+                height: 90px;
+            }
+            .telemetry-bar {
+                font-size: 11px;
+                padding: 6px 14px;
+                gap: 12px;
+            }
+        }
+    </style>
+
+    <!-- 遵循 three-best-practices: setup-use-import-maps -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+
+    <!-- 戰術瞄準準心 -->
+    <div class="crosshair-container" id="crosshair-container">
+        <div class="crosshair">
+            <div class="crosshair-dot"></div>
+        </div>
+        <div class="crosshair-tag">TARGET LOCK // RED SQUADRON</div>
+    </div>
+
+    <!-- 左上角標題與規格資訊 -->
+    <div class="hud-header">
+        <h1>🦾 鋼鐵人 Mark IV (藍軍戰場先鋒)</h1>
+        <p>參照 <code>giant2.html</code> 規格，以 <code>IronMan.jpg</code> 為核心，透過<strong>解剖部位 UV 投影貼圖</strong>與形態學擴邊，建構高精細金屬戰甲關節模型。身為<strong>藍軍守護英雄</strong>，預設採用<strong>背後越肩射擊視角</strong>直擊紅軍！</p>
+        <div class="spec-badges">
+            <span class="badge blue">🔵 藍軍陣營</span>
+            <span class="badge">🎯 越肩背後開火視角</span>
+            <span class="badge gold">🎨 3D UV 投影貼圖</span>
+            <span class="badge red">💥 連續脈衝 / 胸口集束砲</span>
+        </div>
+    </div>
+
+    <!-- 右側互動控制面板 -->
+    <div class="control-panel">
+        <div class="section-title">
+            <span>戰鬥與射擊系統 (Combat)</span>
+            <span style="font-size: 10px; color:#38bdf8;">J.A.R.V.I.S. READY</span>
+        </div>
+        <div class="btn-group">
+            <button id="btn-fire-pulse" class="action-btn">⚡ 掌心連續脈衝</button>
+            <button id="btn-fire-unibeam" class="action-btn">💥 胸口集束光束</button>
+        </div>
+        <div class="btn-group">
+            <button id="btn-fire-missiles" class="action-btn">🚀 肩部微型導彈</button>
+            <button id="btn-toggle-autofire" class="active">🔄 自動連發開關</button>
+        </div>
+
+        <div class="section-title">戰甲姿態與飛行模式</div>
+        <div class="btn-group three-col">
+            <button id="btn-mode-tps" class="active">背後瞄準</button>
+            <button id="btn-mode-hover">懸浮推進</button>
+            <button id="btn-mode-bind">原圖立姿</button>
+        </div>
+        <div class="btn-group">
+            <button id="btn-toggle-motion" class="active">⏸ 暫停 / 恢復動力</button>
+            <button id="btn-dual-aim">👐 雙手齊射姿態</button>
+        </div>
+
+        <div class="section-title">快速戰術視角 (Camera Presets)</div>
+        <div class="btn-group">
+            <button id="cam-tps-back" class="active">⭐ 越肩背後視角</button>
+            <button id="cam-rear-chase">戰術正後方</button>
+            <button id="cam-front-hero">正面英雄檢視</button>
+            <button id="cam-side-profile">側面開火剖面</button>
+        </div>
+        <div class="btn-group single-col">
+            <button id="cam-tactical-top">🌐 全場戰略俯瞰視角</button>
+        </div>
+
+        <div class="section-title">裝甲貼圖與金屬光影</div>
+        <div class="btn-group">
+            <button id="btn-tex-projected" class="active">🎨 原圖 UV 貼圖</button>
+            <button id="btn-tex-solid">🧱 純 3D 金屬裝甲</button>
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                <span>反應爐與目鏡光度 (Glow)</span>
+                <span id="val-glow">2.0x</span>
+            </div>
+            <input type="range" id="slider-glow" min="0.5" max="3.5" step="0.1" value="2.0">
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                <span>紅軍推進速度 (Red Advance)</span>
+                <span id="val-red-speed">1.0x</span>
+            </div>
+            <input type="range" id="slider-red-speed" min="0.2" max="2.8" step="0.1" value="1.0">
+        </div>
+
+        <div class="section-title">紅軍陣營與輔助對照</div>
+        <div class="btn-group">
+            <button id="btn-respawn-red" class="action-btn">🔄 重整紅軍波次</button>
+            <button id="btn-toggle-ref" class="active">🖼 貼圖對照窗</button>
+        </div>
+        <div class="btn-group">
+            <button id="btn-toggle-turntable">🔄 慢速自轉展示</button>
+            <button id="btn-toggle-shield">🛡️ 能量防護罩</button>
+        </div>
+
+        <div class="help-tip">
+            💡 操作提示：點擊畫面或按 <strong>[空白鍵]</strong> 即時開火；按住 <strong>[滑鼠右鍵]</strong> 旋轉視角；按 <strong>[E]</strong> 發射胸口砲；按 <strong>[Q]</strong> 發射肩部導彈。
+        </div>
+    </div>
+
+    <!-- 左下角 IronMan.jpg 原圖與去灰底擴邊 UV 貼圖對照 -->
+    <div class="ref-card" id="ref-card">
+        <div class="ref-col">
+            <div class="ref-card-header">
+                <span>原始圖片 (IronMan.jpg)</span>
+            </div>
+            <img id="raw-ref-img" src="./IronMan.jpg" alt="IronMan Reference">
+        </div>
+        <div class="ref-col">
+            <div class="ref-card-header">
+                <span>UV 擴邊去灰底貼圖</span>
+                <span style="color:#38bdf8;">Dilated</span>
+            </div>
+            <canvas id="dilated-preview-canvas" width="224" height="224"></canvas>
+        </div>
+    </div>
+
+    <!-- 底部即時戰鬥數據列 -->
+    <div class="telemetry-bar">
+        <span>陣營: <strong style="color:#38bdf8;">藍軍 (BLUE ALLIANCE)</strong></span>
+        <span>視角: <strong id="tel-cam">越肩背後開火視角 (TPS)</strong></span>
+        <span>反應爐核心輸出: <strong id="tel-power">100%</strong></span>
+        <span class="gold">擊殺紅軍數: <strong id="tel-kills">0</strong></span>
+        <span class="red">即時 COMBO: <strong id="tel-combo">0x</strong></span>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 內嵌 IronMan.jpg Base64 Data URI，確保無論是在 file:// 協定或離線伺服器皆能零 CORS 限制處理像素
+        const IRONMAN_IMAGE_DATA_URI = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEBLAEsAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAPoApsDAREAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDy+rIFoAKACgAoAKACgYUAFABQAtABQAUAFABSAKYBQAAZOBQAUAFIAxQAUAGKYBSAKACgAoAMUAFABTAKQBTAKQBQAUAFAC0AJQAtACUAFABQAUAFABigAoASgAoAKACgAoAKACgAoAKAEoAMUwCgAoAKQCUABFABjFMApAFAxKYgoAKQBigBKADFABigYUAJQIKBhQISgAoAKAEoAKAEoAKACmBYoELQAUAFABQAUDCgAoAWgAoAKADFABQAUAFACUAFIBcUAGKACgAoAKYBSAKACgAoAKACgAoAKACgAxQAUAFABQAUAFABQAUAFABQAYoAKAEoAKACgAoAKBhQIKACgAoAKAExQAGgBCKAFoAKACgBKACmAUgDFMApAJQAUDCgQUDEoEFABQAUAJQAUAFAwoEJQAUDEoEFABigBKACgA/GmIsUAGKACgAoAWgAoGFABigAoAWgBMUALSAKYBQAlAC0AJQAtIAoAKACgAoAKAEoAWgAoASgAoAKACgAoAKAFoAKACgAoAKACgBKACgAoAKACgAoAKACgAoGFAhKACgAoAKACgAoAKACgAoAKAEoAKACgAoASgYUCCgAoASgAoAKACgBKACgAoGFAgoGFAhKBhQAmKBBQAYoASgAoASmBZoEFABQAUAFAxaACgAoAKACgBaQCUAFMAoAKAFoAKQBQAlAC0AGKBiUCFoASgAoAKACgAoAKYBQAUgCgAoAKACgAoAKACgAoAKACgAoAKAEoAWgYlAgoAKBhQIKACgAoAKBhQISgAoAWgBKACgAoASgAoAKACgAoASgAoAKBhQIKAEoAKACgAoGFAhKBhQAUCEoAKAEoAKACgBKYFmgQUAFABQAAUDFoAKACgAoAKACgApAFAC4pgFIApgJSAKAFoAKAEoAWgBKACgAoAKACgAoAKACgAoAKACgAoAKACgAoAKACgBKAFoASgAoAKACgAoGFAgoASgBaAuFAxKACgQUDCgQUDCgQUAJQAUAFABQAlABigYUAFAgoGGKAEoAKACgAoAKBBQMSgAoAKAEoEFABQMSgAoEFACYoAs0xBQAUAFABQMKAFoAKACgAoAKACgAoAKQBimAUALSAMUAGKACgAoAKAExQAUAFABQAUAGKACgAoAKYCUgFoAKACgYUCEoAKACgAoGFAgoGFABQISgAoGLQAlAhaBiUAFAgxQMKACgAoEFAxKBBQAUDCgQUAFACUAFAwoEFABQMSgAoEGKACgYUAFACUAFABQAUAJQIKACgBKAA0AJQAYoAsUxC0AFABQAUAFAwoAKAFoAKACgAxSAKAFoASmAUALSASgAoAKACgAoAKACgAoAKACgAoASgAoAKACgAoAKACgAoGFAgoAKACgAoGBoEFACUAFAwoEFABQAUDDFABQAUAFACUAFAgoGFAgoGFABQAlABQAUAFABQAUAJQIKBhQAUAFABQISgYUAFABQAlABQAUCEoGFAgpgJSASmBZoELigYUCDFAwoAKADFABigBaQBTAMUAGKQBimAuKQCUALimAYoAMUgCgAoASgAoAKAFoAKBiUCDFABQAYoASgAoAKACgAoAMUAFAwoEFABQAlAxaAEoAKBBQMKBBQMKACgQUDCgBKACgQUDCgBKAFoEJQMKBBQMKACgAxQAUAJQAUAFABQAUAFACUAFABQAUAFACUAFABQAlAgoGFABQAlAgoAQ0AWaYgoGLQIKBhQAUAFIBaYBQAUAFIAoAKYBQAtIApgGKACkAUAFABQMMUCCgAoAKACgBKADFABigAxQAlABQAYoGFAgxQAYoGGKACgQYoASgAoGFABQAYoAKAEoAWgAoASgAoAKACgAoASgAoAKAA0CCgAoAKBhQAUAJQIKBhQAUAFACUAFABigAoAKAEoAWgBKACgBKBBQAUDCgQlABQMKBCYpgWaBBQAtAwoAKACgAoAWgAoAKQBigAoAKYC0AFIAoAKADFABigAoAKADFABQAYoAMUAJQAuKAEoAKACgBG4FAAORQAUAFAwoAMUCCgYUAFAhKADFAwxQAUAGKAEoAWgBKACgAoAKACgAoAKAEoAKACgAoAKBBQMSgAoAKACgAoAKACgBKACgAoAMUAFABQAlABQAUAFACUAFABQAUAJQIKACmAlAFmgQUAFAxaACgAoAKAFoAKACgApAFABQAuKACgAoAKACgBaAExQAUAGKACgAoAKACgAoAKACgBKAAigAoAKAEoGFABQIKBhQAUCExQAYoAKBhQAlAgoGFABigAoAKACgAoAKAEoAKACgAoAKACgBKACgAoAKACgQUDCgAoAKACgBKACgAoASgAoAKACgAoAQ0AFAgoGFAhKACgYlAgpgWaBBQAUDCgBRQAUgCmAUALQAYoAKQBQAUwFpAJTAWkAUAFABQAUAFABQAUAFABQAlABigBaAEoAKACgAoGFAhKACgAoGFAgoASgAoGFABQAUAJQAUAFABQAUAFACUAHegAoAKACgAoAKAEoAKACgAxQAUCCgYUAFABQAUAJQAUAFABQAUAJQAUAFABQAlABQAGgBKBBQMKACgQlACUwLNAgoAWgYCgAoAWgAxQAUAFAC0AFIAoAKAFpgGKQBQAUAFABQAUAFABQAUAFABQAUAGKACgBKACgAoAKACgBKACgAxQMKBBQMSgAoEFAwoASgAoAKACgBKACgAoAKACgAoASgAoAKACgAoAKACgAoAKACgAoAKAExQAUAFABQAUAJQAUAFACGgAoAKACgBKACgAoAKAEoEFABQAUAWKYgoGGKBC0DCgApAFMBaACkAUwCkAtABTAKACkAUAFAC0AFABQAUAFMApAFABQAUAFACUAFABQAUAJQAUAFABQMKBBQMSgQUAFACUDCgAoAKAEoAKACgAoAKAEoAKACgAoAKACgAoAKAEoAWgAoASgAoAKACgAoAKACgBKACgAoADQAUAJQAUAFABQAlABQAUAJQIKBhQISgAoAsUxC0AFABQAtABSGFABimAUALSAKYBSAWgAoAKACgAoAWgBKAFoAKACgBKAFoAKAExQAUAFABQAUAFABQAlAwoEGKACgBKBhQAUCEoGFABQAlABQAUAFACUAFABQAUAFABQAlABQAUAFABQAUAFAAaACgAoAKACgBKACgAoAKACgAoASgAoAKACgBKACgAoAKAEoAKACgBKACgQlAFmmIKBi0AFAgoGLQAUgCmAUAFAC0gDFABimAUALSAKACgAoAKACgBaADFACUAFABQAUAFABQAUAFABQAUAJQAUAFABQMSgANAgoGJQAUCCgYUAJQAlABigAoAKACgAoASgAoAKACgAxQAUAFABQAUAJQAUAFAC0AJQAUAFABQAlABQAUAFABQAUAJQAGgAoASgAoASgAoAKAEoAKBCUDLVMkKAFoGFABQAUgFoAKYBQAUAFIBaACgApgLSAKACgAoAKACgAoAWgBKACgAoAKACgAoAKACgAoAKAEoAKACgAoASgAoGFAhKBhigAoASgAoAKAEoAKACgBKACgAoAKACgAoASgAxQAUAFABigAoAKACgAoAKACgAoASgAoAKACgAoASgAoAKACgBKACgBKACgAoASgAoEJQAUxlqgkKAFoGFABigAoAWgAoAKACgApALQAUAFMBaQBQAYoAKACgAxQAYoAMUAFABQAUAGKADFABigAoAKADFABQMSgQYoAMUAGKAExQMKBBQAYoGJQIMUDExQAUAGKAExQAUAFACUAGKACgAxQAlABQAUAFABQAUAFABQAUAFABQAlAC0AJQAUAFABQAUAJQAUAFACUAFABQAlABQISgYUAFABQAlAhMUAW8UxBQAtABQMKACkAUALQAUwDFIAoAKAFoAKADFAC0AFABQAUAFAC0AJQAUAFABQAtACUAFABQAYoAMUAFABigAoATFABigAoGGKBCUAGKACgYYoATFABQAmKADFACUAGKACgBKACgAoAKAExQAUAFABQAUAFABQAUAFACYoAWgBKACgAoAKACgBKACgAoAKAEoAKACgBDQAUAJQIKBhQAlACGgQYoAt4piCgYtABQAYoAMUgFxQAUwDFIAxQAtABigAxQAuKADFABQAYoAKADFABigBaACgBKAFoAKAExQAuKAEoAWgAxQAmKADFABigAxQAUAFACYoAKADFABigYYoAMUAJigAxQAmKAExQAYoASgAxQAUAJQAYoAMUAGKACgBKADFABQAYoAKACgBKAFoAKAEoAKACgAoASgAoAKADFABQAlABQAUAJQIKBiUAFABQISgBDQMMUCLeKYgoAWgYUCCkAtMYUgCmAtABSAKACgAxQAtABQAUALQAlABQAtABQAUAFABQAUAFABQAUAFABQAlAC4oATFABQAY5oAKACgAoAMUAGKBi7QBknH1pNpbmlKjUrPlpxbfkAy2fLjlkxydiE4rGWIprqezR4cx1RXcVH1ZXluREFLwTAN90lev09aX1iLOmXCmNir3WnmQNqlqrlZPMjIOPmT/AAzVqtFnn1skxdLVpP0ZYhnhn/1MqP7A8/lWiaex5tSjUpfHFokIpmYmKAExQAmKADFACUAFABigAxQAUAFABQAUAJQAUAGKACgAoAKBCUDCgAoAKACgBKACgAoAKAEoAKAExQAUAFACYoAKAEoEFACUDEoEXAKYgoAUUDCgApALTAKQBQAUwFpAFABQAUALQAUAFABQAUALQAlAC0AFABQAUAFABQAUAFABQAUAFABQAlABQAYoAKACgBaAHRxtI6oilmJwAO9AWLng7TZfFPieHSrNlSIbpJ5yeFjXliP5A+pFYSqtvlie7TypUcP9ZxPXZeb7nb/Crwh4f1Epca7rSLdM2FtAvT0y7Ag/TFcsEqrvKR9Zmc62WR9lgqHur7X/AAFqe+R6b4d0KDypFsbaNhyJ3VQfwPH5CuvkhBHxLxGNxcuaPNJ+V/0OW1mHwTrGtWMtkmm3+qWrmRLa1dF8zAzuYjghcZ+uB3rCaopqXbselCpmuFw06dTmjGateV/wv329NT5p8T/D7xDb3xR9P+WRz+8imSXA65wpJ/MVyRrwva59FWzLC1acYwdnZXMTxYn9i2OlWkcZiubqEXsyN96NCSIkPocAsfdxXY9LWPAw9q/POe7f3Lov67C6Hfvc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";
+
+        // =========================================================================
+        // 1. 預配置暫存變數 (遵循 three-best-practices: render-avoid-allocations)
+        // =========================================================================
+        const clock = new THREE.Clock();
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const _tempVec3 = new THREE.Vector3();
+        const _tempVec3B = new THREE.Vector3();
+        const _tempVec3C = new THREE.Vector3();
+        const _tempNormal = new THREE.Vector3();
+        const _normalMatrix = new THREE.Matrix3();
+
+        const state = {
+            // 模式狀態
+            stanceMode: 'tps', // 'tps' (背後瞄準), 'hover' (空中懸浮推進), 'bind' (原圖立姿)
+            isMotionActive: true,
+            autoFire: true,
+            useProjectedTexture: true,
+            dualAim: false,
+            turntable: false,
+            shieldActive: false,
+
+            // 戰鬥與光影參數
+            glowStrength: 2.0,
+            redSpeedMult: 1.0,
+            arcPower: 100,
+            kills: 0,
+            combo: 0,
+            comboTimer: 0,
+            lastFireTime: 0,
+            fireInterval: 0.16, // 連發射擊間隔
+            unibeamActive: false,
+            unibeamTimer: 0,
+            recoilTimer: 0,
+
+            // 懸浮與推進動態
+            hoverElevation: 0,
+            flamePulse: 0
+        };
+
+        // =========================================================================
+        // 2. 建立場景、相機與渲染器 (遵循 three-best-practices)
+        // =========================================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050b14);
+        scene.fog = new THREE.FogExp2(0x050b14, 0.016);
+
+        // 預設相機：遵從使用者需求，採用【對著紅軍射擊的從背面看過去的越肩視角】
+        // 鋼鐵人站於 (0, 0, 0) 面朝 -Z (紅軍來襲方向)。
+        // 經典 TPS 越肩視角：相機置於鋼鐵人右後方 (1.15, 2.25, 3.80)，視線穿越右肩與準心，朝向前方戰場 (0.15, 1.85, -16.0)。
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.2, 140);
+        camera.position.set(1.15, 2.25, 3.80);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.domElement.id = 'webgl-canvas';
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.18;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        // 焦點鎖定在鋼鐵人前方與紅軍交火的開闊戰場中線
+        controls.target.set(0.10, 1.85, -16.0);
+        controls.minDistance = 2.0;
+        controls.maxDistance = 50.0;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+        // =========================================================================
+        // 3. 燈光配置 (遵循 lighting-limit-lights <= 3)
+        // =========================================================================
+        // 1. 半球環境光 (天空湛藍 0x60a5fa, 地面深色 0x0f172a)
+        const hemiLight = new THREE.HemisphereLight(0x7dd3fc, 0x0f172a, 1.35);
+        hemiLight.position.set(0, 25, 0);
+        scene.add(hemiLight);
+
+        // 2. 主方向光：從後上方照射 (照亮背甲線條與金屬反射，並向前投射影子)
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 2.2);
+        dirLight.position.set(5.0, 12.0, 8.0);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 1.0;
+        dirLight.shadow.camera.far = 45.0;
+        const shadowExtent = 10.0;
+        dirLight.shadow.camera.left = -shadowExtent;
+        dirLight.shadow.camera.right = shadowExtent;
+        dirLight.shadow.camera.top = shadowExtent;
+        dirLight.shadow.camera.bottom = -shadowExtent;
+        dirLight.shadow.bias = -0.0004;
+        scene.add(dirLight);
+
+        // 3. 戰場遠方迎面冷光 (Rim light)：照亮紅軍正面與鋼鐵人背影輪廓
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.15);
+        rimLight.position.set(-4.0, 7.0, -18.0);
+        scene.add(rimLight);
+
+        // =========================================================================
+        // 4. 藍軍防守平台與戰場跑道環境 (Blue Base Runway)
+        // =========================================================================
+        const arenaGroup = new THREE.Group();
+        scene.add(arenaGroup);
+
+        const trackWidth = 14;
+        const trackLength = 70;
+        const groundGeo = new THREE.PlaneGeometry(trackWidth, trackLength);
+        groundGeo.rotateX(-Math.PI / 2);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x0a1424,
+            roughness: 0.55,
+            metalness: 0.45
+        });
+        const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+        groundMesh.position.set(0, 0, -18);
+        groundMesh.receiveShadow = true;
+        arenaGroup.add(groundMesh);
+
+        // 戰場高科技藍色霓虹格線
+        const gridHelper = new THREE.GridHelper(trackWidth, 14, 0x38bdf8, 0x1e3a5f);
+        gridHelper.position.set(0, 0.015, -18);
+        gridHelper.scale.z = trackLength / trackWidth;
+        arenaGroup.add(gridHelper);
+
+        // 兩側發光防護導軌 (Blue Energy Rails)
+        const railGeo = new THREE.BoxGeometry(0.25, 0.45, trackLength);
+        const railMat = new THREE.MeshStandardMaterial({
+            color: 0x0369a1,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.7,
+            roughness: 0.25,
+            metalness: 0.8
+        });
+        const leftRail = new THREE.Mesh(railGeo, railMat);
+        leftRail.position.set(-trackWidth / 2 - 0.12, 0.22, -18);
+        arenaGroup.add(leftRail);
+
+        const rightRail = new THREE.Mesh(railGeo, railMat);
+        rightRail.position.set(trackWidth / 2 + 0.12, 0.22, -18);
+        arenaGroup.add(rightRail);
+
+        // 藍軍防線能量警戒線 (Energy Boundary Gate at Z = -2.5)
+        const gateGeo = new THREE.BoxGeometry(trackWidth, 0.08, 0.35);
+        const gateMat = new THREE.MeshStandardMaterial({
+            color: 0x0284c7,
+            emissive: 0x38bdf8,
+            emissiveIntensity: 0.9,
+            roughness: 0.2
+        });
+        const gateMesh = new THREE.Mesh(gateGeo, gateMat);
+        gateMesh.position.set(0, 0.04, -2.5);
+        arenaGroup.add(gateMesh);
+
+        // 藍軍出擊底座 (Hex Platform at Z = 0)
+        const basePlatformGeo = new THREE.CylinderGeometry(2.6, 3.0, 0.14, 6);
+        const basePlatformMat = new THREE.MeshStandardMaterial({
+            color: 0x0f2240,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.4,
+            roughness: 0.35,
+            metalness: 0.75
+        });
+        const basePlatform = new THREE.Mesh(basePlatformGeo, basePlatformMat);
+        basePlatform.position.set(0, 0.07, 0);
+        basePlatform.receiveShadow = true;
+        arenaGroup.add(basePlatform);
+
+        // 底座邊緣發光環
+        const baseRingGeo = new THREE.RingGeometry(2.5, 2.7, 32);
+        baseRingGeo.rotateX(-Math.PI / 2);
+        const baseRingMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            side: THREE.DoubleSide
+        });
+        const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
+        baseRing.position.set(0, 0.15, 0);
+        arenaGroup.add(baseRing);
+
+        // =========================================================================
+        // 5. IronMan.jpg 去灰底與形態學色彩外擴處理 (Morphological Edge Dilation)
+        // =========================================================================
+        function buildDilatedTextures(img) {
+            const w = img.width;
+            const h = img.height;
+
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = w;
+            srcCanvas.height = h;
+            const srcCtx = srcCanvas.getContext('2d');
+            srcCtx.drawImage(img, 0, 0);
+            const srcData = srcCtx.getImageData(0, 0, w, h);
+            const pixels = srcData.data;
+
+            // 建立高純度前景遮罩 (1 = 鋼鐵人金屬戰甲像素, 0 = 灰階攝影背景與陰影)
+            const mask = new Uint8Array(w * h);
+            for (let y = 0; y < h; y++) {
+                const yp = y / h;
+                for (let x = 0; x < w; x++) {
+                    const xp = x / w;
+                    const idx = (y * w + x) * 4;
+                    const r = pixels[idx];
+                    const g = pixels[idx + 1];
+                    const b = pixels[idx + 2];
+
+                    const maxC = Math.max(r, g, b);
+                    const minC = Math.min(r, g, b);
+                    const sat = maxC - minC;
+                    const luma = (r + g + b) / 3;
+
+                    // 1. 經典鋼鐵人金屬熱血紅 (Hot-rod Red)
+                    const isRedArmor = (r > 80 && r > g + 18 && r > b + 18);
+                    // 2. 金色護甲 (Gold/Champagne)
+                    const isGoldArmor = (r > 115 && g > 90 && b < 135 && (r - b > 25));
+                    // 3. 反應爐與雙眼發光發白青光核心
+                    const isArcGlow = (luma > 215 && b >= g - 12 && xp > 0.40 && xp < 0.68 && yp > 0.20 && yp < 0.40);
+                    // 4. 戰甲深色機械關節 (Dark Gunmetal)
+                    const isGunmetal = (luma < 65 && xp > 0.25 && xp < 0.75 && yp > 0.18 && yp < 0.90);
+
+                    // 灰底判定：彩度極低 (sat < 16) 且在背景明度區間 (80 ~ 220)
+                    const isGreyBackground = (sat < 16 && luma >= 75 && luma <= 225);
+
+                    if (!isGreyBackground && (isRedArmor || isGoldArmor || isArcGlow || isGunmetal || sat > 20)) {
+                        mask[y * w + x] = 1;
+                    } else {
+                        mask[y * w + x] = 0;
+                    }
+                }
+            }
+
+            // 執行侵蝕 2px，清除攝影棚邊緣的抗鋸齒灰光暈
+            const erodedMask = new Uint8Array(mask);
+            for (let pass = 0; pass < 2; pass++) {
+                const prev = new Uint8Array(erodedMask);
+                for (let y = 1; y < h - 1; y++) {
+                    const yp = y / h;
+                    for (let x = 1; x < w - 1; x++) {
+                        const xp = x / w;
+                        // 臉部金面罩與反應爐核心保護不侵蝕
+                        if (yp > 0.18 && yp < 0.38 && xp > 0.42 && xp < 0.58) continue;
+                        const i = y * w + x;
+                        if (prev[i] === 1) {
+                            if (prev[i - 1] === 0 || prev[i + 1] === 0 || prev[i - w] === 0 || prev[i + w] === 0) {
+                                erodedMask[i] = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 執行 50 次形態學最近鄰外擴 (Nearest-Neighbor Color Dilation)
+            const outPixels = new Uint8ClampedArray(pixels);
+            const currMask = new Uint8Array(erodedMask);
+            const nextMask = new Uint8Array(erodedMask);
+
+            const dirs = [
+                [-1, 0], [1, 0], [0, -1], [0, 1],
+                [-1, -1], [1, -1], [-1, 1], [1, 1]
+            ];
+
+            for (let iter = 0; iter < 50; iter++) {
+                nextMask.set(currMask);
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = y * w + x;
+                        if (currMask[i] === 0) {
+                            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+                            for (let d = 0; d < 8; d++) {
+                                const nx = x + dirs[d][0];
+                                const ny = y + dirs[d][1];
+                                const ni = ny * w + nx;
+                                if (currMask[ni] === 1) {
+                                    const nIdx = ni * 4;
+                                    sumR += outPixels[nIdx];
+                                    sumG += outPixels[nIdx + 1];
+                                    sumB += outPixels[nIdx + 2];
+                                    count++;
+                                }
+                            }
+                            if (count > 0) {
+                                const idx = i * 4;
+                                outPixels[idx] = Math.round(sumR / count);
+                                outPixels[idx + 1] = Math.round(sumG / count);
+                                outPixels[idx + 2] = Math.round(sumB / count);
+                                outPixels[idx + 3] = 255;
+                                nextMask[i] = 1;
+                            }
+                        }
+                    }
+                }
+                currMask.set(nextMask);
+            }
+
+            // 邊緣外圍填入經典鋼鐵人金屬深紅色
+            for (let i = 0; i < w * h; i++) {
+                if (currMask[i] === 0) {
+                    const idx = i * 4;
+                    outPixels[idx] = 175;
+                    outPixels[idx + 1] = 18;
+                    outPixels[idx + 2] = 28;
+                    outPixels[idx + 3] = 255;
+                }
+            }
+
+            const frontCanvas = document.createElement('canvas');
+            frontCanvas.width = w;
+            frontCanvas.height = h;
+            const frontCtx = frontCanvas.getContext('2d');
+            frontCtx.putImageData(new ImageData(outPixels, w, h), 0, 0);
+
+            const previewCanvas = document.getElementById('dilated-preview-canvas');
+            if (previewCanvas) {
+                const pCtx = previewCanvas.getContext('2d');
+                pCtx.drawImage(frontCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+            }
+
+            const texture = new THREE.CanvasTexture(frontCanvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.flipY = true;
+            texture.needsUpdate = true;
+
+            return texture;
+        }
+
+        // =========================================================================
+        // 6. 鋼鐵人 PBR 高質感金屬材質系統 (遵循 material-reuse)
+        // =========================================================================
+        const solidMaterials = {
+            // 經典金屬烤漆紅 (Hot-rod Red)
+            armorRed: new THREE.MeshStandardMaterial({
+                color: 0xab1420,
+                roughness: 0.22,
+                metalness: 0.88
+            }),
+            armorRedDark: new THREE.MeshStandardMaterial({
+                color: 0x7a0b14,
+                roughness: 0.28,
+                metalness: 0.85
+            }),
+            // 奢華鈦金 (Titanium Gold)
+            armorGold: new THREE.MeshStandardMaterial({
+                color: 0xd4af37,
+                roughness: 0.24,
+                metalness: 0.92
+            }),
+            // 機械關節深色合金 (Gunmetal)
+            jointDark: new THREE.MeshStandardMaterial({
+                color: 0x22262c,
+                roughness: 0.42,
+                metalness: 0.78
+            }),
+            // 反應爐與掌心噴射口發光核心 (Cyan Glow)
+            arcGlow: new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0x00f0ff,
+                emissiveIntensity: state.glowStrength,
+                roughness: 0.1,
+                metalness: 0.1
+            }),
+            // 雙眼發光目鏡
+            eyeGlow: new THREE.MeshBasicMaterial({
+                color: 0xe0f7fa
+            })
+        };
+
+        // 原圖 UV 投影貼圖專用材質 (融合金屬反射度與 PBR)
+        const projectedMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.25,
+            metalness: 0.78,
+            emissive: 0x333333,
+            emissiveIntensity: 0.25
+        });
+
+        // =========================================================================
+        // 7. 建構鋼鐵人關節骨骼 3D 模型 (Iron Man Hierarchy)
+        // =========================================================================
+        const uvBakeTargets = [];
+
+        function registerMeshForUV(mesh, partType, fallbackMat) {
+            mesh.geometry = mesh.geometry.clone();
+            mesh.userData.partType = partType;
+            mesh.userData.fallbackMat = fallbackMat;
+            mesh.material = projectedMaterial;
+            uvBakeTargets.push(mesh);
+            return mesh;
+        }
+
+        function createIronManHero() {
+            const root = new THREE.Group();
+            root.name = 'IronManHeroRoot';
+            root.position.set(0, 0, 0); // 位於藍軍防守基地中心
+
+            // 骨盆與下腹根節點 (Pelvis Group, 基準高度 Y = 1.62)
+            const pelvisGroup = new THREE.Group();
+            pelvisGroup.position.set(0, 1.62, 0);
+            root.add(pelvisGroup);
+
+            // -----------------------------------------------------------------
+            // A. 骨盆與腰部護甲 (Pelvis & Hip Armor)
+            // -----------------------------------------------------------------
+            const codPiece = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.32, 0.32, 18), solidMaterials.armorRed),
+                'pelvis', solidMaterials.armorRed
+            );
+            codPiece.scale.set(1.12, 1.0, 0.88);
+            codPiece.position.y = -0.06;
+            codPiece.castShadow = true;
+            codPiece.receiveShadow = true;
+            pelvisGroup.add(codPiece);
+
+            // 腰際金色側向動力飾板
+            [-0.34, 0.34].forEach(xOff => {
+                const hipPlate = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.24, 0.28), solidMaterials.armorGold),
+                    'pelvis', solidMaterials.armorGold
+                );
+                hipPlate.position.set(xOff, -0.05, 0.02);
+                hipPlate.castShadow = true;
+                pelvisGroup.add(hipPlate);
+            });
+
+            // -----------------------------------------------------------------
+            // B. 脊椎、腹部六塊流線護板與厚實金屬胸甲 (Torso Hierarchy)
+            // -----------------------------------------------------------------
+            const spineGroup = new THREE.Group();
+            spineGroup.position.set(0, 0.16, 0);
+            pelvisGroup.add(spineGroup);
+
+            // 腹部核心結構
+            const abdomenCore = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.34, 0.44, 20), solidMaterials.jointDark),
+                'torso', solidMaterials.jointDark
+            );
+            abdomenCore.scale.set(1.08, 1.0, 0.82);
+            abdomenCore.position.y = 0.22;
+            abdomenCore.castShadow = true;
+            spineGroup.add(abdomenCore);
+
+            // 腹部分段式流線金屬護板 (金色與紅色相間)
+            const abPlates = [
+                { y: 0.34, w: 0.32, h: 0.10, d: 0.16, mat: solidMaterials.armorGold },
+                { y: 0.22, w: 0.30, h: 0.09, d: 0.15, mat: solidMaterials.armorRed },
+                { y: 0.10, w: 0.28, h: 0.08, d: 0.14, mat: solidMaterials.armorGold }
+            ];
+            abPlates.forEach(p => {
+                const abMesh = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), p.mat),
+                    'torso', p.mat
+                );
+                abMesh.position.set(0, p.y, 0.24);
+                abMesh.castShadow = true;
+                spineGroup.add(abMesh);
+            });
+
+            // 胸腔總成節點 (Chest Group)
+            const chestGroup = new THREE.Group();
+            chestGroup.position.set(0, 0.46, 0);
+            spineGroup.add(chestGroup);
+
+            const chestBase = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.56, 24, 20), solidMaterials.armorRed),
+                'torso', solidMaterials.armorRed
+            );
+            chestBase.scale.set(1.18, 0.95, 0.80);
+            chestBase.position.set(0, 0.24, -0.02);
+            chestBase.castShadow = true;
+            chestBase.receiveShadow = true;
+            chestGroup.add(chestBase);
+
+            // 左右胸肌金屬護板
+            [-1, 1].forEach(side => {
+                const pec = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.34, 0.20), solidMaterials.armorRed),
+                    'torso', solidMaterials.armorRed
+                );
+                pec.position.set(side * 0.24, 0.28, 0.28);
+                pec.rotation.y = side * 0.18;
+                pec.rotation.z = side * -0.08;
+                pec.castShadow = true;
+                chestGroup.add(pec);
+
+                // 領口上方金色流線飾板
+                const collarGold = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.32, 8, 12), solidMaterials.armorGold),
+                    'torso', solidMaterials.armorGold
+                );
+                collarGold.rotation.z = side * 1.15;
+                collarGold.position.set(side * 0.26, 0.46, 0.18);
+                collarGold.castShadow = true;
+                chestGroup.add(collarGold);
+            });
+
+            // -----------------------------------------------------------------
+            // C. 核心方舟反應爐 (Arc Reactor) & 胸口集束砲發射器
+            // -----------------------------------------------------------------
+            const reactorGroup = new THREE.Group();
+            reactorGroup.position.set(0, 0.28, 0.38);
+            chestGroup.add(reactorGroup);
+
+            // 外圈合金固定環
+            const reactorRing = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.05, 24), solidMaterials.jointDark),
+                'torso', solidMaterials.jointDark
+            );
+            reactorRing.rotation.x = Math.PI / 2;
+            reactorGroup.add(reactorRing);
+
+            // 內部發光核心 (Arc Reactor Core)
+            const reactorCore = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.11, 0.11, 0.06, 24),
+                solidMaterials.arcGlow
+            );
+            reactorCore.rotation.x = Math.PI / 2;
+            reactorGroup.add(reactorCore);
+
+            // -----------------------------------------------------------------
+            // D. 背部戰甲、飛行減速翼片 (Flight Flaps) 與背部推進器 (重要！背重視角核心)
+            // -----------------------------------------------------------------
+            const backGroup = new THREE.Group();
+            backGroup.position.set(0, 0.26, -0.32);
+            chestGroup.add(backGroup);
+
+            // 背部流線型脊柱散熱片 (Gold Spine Plates)
+            const spineVent = registerMeshForUV(
+                new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.52, 0.12), solidMaterials.armorGold),
+                'back_armor', solidMaterials.armorGold
+            );
+            spineVent.position.set(0, 0, 0);
+            spineVent.castShadow = true;
+            backGroup.add(spineVent);
+
+            // 左右背部飛行擾流氣動翼板 (可張開活動)
+            const leftFlap = registerMeshForUV(
+                new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.38, 0.05), solidMaterials.armorRed),
+                'back_armor', solidMaterials.armorRed
+            );
+            leftFlap.position.set(0.25, 0.05, -0.06);
+            leftFlap.rotation.y = 0.22;
+            leftFlap.castShadow = true;
+            backGroup.add(leftFlap);
+
+            const rightFlap = registerMeshForUV(
+                new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.38, 0.05), solidMaterials.armorRed),
+                'back_armor', solidMaterials.armorRed
+            );
+            rightFlap.position.set(-0.25, 0.05, -0.06);
+            rightFlap.rotation.y = -0.22;
+            rightFlap.castShadow = true;
+            backGroup.add(rightFlap);
+
+            // 背部雙推進噴射口 (Twin Thruster Nozzles)
+            const thrusterGeo = new THREE.CylinderGeometry(0.08, 0.10, 0.12, 16);
+            thrusterGeo.rotateX(Math.PI / 2);
+            const backFlames = [];
+            [-0.18, 0.18].forEach(x => {
+                const nozzle = registerMeshForUV(
+                    new THREE.Mesh(thrusterGeo, solidMaterials.jointDark),
+                    'back_armor', solidMaterials.jointDark
+                );
+                nozzle.position.set(x, 0.14, -0.08);
+                backGroup.add(nozzle);
+
+                const thrusterFlame = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.06, 0.35, 12),
+                    solidMaterials.arcGlow
+                );
+                thrusterFlame.rotation.x = -Math.PI / 2;
+                thrusterFlame.position.set(x, 0.14, -0.26);
+                thrusterFlame.visible = false;
+                backGroup.add(thrusterFlame);
+                backFlames.push(thrusterFlame);
+            });
+
+            // -----------------------------------------------------------------
+            // E. 頭部、經典黃金面罩與青白發光目鏡 (Head Hierarchy)
+            // -----------------------------------------------------------------
+            const neckGroup = new THREE.Group();
+            neckGroup.position.set(0, 0.54, 0.03);
+            chestGroup.add(neckGroup);
+
+            const neckJoint = registerMeshForUV(
+                new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.20, 16), solidMaterials.jointDark),
+                'torso', solidMaterials.jointDark
+            );
+            neckJoint.position.y = 0.06;
+            neckGroup.add(neckJoint);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 0.20, 0.02);
+            neckGroup.add(headGroup);
+
+            // 鋼鐵人經典紅頭盔本體
+            const helmetBase = registerMeshForUV(
+                new THREE.Mesh(new THREE.SphereGeometry(0.28, 28, 22), solidMaterials.armorRed),
+                'head', solidMaterials.armorRed
+            );
+            helmetBase.scale.set(0.86, 1.10, 0.98);
+            helmetBase.position.set(0, 0.10, 0);
+            helmetBase.castShadow = true;
+            headGroup.add(helmetBase);
+
+            // 標誌性金色面罩 (Faceplate)
+            const faceplate = registerMeshForUV(
+                new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.36, 0.16), solidMaterials.armorGold),
+                'head', solidMaterials.armorGold
+            );
+            faceplate.position.set(0, 0.08, 0.18);
+            faceplate.castShadow = true;
+            headGroup.add(faceplate);
+
+            // 下巴突出部 (Chin Plate)
+            const chinPlate = registerMeshForUV(
+                new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.14), solidMaterials.armorGold),
+                'head', solidMaterials.armorGold
+            );
+            chinPlate.position.set(0, -0.10, 0.18);
+            chinPlate.castShadow = true;
+            headGroup.add(chinPlate);
+
+            // 雙眼發光細縫目鏡 (Glowing Slit Eyes)
+            const eyeGeo = new THREE.BoxGeometry(0.07, 0.022, 0.04);
+            [-0.085, 0.085].forEach(x => {
+                const eye = new THREE.Mesh(eyeGeo, solidMaterials.eyeGlow);
+                eye.position.set(x, 0.11, 0.26);
+                eye.rotation.z = (x < 0 ? 0.12 : -0.12);
+                headGroup.add(eye);
+            });
+
+            // 兩側耳部圓盤飾蓋 (Ear Pucks)
+            [-0.26, 0.26].forEach(x => {
+                const earPuck = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16), solidMaterials.armorGold),
+                    'head', solidMaterials.armorGold
+                );
+                earPuck.rotation.z = Math.PI / 2;
+                earPuck.position.set(x, 0.08, 0.01);
+                headGroup.add(earPuck);
+            });
+
+            // -----------------------------------------------------------------
+            // F. 雙臂與掌心脈衝雷射發射器 (Arms Hierarchy)
+            // -----------------------------------------------------------------
+            function createArm(side) {
+                const partTag = (side === -1) ? 'right_arm' : 'left_arm';
+
+                const shoulderPivot = new THREE.Group();
+                shoulderPivot.position.set(side * 0.62, 0.44, 0.0);
+                chestGroup.add(shoulderPivot);
+
+                // 肩甲護板 (Shoulder Pauldron)
+                const pauldron = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 16), solidMaterials.armorRed),
+                    partTag, solidMaterials.armorRed
+                );
+                pauldron.scale.set(1.10, 1.25, 0.95);
+                pauldron.position.set(side * 0.08, 0.02, 0);
+                pauldron.castShadow = true;
+                shoulderPivot.add(pauldron);
+
+                // 上臂 (Bicep / Tricep)
+                const upperArm = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.32, 12, 16), solidMaterials.armorRed),
+                    partTag, solidMaterials.armorRed
+                );
+                upperArm.position.set(side * 0.05, -0.28, 0);
+                upperArm.castShadow = true;
+                shoulderPivot.add(upperArm);
+
+                // 上臂內側金色飾片
+                const bicepGold = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.14), solidMaterials.armorGold),
+                    partTag, solidMaterials.armorGold
+                );
+                bicepGold.position.set(side * 0.05, -0.28, 0.08);
+                shoulderPivot.add(bicepGold);
+
+                // 手肘關節 (Elbow Pivot)
+                const elbowPivot = new THREE.Group();
+                elbowPivot.position.set(side * 0.06, -0.52, 0.02);
+                shoulderPivot.add(elbowPivot);
+
+                const elbowJoint = registerMeshForUV(
+                    new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 12), solidMaterials.jointDark),
+                    partTag, solidMaterials.jointDark
+                );
+                elbowPivot.add(elbowJoint);
+
+                // 前臂與護腕總成 (Forearm Gauntlet)
+                const forearm = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.36, 14, 16), solidMaterials.armorRed),
+                    partTag, solidMaterials.armorRed
+                );
+                forearm.position.set(0, -0.24, 0.04);
+                forearm.castShadow = true;
+                elbowPivot.add(forearm);
+
+                const gauntletGold = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.28, 0.12), solidMaterials.armorGold),
+                    partTag, solidMaterials.armorGold
+                );
+                gauntletGold.position.set(0, -0.22, 0.12);
+                elbowPivot.add(gauntletGold);
+
+                // 手掌與掌心脈衝雷射節點 (Hand & Palm Repulsor)
+                const handGroup = new THREE.Group();
+                handGroup.position.set(0, -0.52, 0.08);
+                elbowPivot.add(handGroup);
+
+                const palmMesh = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.12), solidMaterials.armorRed),
+                    partTag, solidMaterials.armorRed
+                );
+                palmMesh.castShadow = true;
+                handGroup.add(palmMesh);
+
+                // 掌心圓形發光脈衝節點 (Repulsor Node)
+                const repulsorNode = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.065, 0.065, 0.03, 16),
+                    solidMaterials.arcGlow
+                );
+                repulsorNode.rotation.x = Math.PI / 2;
+                repulsorNode.position.set(0, 0, 0.07);
+                handGroup.add(repulsorNode);
+
+                // 槍口閃光精靈 (Muzzle Flash Sprite)
+                const flashCanvas = document.createElement('canvas');
+                flashCanvas.width = 128;
+                flashCanvas.height = 128;
+                const fCtx = flashCanvas.getContext('2d');
+                const grad = fCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(0.3, '#38bdf8');
+                grad.addColorStop(0.7, 'rgba(2, 132, 199, 0.5)');
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                fCtx.fillStyle = grad;
+                fCtx.fillRect(0, 0, 128, 128);
+
+                const flashTex = new THREE.CanvasTexture(flashCanvas);
+                const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: flashTex,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending
+                }));
+                flashSprite.scale.set(0.75, 0.75, 1);
+                flashSprite.position.set(0, 0, 0.22);
+                flashSprite.visible = false;
+                handGroup.add(flashSprite);
+
+                // 4 指微張展開 (經典掌心瞄準手勢)
+                for (let f = 0; f < 4; f++) {
+                    const xOff = (f - 1.5) * 0.045;
+                    const finger = registerMeshForUV(
+                        new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.09, 8, 8), solidMaterials.armorGold),
+                        partTag, solidMaterials.armorGold
+                    );
+                    finger.position.set(xOff, -0.10, 0.02);
+                    finger.rotation.x = 0.35;
+                    handGroup.add(finger);
+                }
+
+                return { shoulderPivot, elbowPivot, handGroup, flashSprite };
+            }
+
+            const rightArm = createArm(-1);
+            const leftArm = createArm(1);
+
+            // -----------------------------------------------------------------
+            // G. 雙腿、金色股四頭肌護甲、膝蓋動力活塞與推進戰靴 (Legs Hierarchy)
+            // -----------------------------------------------------------------
+            function createLeg(side) {
+                const thighTag = (side === -1) ? 'right_thigh' : 'left_thigh';
+                const calfTag = (side === -1) ? 'right_calf' : 'left_calf';
+
+                const hipPivot = new THREE.Group();
+                hipPivot.position.set(side * 0.32, -0.12, 0);
+                pelvisGroup.add(hipPivot);
+
+                // 大腿金色護甲 (Thigh Armor - Gold & Red)
+                const thighGold = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.44, 14, 18), solidMaterials.armorGold),
+                    thighTag, solidMaterials.armorGold
+                );
+                thighGold.position.set(0, -0.32, 0.02);
+                thighGold.castShadow = true;
+                hipPivot.add(thighGold);
+
+                const thighRedOuter = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.24), solidMaterials.armorRed),
+                    thighTag, solidMaterials.armorRed
+                );
+                thighRedOuter.position.set(side * 0.14, -0.32, 0.01);
+                thighRedOuter.castShadow = true;
+                hipPivot.add(thighRedOuter);
+
+                // 膝蓋關節 (Knee Pivot)
+                const kneePivot = new THREE.Group();
+                kneePivot.position.set(0, -0.66, 0.02);
+                hipPivot.add(kneePivot);
+
+                const kneeCap = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.14), solidMaterials.armorGold),
+                    thighTag, solidMaterials.armorGold
+                );
+                kneeCap.position.set(0, 0, 0.12);
+                kneeCap.castShadow = true;
+                kneePivot.add(kneeCap);
+
+                // 小腿護脛 (Calf & Shin)
+                const calfShaft = registerMeshForUV(
+                    new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.48, 14, 18), solidMaterials.armorRed),
+                    calfTag, solidMaterials.armorRed
+                );
+                calfShaft.position.set(0, -0.34, -0.01);
+                calfShaft.castShadow = true;
+                kneePivot.add(calfShaft);
+
+                // 後小腿散熱導風片
+                const calfFin = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.16), solidMaterials.armorGold),
+                    calfTag, solidMaterials.armorGold
+                );
+                calfFin.position.set(0, -0.30, -0.16);
+                kneePivot.add(calfFin);
+
+                // 腳踝與推進戰靴 (Ankle & Boots)
+                const anklePivot = new THREE.Group();
+                anklePivot.position.set(0, -0.68, 0);
+                kneePivot.add(anklePivot);
+
+                const bootBase = registerMeshForUV(
+                    new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.44), solidMaterials.armorRed),
+                    calfTag, solidMaterials.armorRed
+                );
+                bootBase.position.set(0, -0.07, 0.08);
+                bootBase.castShadow = true;
+                anklePivot.add(bootBase);
+
+                // 鞋底噴氣推進孔 (Boot Sole Thruster)
+                const bootThruster = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.06, 0.07, 0.04, 14),
+                    solidMaterials.arcGlow
+                );
+                bootThruster.position.set(0, -0.14, 0.08);
+                anklePivot.add(bootThruster);
+
+                // 懸浮噴射火焰 (Hover Flame)
+                const bootFlame = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.08, 0.45, 12),
+                    solidMaterials.arcGlow
+                );
+                bootFlame.rotation.x = Math.PI;
+                bootFlame.position.set(0, -0.38, 0.08);
+                bootFlame.visible = false;
+                anklePivot.add(bootFlame);
+
+                return { hipPivot, kneePivot, anklePivot, bootFlame };
+            }
+
+            const rightLeg = createLeg(-1);
+            const leftLeg = createLeg(1);
+
+            // -----------------------------------------------------------------
+            // H. 藍軍戰場防護盾 (Energy Shield Mesh - Default Hidden)
+            // -----------------------------------------------------------------
+            const shieldGeo = new THREE.SphereGeometry(1.65, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.75);
+            const shieldMat = new THREE.MeshBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.15,
+                wireframe: true
+            });
+            const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            shieldMesh.position.set(0, 1.3, 0);
+            shieldMesh.visible = false;
+            root.add(shieldMesh);
+
+            return {
+                root,
+                pelvisGroup,
+                spineGroup,
+                chestGroup,
+                neckGroup,
+                headGroup,
+                leftFlap,
+                rightFlap,
+                reactorCore,
+                rightArm,
+                leftArm,
+                rightLeg,
+                leftLeg,
+                shieldMesh,
+                backFlames
+            };
+        }
+
+        const ironMan = createIronManHero();
+        scene.add(ironMan.root);
+
+        // =========================================================================
+        // 8. 依據解剖部位實際 3D 包圍盒自動映射至 IronMan.jpg 內部純淨像素 (UV Bake)
+        // =========================================================================
+        function applyBindPoseForUVBaking(im) {
+            im.root.position.set(0, 0, 0);
+            im.root.rotation.set(0, 0, 0); // 烘焙時朝標準 +Z
+            im.pelvisGroup.position.set(0, 1.62, 0);
+            im.pelvisGroup.rotation.set(0, 0, 0);
+            im.spineGroup.rotation.set(0, 0, 0);
+            im.chestGroup.rotation.set(0, 0, 0);
+            im.headGroup.rotation.set(0, 0, 0);
+
+            // 右手持平微張
+            im.rightArm.shoulderPivot.rotation.set(0.12, 0, -0.22);
+            im.rightArm.elbowPivot.rotation.set(-0.25, 0, 0.10);
+            im.rightArm.handGroup.rotation.set(0, 0, 0);
+
+            // 左手向前微舉對稱
+            im.leftArm.shoulderPivot.rotation.set(0.12, 0, 0.22);
+            im.leftArm.elbowPivot.rotation.set(-0.25, 0, -0.10);
+            im.leftArm.handGroup.rotation.set(0, 0, 0);
+
+            // 雙腿自然立姿
+            im.rightLeg.hipPivot.rotation.set(0, 0, -0.06);
+            im.rightLeg.kneePivot.rotation.set(0, 0, 0.04);
+            im.rightLeg.anklePivot.rotation.set(0, 0, 0);
+
+            im.leftLeg.hipPivot.rotation.set(0, 0, 0.06);
+            im.leftLeg.kneePivot.rotation.set(0, 0, -0.04);
+            im.leftLeg.anklePivot.rotation.set(0, 0, 0);
+        }
+
+        function bakeProjectiveUVs() {
+            applyBindPoseForUVBaking(ironMan);
+            ironMan.root.updateMatrixWorld(true);
+
+            // 第一步：自動量測每個解剖部位在 3D 世界空間中的實際 [minX, maxX, minY, maxY]
+            const bbox3D = {};
+            for (const mesh of uvBakeTargets) {
+                const pType = mesh.userData.partType;
+                if (!bbox3D[pType]) {
+                    bbox3D[pType] = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+                }
+                const b = bbox3D[pType];
+                const posAttr = mesh.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    _tempVec3.fromBufferAttribute(posAttr, i).applyMatrix4(mesh.matrixWorld);
+                    if (_tempVec3.x < b.minX) b.minX = _tempVec3.x;
+                    if (_tempVec3.x > b.maxX) b.maxX = _tempVec3.x;
+                    if (_tempVec3.y < b.minY) b.minY = _tempVec3.y;
+                    if (_tempVec3.y > b.maxY) b.maxY = _tempVec3.y;
+                }
+            }
+
+            // 第二步：定義對應至 IronMan.jpg 內部純淨像素的目標 UV 範圍 [uMin, uMax, vMin, vMax]
+            const targetUV = {
+                head:        { uMin: 0.445, uMax: 0.575, vMin: 0.730, vMax: 0.855 },
+                torso:       { uMin: 0.335, uMax: 0.655, vMin: 0.510, vMax: 0.735 },
+                pelvis:      { uMin: 0.375, uMax: 0.615, vMin: 0.445, vMax: 0.535 },
+                right_arm:   { uMin: 0.205, uMax: 0.420, vMin: 0.480, vMax: 0.735 },
+                left_arm:    { uMin: 0.585, uMax: 0.745, vMin: 0.640, vMax: 0.765 },
+                right_thigh: { uMin: 0.295, uMax: 0.450, vMin: 0.340, vMax: 0.510 },
+                left_thigh:  { uMin: 0.495, uMax: 0.635, vMin: 0.340, vMax: 0.510 },
+                right_calf:  { uMin: 0.265, uMax: 0.465, vMin: 0.080, vMax: 0.350 },
+                left_calf:   { uMin: 0.525, uMax: 0.755, vMin: 0.060, vMax: 0.350 },
+                back_armor:  { uMin: 0.380, uMax: 0.620, vMin: 0.560, vMax: 0.720 }
+            };
+
+            // 第三步：烘焙正規化頂點比例至幾何體 UV
+            for (const mesh of uvBakeTargets) {
+                const geo = mesh.geometry;
+                const posAttr = geo.attributes.position;
+                const normAttr = geo.attributes.normal;
+                const uvAttr = geo.attributes.uv;
+                const partType = mesh.userData.partType;
+                const b3d = bbox3D[partType] || { minX: -1, maxX: 1, minY: 0, maxY: 2 };
+                const tuv = targetUV[partType] || targetUV.torso;
+
+                _normalMatrix.getNormalMatrix(mesh.matrixWorld);
+
+                const spanX = Math.max(0.001, b3d.maxX - b3d.minX);
+                const spanY = Math.max(0.001, b3d.maxY - b3d.minY);
+
+                for (let i = 0; i < posAttr.count; i++) {
+                    _tempVec3.fromBufferAttribute(posAttr, i).applyMatrix4(mesh.matrixWorld);
+                    _tempNormal.fromBufferAttribute(normAttr, i).applyMatrix3(_normalMatrix).normalize();
+
+                    const tx = THREE.MathUtils.clamp((_tempVec3.x - b3d.minX) / spanX, 0, 1);
+                    const ty = THREE.MathUtils.clamp((_tempVec3.y - b3d.minY) / spanY, 0, 1);
+
+                    let u = tuv.uMin + tx * (tuv.uMax - tuv.uMin);
+                    let v = tuv.vMin + ty * (tuv.vMax - tuv.vMin);
+
+                    // 背部法向量特別處理：對應至背甲紅色裝甲，防止頭顱或胸口在背面反向鏡像
+                    if (partType === 'head' && _tempNormal.z < -0.15) {
+                        u = 0.510 + (tx - 0.5) * 0.06;
+                        v = 0.825; // 金屬紅頭盔背面
+                    } else if (partType === 'torso' && _tempNormal.z < -0.20) {
+                        u = 0.500 + (tx - 0.5) * 0.08;
+                        v = 0.630 + ty * 0.05;
+                    }
+
+                    uvAttr.setXY(i, u, v);
+                }
+                uvAttr.needsUpdate = true;
+            }
+        }
+
+        bakeProjectiveUVs();
+
+        // 烘焙完成後，讓鋼鐵人預設旋轉 180 度 (Math.PI) 直面前方 -Z 紅軍陣營！
+        ironMan.root.rotation.y = Math.PI;
+
+        // 載入內嵌與本機 IronMan.jpg
+        const rawImg = new Image();
+        rawImg.onload = () => {
+            const dilatedTex = buildDilatedTextures(rawImg);
+            projectedMaterial.map = dilatedTex;
+            projectedMaterial.emissiveMap = dilatedTex;
+            projectedMaterial.needsUpdate = true;
+        };
+        rawImg.src = IRONMAN_IMAGE_DATA_URI;
+        document.getElementById('raw-ref-img').src = IRONMAN_IMAGE_DATA_URI;
+
+        // =========================================================================
+        // 9. 紅軍陣營部隊系統 (Red Army Enemies Pool)
+        // 遵循 three-best-practices: object-pooling
+        // =========================================================================
+        const redArmyGroup = new THREE.Group();
+        scene.add(redArmyGroup);
+
+        const RED_ENEMY_COUNT = 9;
+        const redEnemies = [];
+
+        // 紅軍專用 PBR 材質
+        const redEnemyMat = new THREE.MeshStandardMaterial({
+            color: 0x991b1b,
+            roughness: 0.35,
+            metalness: 0.75
+        });
+        const redDarkMat = new THREE.MeshStandardMaterial({
+            color: 0x18181b,
+            roughness: 0.5,
+            metalness: 0.6
+        });
+        const redSensorMat = new THREE.MeshBasicMaterial({
+            color: 0xff1133
+        });
+
+        function createRedEnemy(index) {
+            const enemyGroup = new THREE.Group();
+
+            // 隨機分為 2 種機體：突擊兵 (Infantry) 或 重裝雙足機甲 (Walker Mech)
+            const isMech = (index % 3 === 0);
+
+            let mesh;
+            if (isMech) {
+                // 重裝機甲 (Walker)
+                mesh = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.0), redEnemyMat);
+                body.position.y = 1.35;
+                body.castShadow = true;
+                mesh.add(body);
+
+                // 雙肩突擊重砲
+                [-0.65, 0.65].forEach(x => {
+                    const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.1, 12), redDarkMat);
+                    cannon.rotation.x = Math.PI / 2;
+                    cannon.position.set(x, 1.6, 0.2);
+                    mesh.add(cannon);
+                });
+
+                // 紅色光學眼
+                const eye = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.08), redSensorMat);
+                eye.position.set(0, 1.45, 0.52);
+                mesh.add(eye);
+
+                // 粗壯雙足
+                [-0.45, 0.45].forEach(x => {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.9, 10), redDarkMat);
+                    leg.position.set(x, 0.45, 0);
+                    mesh.add(leg);
+                });
+            } else {
+                // 突擊兵 (Cyborg Trooper)
+                mesh = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.72, 10, 14), redEnemyMat);
+                body.position.y = 0.95;
+                body.castShadow = true;
+                mesh.add(body);
+
+                const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.10, 0.16), redSensorMat);
+                visor.position.set(0, 1.25, 0.22);
+                mesh.add(visor);
+            }
+
+            enemyGroup.add(mesh);
+
+            // 敵軍 3D 浮動血條 (HP Sprite)
+            const hpCanvas = document.createElement('canvas');
+            hpCanvas.width = 160;
+            hpCanvas.height = 24;
+            const hpTex = new THREE.CanvasTexture(hpCanvas);
+            const hpSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpTex, transparent: true }));
+            hpSprite.position.set(0, isMech ? 2.3 : 1.75, 0);
+            hpSprite.scale.set(1.5, 0.22, 1);
+            enemyGroup.add(hpSprite);
+
+            redArmyGroup.add(enemyGroup);
+
+            const enemy = {
+                group: enemyGroup,
+                mesh,
+                hpSprite,
+                hpCanvas,
+                hpTex,
+                isMech,
+                maxHp: isMech ? 220 : 70,
+                hp: isMech ? 220 : 70,
+                laneX: ((index % 3) - 1) * 3.6, // 3 條推進走道
+                speed: 1.8 + Math.random() * 0.9,
+                active: true,
+                hitFlash: 0
+            };
+
+            resetRedEnemy(enemy, -16 - index * 6.5);
+            updateEnemyHpBar(enemy);
+            return enemy;
+        }
+
+        function resetRedEnemy(e, customZ) {
+            e.hp = e.maxHp;
+            e.active = true;
+            e.group.position.x = e.laneX + (Math.random() - 0.5) * 0.8;
+            e.group.position.z = (customZ !== undefined) ? customZ : (-36 - Math.random() * 20);
+            e.group.position.y = 0;
+            e.mesh.scale.set(1, 1, 1);
+            updateEnemyHpBar(e);
+        }
+
+        function updateEnemyHpBar(e) {
+            const ctx = e.hpCanvas.getContext('2d');
+            ctx.clearRect(0, 0, 160, 24);
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, 160, 24);
+
+            const pct = Math.max(0, e.hp / e.maxHp);
+            ctx.fillStyle = pct > 0.4 ? '#ef4444' : '#f59e0b';
+            ctx.fillRect(4, 4, (160 - 8) * pct, 16);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(e.isMech ? `MECH ${Math.ceil(e.hp)}` : `RED ${Math.ceil(e.hp)}`, 80, 16);
+            e.hpTex.needsUpdate = true;
+        }
+
+        for (let i = 0; i < RED_ENEMY_COUNT; i++) {
+            redEnemies.push(createRedEnemy(i));
+        }
+
+        // =========================================================================
+        // 10. 高性能彈道物件池 (Weapons & Projectiles Pool)
+        // 遵循 three-best-practices: object-pooling
+        // =========================================================================
+        // A. 掌心脈衝雷射 (Repulsor Pulse Bolts)
+        const MAX_PULSES = 35;
+        const pulsePool = [];
+        const pulseGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.9, 8);
+        pulseGeo.rotateX(Math.PI / 2);
+        const pulseMat = new THREE.MeshBasicMaterial({
+            color: 0x00f0ff
+        });
+
+        for (let i = 0; i < MAX_PULSES; i++) {
+            const mesh = new THREE.Mesh(pulseGeo, pulseMat);
+            mesh.visible = false;
+            scene.add(mesh);
+            pulsePool.push({
+                mesh,
+                active: false,
+                pos: new THREE.Vector3(),
+                vel: new THREE.Vector3(),
+                life: 0
+            });
+        }
+
+        // B. 胸口單一集束巨砲 (Unibeam Blast Column)
+        const unibeamGeo = new THREE.CylinderGeometry(0.38, 0.38, 60, 20);
+        unibeamGeo.rotateX(Math.PI / 2);
+        const unibeamMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0
+        });
+        const unibeamMesh = new THREE.Mesh(unibeamGeo, unibeamMat);
+        unibeamMesh.position.set(0, 1.88, -30);
+        scene.add(unibeamMesh);
+
+        // 伴隨集束巨砲的同軸能量旋轉光環
+        const unibeamRings = [];
+        const uRingGeo = new THREE.TorusGeometry(0.65, 0.05, 8, 24);
+        for (let i = 0; i < 6; i++) {
+            const rMesh = new THREE.Mesh(uRingGeo, new THREE.MeshBasicMaterial({
+                color: 0xe0f2fe,
+                transparent: true,
+                opacity: 0
+            }));
+            rMesh.position.set(0, 1.88, -6 - i * 8);
+            scene.add(rMesh);
+            unibeamRings.push(rMesh);
+        }
+
+        // C. 肩部微型追蹤導彈 (Micro-Missiles)
+        const MAX_MISSILES = 12;
+        const missilePool = [];
+        const missileGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.35, 8);
+        missileGeo.rotateX(Math.PI / 2);
+        const missileMat = new THREE.MeshStandardMaterial({
+            color: 0xd4af37,
+            metalness: 0.9,
+            roughness: 0.2
+        });
+
+        for (let i = 0; i < MAX_MISSILES; i++) {
+            const mMesh = new THREE.Mesh(missileGeo, missileMat);
+            mMesh.visible = false;
+            scene.add(mMesh);
+            missilePool.push({
+                mesh: mMesh,
+                active: false,
+                pos: new THREE.Vector3(),
+                vel: new THREE.Vector3(),
+                targetIndex: 0,
+                life: 0
+            });
+        }
+
+        // D. 命中爆炸火花粒子池 (Hit Sparks Pool)
+        const MAX_SPARKS = 80;
+        const sparkPool = [];
+        const sparkGeo = new THREE.SphereGeometry(0.06, 6, 6);
+        for (let i = 0; i < MAX_SPARKS; i++) {
+            const sMesh = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({
+                color: (i % 2 === 0) ? 0x38bdf8 : 0xfbbf24
+            }));
+            sMesh.visible = false;
+            scene.add(sMesh);
+            sparkPool.push({
+                mesh: sMesh,
+                active: false,
+                vel: new THREE.Vector3(),
+                life: 0
+            });
+        }
+
+        function spawnHitSparks(pos, count = 6) {
+            let spawned = 0;
+            for (const sp of sparkPool) {
+                if (!sp.active) {
+                    sp.active = true;
+                    sp.life = 0.45;
+                    sp.mesh.position.copy(pos);
+                    sp.mesh.visible = true;
+                    sp.vel.set(
+                        (Math.random() - 0.5) * 8.0,
+                        (Math.random() * 4.0) + 1.0,
+                        (Math.random() - 0.5) * 8.0
+                    );
+                    spawned++;
+                    if (spawned >= count) break;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 11. 武器射擊解算器 (Firing Mechanisms)
+        // =========================================================================
+        function fireRepulsorPulse(isLeft = true) {
+            const arm = isLeft ? ironMan.leftArm : ironMan.rightArm;
+
+            // 取得掌心在世界空間中的精確座標
+            _tempVec3.set(0, 0, 0.15);
+            arm.handGroup.localToWorld(_tempVec3);
+
+            // 尋找閒置彈道
+            for (const p of pulsePool) {
+                if (!p.active) {
+                    p.active = true;
+                    p.life = 1.2;
+                    p.pos.copy(_tempVec3);
+                    p.mesh.position.copy(_tempVec3);
+
+                    // 朝向戰場前方 -Z
+                    p.vel.set((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.3, -64.0);
+                    p.mesh.visible = true;
+                    break;
+                }
+            }
+
+            // 閃爍槍口閃光
+            arm.flashSprite.visible = true;
+            setTimeout(() => { arm.flashSprite.visible = false; }, 50);
+
+            // 後座力解算
+            state.recoilTimer = 0.12;
+        }
+
+        function triggerUnibeam() {
+            state.unibeamActive = true;
+            state.unibeamTimer = 1.4; // 持續 1.4 秒大絕招
+            unibeamMesh.visible = true;
+            unibeamMat.opacity = 0.88;
+
+            // 瞬間對中央走道所有紅軍造成毀滅性穿透打擊
+            for (const e of redEnemies) {
+                if (e.active && Math.abs(e.group.position.x) < 2.8) {
+                    damageRedEnemy(e, 300);
+                }
+            }
+        }
+
+        function fireMicroMissiles() {
+            [-0.32, 0.32].forEach((xOff, idx) => {
+                for (let i = 0; i < 3; i++) {
+                    for (const m of missilePool) {
+                        if (!m.active) {
+                            m.active = true;
+                            m.life = 2.0;
+                            m.pos.set(xOff, 2.3 + i * 0.1, 0);
+                            m.mesh.position.copy(m.pos);
+                            m.vel.set(
+                                (xOff > 0 ? 1 : -1) * (2.0 + Math.random() * 2.0),
+                                5.0 + Math.random() * 4.0,
+                                -15.0 - Math.random() * 8.0
+                            );
+                            m.targetIndex = Math.floor(Math.random() * redEnemies.length);
+                            m.mesh.visible = true;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+
+        function damageRedEnemy(e, dmg) {
+            if (!e.active) return;
+            e.hp -= dmg;
+            e.hitFlash = 0.18;
+            updateEnemyHpBar(e);
+
+            state.combo++;
+            state.comboTimer = 2.2;
+            document.getElementById('tel-combo').innerText = `${state.combo}x`;
+
+            if (e.hp <= 0) {
+                e.active = false;
+                state.kills++;
+                document.getElementById('tel-kills').innerText = state.kills;
+                spawnHitSparks(e.group.position, 14);
+
+                // 2 秒後在更遠方重新編隊來襲
+                setTimeout(() => {
+                    resetRedEnemy(e);
+                }, 1800);
+            }
+        }
+
+        // =========================================================================
+        // 12. 動畫運動學解算器 (Kinematics & Stances)
+        // =========================================================================
+        function updateIronManAnimation(dt, elapsed) {
+            const im = ironMan;
+
+            // 1. 原圖立姿模式
+            if (state.stanceMode === 'bind') {
+                applyBindPoseForUVBaking(im);
+                if (state.turntable) {
+                    im.root.rotation.y = elapsed * 0.45;
+                }
+                return;
+            }
+
+            // 2. 懸浮推進模式
+            if (state.stanceMode === 'hover') {
+                state.hoverElevation = THREE.MathUtils.lerp(state.hoverElevation, 1.15, dt * 3.5);
+                const floatBob = Math.sin(elapsed * 3.2) * 0.08;
+                im.root.position.y = state.hoverElevation + floatBob;
+
+                // 展開背後風翼與噴射背部推進火焰
+                im.leftFlap.rotation.y = 0.55;
+                im.rightFlap.rotation.y = -0.55;
+                im.backFlames.forEach(f => f.visible = true);
+
+                // 噴射足底火焰
+                im.leftLeg.bootFlame.visible = true;
+                im.rightLeg.bootFlame.visible = true;
+                const fScale = 1.0 + Math.sin(elapsed * 25) * 0.25;
+                im.leftLeg.bootFlame.scale.set(fScale, fScale, fScale);
+                im.rightLeg.bootFlame.scale.set(fScale, fScale, fScale);
+
+                // 腿部微屈懸浮姿態
+                im.leftLeg.hipPivot.rotation.x = -0.22;
+                im.leftLeg.kneePivot.rotation.x = 0.42;
+                im.rightLeg.hipPivot.rotation.x = -0.18;
+                im.rightLeg.kneePivot.rotation.x = 0.38;
+            } else {
+                // 地面站姿
+                state.hoverElevation = THREE.MathUtils.lerp(state.hoverElevation, 0, dt * 5.0);
+                im.root.position.y = state.hoverElevation;
+                im.leftFlap.rotation.y = 0.22;
+                im.rightFlap.rotation.y = -0.22;
+                im.backFlames.forEach(f => f.visible = false);
+                im.leftLeg.bootFlame.visible = false;
+                im.rightLeg.bootFlame.visible = false;
+
+                im.leftLeg.hipPivot.rotation.x = 0;
+                im.leftLeg.kneePivot.rotation.x = 0;
+                im.rightLeg.hipPivot.rotation.x = 0;
+                im.rightLeg.kneePivot.rotation.x = 0;
+            }
+
+            // 3. 越肩射擊核心姿態 (Over-the-Shoulder Aiming Stance)
+            // 當鋼鐵人面向 -Z 時：
+            // 左手：穩固向前抬起，手掌向上 90 度瞄準紅軍！
+            im.leftArm.shoulderPivot.rotation.set(-1.42, 0.08, 0.12);
+            im.leftArm.elbowPivot.rotation.set(-0.15, 0, 0);
+            im.leftArm.handGroup.rotation.set(Math.PI / 2 + 0.1, 0, 0);
+
+            // 右手：警戒或雙持齊射
+            if (state.dualAim) {
+                im.rightArm.shoulderPivot.rotation.set(-1.42, -0.08, -0.12);
+                im.rightArm.elbowPivot.rotation.set(-0.15, 0, 0);
+                im.rightArm.handGroup.rotation.set(Math.PI / 2 + 0.1, 0, 0);
+            } else {
+                im.rightArm.shoulderPivot.rotation.set(0.18, 0, -0.32);
+                im.rightArm.elbowPivot.rotation.set(-0.45, 0, 0.15);
+                im.rightArm.handGroup.rotation.set(0, 0, 0);
+            }
+
+            // 後座力震動
+            if (state.recoilTimer > 0) {
+                state.recoilTimer -= dt;
+                const kick = Math.sin(state.recoilTimer * 50) * 0.08;
+                im.leftArm.shoulderPivot.rotation.x += kick;
+                im.spineGroup.rotation.x = -kick * 0.4;
+            }
+
+            // 胸口大絕招姿態 (挺胸蓄力)
+            if (state.unibeamActive) {
+                state.unibeamTimer -= dt;
+                im.chestGroup.rotation.x = -0.18;
+                im.neckGroup.rotation.x = -0.12;
+                unibeamMat.opacity = Math.min(0.9, state.unibeamTimer);
+                for (let i = 0; i < unibeamRings.length; i++) {
+                    unibeamRings[i].rotation.z += dt * 8.0;
+                    unibeamRings[i].material.opacity = unibeamMat.opacity;
+                }
+                if (state.unibeamTimer <= 0) {
+                    state.unibeamActive = false;
+                    unibeamMesh.visible = false;
+                    for (const r of unibeamRings) r.material.opacity = 0;
+                }
+            }
+
+            // 能量防護罩旋轉波紋
+            if (im.shieldMesh.visible) {
+                im.shieldMesh.rotation.y += dt * 0.6;
+            }
+
+            // 自轉模式 (未開啟自轉時保持面朝 -Z 方向，朝向紅軍)
+            if (state.turntable) {
+                im.root.rotation.y = elapsed * 0.45;
+            } else {
+                im.root.rotation.y = Math.PI;
+            }
+        }
+
+        // =========================================================================
+        // 13. 戰場動態更新迴圈 (Main Animation Loop)
+        // 遵循 three-best-practices: render-delta-time & render-avoid-allocations
+        // =========================================================================
+        function updateBattlefield(dt, elapsed) {
+            // 1. 自動連發解算
+            if (state.autoFire && state.isMotionActive) {
+                state.lastFireTime += dt;
+                if (state.lastFireTime >= state.fireInterval) {
+                    state.lastFireTime = 0;
+                    fireRepulsorPulse(true);
+                    if (state.dualAim) {
+                        fireRepulsorPulse(false);
+                    }
+                }
+            }
+
+            // 2. COMBO 計時衰減
+            if (state.comboTimer > 0) {
+                state.comboTimer -= dt;
+                if (state.comboTimer <= 0) {
+                    state.combo = 0;
+                    document.getElementById('tel-combo').innerText = '0x';
+                }
+            }
+
+            // 3. 脈衝雷射彈道推進與命中檢測
+            for (const p of pulsePool) {
+                if (p.active) {
+                    p.life -= dt;
+                    p.pos.addScaledVector(p.vel, dt);
+                    p.mesh.position.copy(p.pos);
+
+                    // 檢測是否擊中紅軍
+                    for (const e of redEnemies) {
+                        if (e.active) {
+                            const distSq = p.pos.distanceToSquared(e.group.position);
+                            if (distSq < (e.isMech ? 2.4 : 1.4)) {
+                                p.active = false;
+                                p.mesh.visible = false;
+                                spawnHitSparks(p.pos, 5);
+                                damageRedEnemy(e, 35);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (p.life <= 0 || p.pos.z < -65) {
+                        p.active = false;
+                        p.mesh.visible = false;
+                    }
+                }
+            }
+
+            // 4. 微型導彈巡航與命中
+            for (const m of missilePool) {
+                if (m.active) {
+                    m.life -= dt;
+                    const tgt = redEnemies[m.targetIndex];
+                    if (tgt && tgt.active) {
+                        _tempVec3.copy(tgt.group.position).add(_tempVec3B.set(0, 1.2, 0));
+                        _tempVec3C.subVectors(_tempVec3, m.pos).normalize();
+                        m.vel.lerp(_tempVec3C.multiplyScalar(32.0), dt * 6.5);
+                    }
+
+                    m.pos.addScaledVector(m.vel, dt);
+                    m.mesh.position.copy(m.pos);
+                    m.mesh.lookAt(m.pos.x + m.vel.x, m.pos.y + m.vel.y, m.pos.z + m.vel.z);
+
+                    // 命中判定
+                    if (tgt && tgt.active && m.pos.distanceToSquared(tgt.group.position) < 2.2) {
+                        m.active = false;
+                        m.mesh.visible = false;
+                        spawnHitSparks(m.pos, 12);
+                        damageRedEnemy(tgt, 95);
+                    }
+
+                    if (m.life <= 0) {
+                        m.active = false;
+                        m.mesh.visible = false;
+                    }
+                }
+            }
+
+            // 5. 命中火花粒子衰減
+            for (const sp of sparkPool) {
+                if (sp.active) {
+                    sp.life -= dt;
+                    sp.vel.y -= 9.8 * dt; // 重力
+                    sp.mesh.position.addScaledVector(sp.vel, dt);
+                    if (sp.life <= 0) {
+                        sp.active = false;
+                        sp.mesh.visible = false;
+                    }
+                }
+            }
+
+            // 6. 紅軍前進與步伐動態 (在到達藍軍防線 Z = -2.5 前被防線雷擊消滅重置)
+            if (state.isMotionActive) {
+                for (const e of redEnemies) {
+                    if (e.active) {
+                        e.group.position.z += e.speed * state.redSpeedMult * dt;
+
+                        // 步伐擺動
+                        if (!e.isMech) {
+                            e.mesh.position.y = Math.sin(elapsed * 8.0 + e.laneX) * 0.05;
+                            e.mesh.rotation.z = Math.sin(elapsed * 4.0) * 0.04;
+                        }
+
+                        // 抵達藍軍防守線 Z > -2.2 則被防線雷擊消滅，重新在後方出動
+                        if (e.group.position.z > -2.2) {
+                            spawnHitSparks(e.group.position, 10);
+                            resetRedEnemy(e, -40);
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // 14. 核心渲染排程 (setAnimationLoop)
+        // 遵循 three-best-practices: setup-animation-loop
+        // =========================================================================
+        renderer.setAnimationLoop(() => {
+            const dt = Math.min(clock.getDelta(), 0.1);
+            const elapsed = clock.getElapsedTime();
+
+            if (state.isMotionActive) {
+                updateIronManAnimation(dt, elapsed);
+                updateBattlefield(dt, elapsed);
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        });
+
+        // =========================================================================
+        // 15. 視角切換預設集 (Camera Presets)
+        // =========================================================================
+        function setCameraPreset(mode) {
+            const btnList = [
+                'cam-tps-back', 'cam-rear-chase', 'cam-front-hero',
+                'cam-side-profile', 'cam-tactical-top'
+            ];
+            btnList.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+
+            const curBtn = document.getElementById(mode);
+            if (curBtn) curBtn.classList.add('active');
+
+            if (mode === 'cam-tps-back') {
+                // 【核心要求】：對著紅軍射擊的從背面看過去的越肩視角
+                camera.position.set(1.15, 2.25, 3.80);
+                controls.target.set(0.15, 1.85, -16.0);
+                document.getElementById('tel-cam').innerText = '越肩背後開火視角 (TPS)';
+            } else if (mode === 'cam-rear-chase') {
+                // 正後方戰術追尾
+                camera.position.set(0.0, 2.70, 5.20);
+                controls.target.set(0.0, 1.85, -16.0);
+                document.getElementById('tel-cam').innerText = '戰術正後方視角';
+            } else if (mode === 'cam-front-hero') {
+                // 正面英雄檢視 (可近賞 IronMan.jpg UV 貼圖與發光反應爐)
+                camera.position.set(0.0, 1.85, -3.80);
+                controls.target.set(0.0, 1.80, 0.0);
+                document.getElementById('tel-cam').innerText = '正面英雄檢視視角';
+            } else if (mode === 'cam-side-profile') {
+                // 側面開火剖面
+                camera.position.set(4.80, 2.05, -1.20);
+                controls.target.set(0.0, 1.80, -8.0);
+                document.getElementById('tel-cam').innerText = '側面開火剖面視角';
+            } else if (mode === 'cam-tactical-top') {
+                // 全場戰略俯瞰
+                camera.position.set(0.0, 15.0, 8.0);
+                controls.target.set(0.0, 0.5, -16.0);
+                document.getElementById('tel-cam').innerText = '全場戰略俯瞰視角';
+            }
+        }
+
+        // =========================================================================
+        // 16. UI 事件綁定與鍵盤快捷鍵
+        // =========================================================================
+        // 武器發射按鈕
+        document.getElementById('btn-fire-pulse').addEventListener('click', () => {
+            fireRepulsorPulse(true);
+        });
+        document.getElementById('btn-fire-unibeam').addEventListener('click', () => {
+            triggerUnibeam();
+        });
+        document.getElementById('btn-fire-missiles').addEventListener('click', () => {
+            fireMicroMissiles();
+        });
+
+        // 自動連發切換
+        const btnAutoFire = document.getElementById('btn-toggle-autofire');
+        btnAutoFire.addEventListener('click', () => {
+            state.autoFire = !state.autoFire;
+            btnAutoFire.classList.toggle('active', state.autoFire);
+            btnAutoFire.innerText = state.autoFire ? '🔄 自動連發: 開啟' : '⏸ 自動連發: 關閉';
+        });
+
+        // 姿態模式切換
+        const stanceBtns = ['btn-mode-tps', 'btn-mode-hover', 'btn-mode-bind'];
+        stanceBtns.forEach(id => {
+            document.getElementById(id).addEventListener('click', () => {
+                stanceBtns.forEach(b => document.getElementById(b).classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+
+                if (id === 'btn-mode-tps') state.stanceMode = 'tps';
+                else if (id === 'btn-mode-hover') state.stanceMode = 'hover';
+                else if (id === 'btn-mode-bind') state.stanceMode = 'bind';
+            });
+        });
+
+        // 雙臂開火切換
+        const btnDualAim = document.getElementById('btn-dual-aim');
+        btnDualAim.addEventListener('click', () => {
+            state.dualAim = !state.dualAim;
+            btnDualAim.classList.toggle('active', state.dualAim);
+        });
+
+        // 暫停/恢復動力
+        const btnMotion = document.getElementById('btn-toggle-motion');
+        btnMotion.addEventListener('click', () => {
+            state.isMotionActive = !state.isMotionActive;
+            btnMotion.classList.toggle('active', state.isMotionActive);
+            btnMotion.innerText = state.isMotionActive ? '⏸ 暫停動力' : '▶ 恢復動力';
+        });
+
+        // 視角按鈕綁定
+        const camBtns = ['cam-tps-back', 'cam-rear-chase', 'cam-front-hero', 'cam-side-profile', 'cam-tactical-top'];
+        camBtns.forEach(id => {
+            document.getElementById(id).addEventListener('click', () => setCameraPreset(id));
+        });
+
+        // 貼圖切換
+        const btnTexProj = document.getElementById('btn-tex-projected');
+        const btnTexSolid = document.getElementById('btn-tex-solid');
+
+        btnTexProj.addEventListener('click', () => {
+            btnTexProj.classList.add('active');
+            btnTexSolid.classList.remove('active');
+            for (const mesh of uvBakeTargets) {
+                mesh.material = projectedMaterial;
+            }
+        });
+
+        btnTexSolid.addEventListener('click', () => {
+            btnTexSolid.classList.add('active');
+            btnTexProj.classList.remove('active');
+            for (const mesh of uvBakeTargets) {
+                mesh.material = mesh.userData.fallbackMat || solidMaterials.armorRed;
+            }
+        });
+
+        // 滑桿事件
+        document.getElementById('slider-glow').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            state.glowStrength = val;
+            solidMaterials.arcGlow.emissiveIntensity = val;
+            document.getElementById('val-glow').innerText = `${val.toFixed(1)}x`;
+        });
+
+        document.getElementById('slider-red-speed').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            state.redSpeedMult = val;
+            document.getElementById('val-red-speed').innerText = `${val.toFixed(1)}x`;
+        });
+
+        // 輔助功能
+        document.getElementById('btn-respawn-red').addEventListener('click', () => {
+            redEnemies.forEach((e, idx) => resetRedEnemy(e, -16 - idx * 6.5));
+        });
+
+        const refCard = document.getElementById('ref-card');
+        document.getElementById('btn-toggle-ref').addEventListener('click', (e) => {
+            refCard.classList.toggle('hidden');
+            e.target.classList.toggle('active');
+        });
+
+        const btnTurntable = document.getElementById('btn-toggle-turntable');
+        btnTurntable.addEventListener('click', () => {
+            state.turntable = !state.turntable;
+            btnTurntable.classList.toggle('active', state.turntable);
+        });
+
+        const btnShield = document.getElementById('btn-toggle-shield');
+        btnShield.addEventListener('click', () => {
+            ironMan.shieldMesh.visible = !ironMan.shieldMesh.visible;
+            btnShield.classList.toggle('active', ironMan.shieldMesh.visible);
+        });
+
+        // 鍵盤與滑鼠直接開火交互
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                fireRepulsorPulse(true);
+                e.preventDefault();
+            } else if (e.code === 'KeyE') {
+                triggerUnibeam();
+            } else if (e.code === 'KeyQ') {
+                fireMicroMissiles();
+            }
+        });
+
+        window.addEventListener('pointerdown', (e) => {
+            // 左鍵點擊畫面非按鈕區域即時開火
+            if (e.button === 0 && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+                fireRepulsorPulse(true);
+            }
+        });
+
+        // 視窗自適應縮放 (camera-resize-handler)
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+        });
+
+    </script>
+</body>
+</html>
