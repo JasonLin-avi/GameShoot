@@ -1162,6 +1162,50 @@
                 oscBeam.start(t);
                 oscBeam.stop(t + 1.1);
             }
+            // 巨人沉重踏步重低音震盪 (Stomp Bass Thud)
+            playStomp() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(65, t);
+                osc.frequency.exponentialRampToValueAtTime(25, t + 0.14);
+
+                gain.gain.setValueAtTime(0.20, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 0.14);
+            }
+
+            // 巨人殘血狂暴咆哮音效 (Giant Roar)
+            playGiantRoar() {
+                if (!this.ctx || this.muted) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, t);
+                osc.frequency.linearRampToValueAtTime(140, t + 0.3);
+                osc.frequency.exponentialRampToValueAtTime(45, t + 1.6);
+
+                gain.gain.setValueAtTime(0.35, t);
+                gain.gain.linearRampToValueAtTime(0.40, t + 0.4);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(t);
+                osc.stop(t + 1.6);
+            }
+
 
             // 微型導彈發射推進音效：短促清脆的推進器點火呼嘯音 (頻率由 200Hz 迅速滑升至 700Hz)
             playMissileLaunch() {
@@ -1983,6 +2027,976 @@
             };
         }
 
+
+        // =========================================================================
+        // 3.6 綠巨人 3D 巨型頭目模型、材質系統與運動學解算器 (Giant Boss PBR System)
+        // =========================================================================
+
+        /**
+         * 建立綠巨人純程序化 PBR 材質庫 (免外部圖片依賴，100% 離線相容，遵守 material-reuse)
+         */
+        function createGiantMaterials() {
+            return {
+                // 巨人主體草綠膚色 (對應 Giant.jpg 飽和橄欖草綠)
+                skinMain: new THREE.MeshStandardMaterial({
+                    color: 0x6ea33b,
+                    roughness: 0.56,
+                    metalness: 0.04
+                }),
+                // 肌肉深處陰影與關節凹槽色
+                skinDark: new THREE.MeshStandardMaterial({
+                    color: 0x4e7926,
+                    roughness: 0.65,
+                    metalness: 0.04
+                }),
+                // 肌肉飽滿受光高光色
+                skinLight: new THREE.MeshStandardMaterial({
+                    color: 0x7ab044,
+                    roughness: 0.50,
+                    metalness: 0.04
+                }),
+                // 招牌破損深紫短褲 (對應 Giant.jpg 紫褲)
+                pantsPurple: new THREE.MeshStandardMaterial({
+                    color: 0x4e2a50,
+                    roughness: 0.72,
+                    metalness: 0.06
+                }),
+                // 紫褲腰帶與皺褶深色
+                pantsDark: new THREE.MeshStandardMaterial({
+                    color: 0x371b39,
+                    roughness: 0.78,
+                    metalness: 0.06
+                }),
+                // 黑色亂髮與濃眉
+                hairBlack: new THREE.MeshStandardMaterial({
+                    color: 0x1c201d,
+                    roughness: 0.78,
+                    metalness: 0.05
+                }),
+                // 咬緊牙關與眼白
+                teethWhite: new THREE.MeshStandardMaterial({
+                    color: 0xf8fafc,
+                    roughness: 0.25,
+                    metalness: 0.05
+                }),
+                // 瞳孔深黑
+                eyePupil: new THREE.MeshBasicMaterial({ color: 0x0f172a }),
+                // 指甲/腳趾甲微淺綠
+                nailMat: new THREE.MeshStandardMaterial({
+                    color: 0x8cc152,
+                    roughness: 0.42
+                })
+            };
+        }
+
+        /**
+         * 建立階層式 3D 綠巨人頭目骨骼模型
+         */
+        function createGiantBossModel(materials = createGiantMaterials()) {
+
+            const root = new THREE.Group();
+            root.name = 'GiantBossRoot';
+
+            // 骨盆根節點 (中心高度 Y = 2.18，確保腳底恰巧踏在 Y = 0 地面)
+            const pelvisGroup = new THREE.Group();
+            pelvisGroup.position.set(0, 2.18, 0);
+            root.add(pelvisGroup);
+
+            // -----------------------------------------------------------------
+            // A. 骨盆與紫褲腰頭區 (Pelvis & Purple Waistband)
+            // -----------------------------------------------------------------
+            const pelvisCore = new THREE.Mesh(
+                new THREE.SphereGeometry(0.66, 20, 16),
+                materials.pantsPurple
+            );
+            pelvisCore.scale.set(1.16, 0.72, 0.82);
+            pelvisCore.position.y = -0.05;
+            pelvisCore.castShadow = true;
+            pelvisCore.receiveShadow = true;
+            pelvisGroup.add(pelvisCore);
+
+            // 臀部肌肉量體
+            const gluteGeo = new THREE.SphereGeometry(0.44, 16, 14);
+            [-0.34, 0.34].forEach(xOff => {
+                const glute = new THREE.Mesh(gluteGeo, materials.pantsPurple);
+                glute.scale.set(1.0, 0.96, 0.88);
+                glute.position.set(xOff, -0.08, -0.18);
+                glute.castShadow = true;
+                pelvisGroup.add(glute);
+            });
+
+            // 紫褲平貼腰頭與皮帶環 (Flush Waistband & Belt Loops — 對應 Giant.jpg 平整褲頭)
+            const beltBand = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.68, 0.69, 0.13, 24),
+                materials.pantsDark
+            );
+            beltBand.scale.set(1.14, 1.0, 0.78);
+            beltBand.position.y = 0.20;
+            pelvisGroup.add(beltBand);
+
+            // 皮帶環釦與正中褲襠縫線 (細節對齊 Giant.jpg)
+            const loopGeo = new THREE.BoxGeometry(0.055, 0.15, 0.04);
+            for (let angle of [-0.75, -0.32, 0.32, 0.75, Math.PI - 0.5, Math.PI + 0.5]) {
+                const loop = new THREE.Mesh(loopGeo, materials.pantsDark);
+                loop.position.set(
+                    Math.sin(angle) * 0.77,
+                    0.20,
+                    Math.cos(angle) * 0.53
+                );
+                loop.rotation.y = angle;
+                pelvisGroup.add(loop);
+            }
+
+            // 褲頭前襠拉鍊縫線
+            const flySeam = new THREE.Mesh(
+                new THREE.BoxGeometry(0.065, 0.32, 0.04),
+                materials.pantsDark
+            );
+            flySeam.position.set(0, 0.02, 0.53);
+            pelvisGroup.add(flySeam);
+
+            // -----------------------------------------------------------------
+            // B. 軀幹、六塊腹肌、厚實胸肌與背闊肌 (Organic Muscular Torso)
+            // -----------------------------------------------------------------
+            const spineGroup = new THREE.Group();
+            spineGroup.position.set(0, 0.24, 0);
+            pelvisGroup.add(spineGroup);
+
+            // 腰腹核心基座 (平滑橢球體過渡)
+            const abdomenCore = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.76, 0.66, 0.78, 20),
+                materials.skinMain
+            );
+            abdomenCore.scale.set(1.10, 1.0, 0.74);
+            abdomenCore.position.y = 0.38;
+            abdomenCore.castShadow = true;
+            abdomenCore.receiveShadow = true;
+            spineGroup.add(abdomenCore);
+
+            // 胸腔倒三角主體 (V-Taper Ribcage — 使用平滑球體消除頂部銳利邊緣)
+            const chestGroup = new THREE.Group();
+            chestGroup.position.set(0, 0.66, 0);
+            spineGroup.add(chestGroup);
+
+            const ribcageCore = new THREE.Mesh(
+                new THREE.SphereGeometry(0.88, 24, 20),
+                materials.skinMain
+            );
+            ribcageCore.scale.set(1.22, 0.94, 0.76);
+            ribcageCore.position.set(0, 0.42, -0.02);
+            ribcageCore.castShadow = true;
+            ribcageCore.receiveShadow = true;
+            chestGroup.add(ribcageCore);
+
+            // 兩大塊寬闊厚實胸大肌 (Broad Masculine Pectoral Plates — 對應 Giant.jpg 胸肌比例)
+            const pecGeo = new THREE.SphereGeometry(0.50, 20, 16);
+            [-1, 1].forEach(side => {
+                const pec = new THREE.Mesh(pecGeo, materials.skinLight);
+                pec.scale.set(1.16, 0.78, 0.48);
+                pec.position.set(side * 0.40, 0.47, 0.36);
+                pec.rotation.z = side * -0.10;
+                pec.rotation.y = side * 0.16;
+                pec.castShadow = true;
+                pec.receiveShadow = true;
+                chestGroup.add(pec);
+            });
+
+            // 胸骨中央肌溝陰影
+            const sternumGroove = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.035, 0.40, 6, 8),
+                materials.skinDark
+            );
+            sternumGroove.position.set(0, 0.47, 0.56);
+            chestGroup.add(sternumGroove);
+
+            // 六塊腹肌與兩側腹外斜肌/前鋸肌 (6-Pack Abs & Oblique Pads)
+            const abRows = [
+                { y: 0.66, w: 0.20, h: 0.145, z: 0.49 },
+                { y: 0.45, w: 0.19, h: 0.145, z: 0.50 },
+                { y: 0.24, w: 0.175, h: 0.135, z: 0.48 }
+            ];
+            abRows.forEach(row => {
+                [-1, 1].forEach(side => {
+                    const abBlock = new THREE.Mesh(
+                        new THREE.SphereGeometry(row.w, 14, 12),
+                        materials.skinLight
+                    );
+                    abBlock.scale.set(1.18, row.h / row.w, 0.45);
+                    abBlock.position.set(side * 0.18, row.y, row.z);
+                    abBlock.castShadow = true;
+                    spineGroup.add(abBlock);
+                });
+            });
+
+            // 兩側腹外斜肌與前鋸肌 (自然嵌入腰腹兩側，形成流暢肌肉起伏)
+            [-1, 1].forEach(side => {
+                for (let r = 0; r < 3; r++) {
+                    const serratusPad = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.18, 12, 10),
+                        materials.skinMain
+                    );
+                    serratusPad.scale.set(1.15, 0.55, 0.65);
+                    serratusPad.rotation.z = side * -0.28;
+                    serratusPad.rotation.y = side * 0.35;
+                    serratusPad.position.set(side * (0.55 + r * 0.045), 0.26 + r * 0.20, 0.28);
+                    spineGroup.add(serratusPad);
+                }
+            });
+
+            // 背部背闊肌與上背肌群 (Wide Lats & Scapula)
+            [-1, 1].forEach(side => {
+                const latMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.56, 16, 14),
+                    materials.skinMain
+                );
+                latMesh.scale.set(0.95, 1.25, 0.68);
+                latMesh.position.set(side * 0.55, 0.38, -0.24);
+                latMesh.rotation.z = side * 0.24;
+                latMesh.castShadow = true;
+                chestGroup.add(latMesh);
+            });
+
+            // 巨大斜方肌 (Massive Trapezius — 連接頸部與雙肩的斜坡肌群)
+            [-1, 1].forEach(side => {
+                const trapSlope = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.28, 0.54, 12, 14),
+                    materials.skinMain
+                );
+                trapSlope.rotation.z = side * 1.08;
+                trapSlope.scale.set(1.0, 1.0, 0.82);
+                trapSlope.position.set(side * 0.42, 0.84, -0.03);
+                trapSlope.castShadow = true;
+                chestGroup.add(trapSlope);
+            });
+
+            // -----------------------------------------------------------------
+            // C. 頭部、憤怒五官與雕塑黑髮 (Head & Fierce Facial Expression)
+            // -----------------------------------------------------------------
+            const neckGroup = new THREE.Group();
+            neckGroup.position.set(0, 0.98, 0.06);
+            chestGroup.add(neckGroup);
+
+            // 粗壯頸部與胸鎖乳突肌
+            const neckCyl = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.36, 0.44, 0.40, 16),
+                materials.skinMain
+            );
+            neckCyl.position.y = 0.12;
+            neckGroup.add(neckCyl);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 0.34, 0.06);
+            neckGroup.add(headGroup);
+
+            // 頭顱上半部
+            const cranium = new THREE.Mesh(
+                new THREE.SphereGeometry(0.45, 22, 18),
+                materials.skinMain
+            );
+            cranium.scale.set(0.96, 1.04, 1.02);
+            cranium.position.set(0, 0.16, 0.0);
+            cranium.castShadow = true;
+            headGroup.add(cranium);
+
+            // 方正寬厚的下顎與臉頰 (平滑融合球體與方顎)
+            const jawBase = new THREE.Mesh(
+                new THREE.SphereGeometry(0.42, 18, 16),
+                materials.skinMain
+            );
+            jawBase.scale.set(1.02, 0.88, 0.96);
+            jawBase.position.set(0, -0.02, 0.05);
+            jawBase.castShadow = true;
+            headGroup.add(jawBase);
+
+            // 兩側咀嚼肌稜角與寬厚下巴
+            [-1, 1].forEach(side => {
+                const jawCorner = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.22, 12, 10),
+                    materials.skinMain
+                );
+                jawCorner.scale.set(0.9, 1.0, 1.1);
+                jawCorner.position.set(side * 0.24, -0.06, 0.08);
+                headGroup.add(jawCorner);
+            });
+
+            const chinBump = new THREE.Mesh(
+                new THREE.SphereGeometry(0.18, 14, 12),
+                materials.skinLight
+            );
+            chinBump.scale.set(1.35, 0.78, 0.85);
+            chinBump.position.set(0, -0.19, 0.33);
+            headGroup.add(chinBump);
+
+            // 突出眉骨與憤怒濃眉 (Heavy Supraorbital Brow Ridge)
+            [-1, 1].forEach(side => {
+                const browRidge = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.072, 0.20, 8, 10),
+                    materials.skinLight
+                );
+                browRidge.rotation.z = Math.PI / 2 + side * 0.26;
+                browRidge.rotation.y = side * -0.22;
+                browRidge.position.set(side * 0.15, 0.21, 0.40);
+                headGroup.add(browRidge);
+
+                // 黑色憤怒濃眉
+                const eyebrow = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.028, 0.19, 6, 8),
+                    materials.hairBlack
+                );
+                eyebrow.rotation.z = Math.PI / 2 + side * 0.30;
+                eyebrow.rotation.y = side * -0.22;
+                eyebrow.position.set(side * 0.16, 0.25, 0.44);
+                headGroup.add(eyebrow);
+
+                // 眼睛 (眼白 + 深色瞳孔)
+                const sclera = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.062, 12, 10),
+                    materials.teethWhite
+                );
+                sclera.scale.set(1.22, 0.78, 0.55);
+                sclera.position.set(side * 0.15, 0.145, 0.41);
+                headGroup.add(sclera);
+
+                const pupil = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.033, 10, 10),
+                    materials.eyePupil
+                );
+                pupil.position.set(side * 0.145, 0.145, 0.442);
+                headGroup.add(pupil);
+            });
+
+            // 寬厚鼻樑與鼻翼 (Broad Nose)
+            const noseBridge = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.068, 0.12, 8, 10),
+                materials.skinLight
+            );
+            noseBridge.scale.set(1.15, 1.0, 0.85);
+            noseBridge.position.set(0, 0.08, 0.44);
+            noseBridge.rotation.x = -0.22;
+            headGroup.add(noseBridge);
+
+            [-1, 1].forEach(side => {
+                const nostril = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.055, 10, 8),
+                    materials.skinMain
+                );
+                nostril.position.set(side * 0.065, 0.02, 0.45);
+                headGroup.add(nostril);
+
+                // 憤怒法令紋 (Nasolabial Grimace Folds)
+                const fold = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.022, 0.15, 6, 8),
+                    materials.skinDark
+                );
+                fold.rotation.z = side * 0.38;
+                fold.position.set(side * 0.155, -0.05, 0.415);
+                headGroup.add(fold);
+            });
+
+            // 咬緊牙關的下撇憤怒嘴型 (對應 Giant.jpg 嘴角下彎露齒表情)
+            const mouthCavity = new THREE.Mesh(
+                new THREE.BoxGeometry(0.24, 0.075, 0.08),
+                materials.pantsDark
+            );
+            mouthCavity.position.set(0, -0.085, 0.395);
+            headGroup.add(mouthCavity);
+
+            const teethRow = new THREE.Mesh(
+                new THREE.BoxGeometry(0.22, 0.055, 0.06),
+                materials.teethWhite
+            );
+            teethRow.position.set(0, -0.082, 0.418);
+            headGroup.add(teethRow);
+
+            // 上唇與兩側下撇嘴角
+            const upperLip = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.025, 0.18, 6, 8),
+                materials.skinDark
+            );
+            upperLip.rotation.z = Math.PI / 2;
+            upperLip.position.set(0, -0.048, 0.435);
+            headGroup.add(upperLip);
+
+            [-1, 1].forEach(side => {
+                const mouthCorner = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.024, 0.07, 6, 8),
+                    materials.skinDark
+                );
+                mouthCorner.rotation.z = side * 0.55;
+                mouthCorner.position.set(side * 0.115, -0.08, 0.425);
+                headGroup.add(mouthCorner);
+            });
+
+            // 雙耳
+            [-1, 1].forEach(side => {
+                const ear = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.095, 12, 10),
+                    materials.skinMain
+                );
+                ear.scale.set(0.45, 1.15, 0.72);
+                ear.position.set(side * 0.43, 0.11, 0.0);
+                headGroup.add(ear);
+            });
+
+            // 黑色雕塑短亂髮 (Sculpted Layered Black Hair — 對應 Giant.jpg 髮型輪廓)
+            const hairVolume = new THREE.Mesh(
+                new THREE.SphereGeometry(0.465, 20, 16),
+                materials.hairBlack
+            );
+            hairVolume.scale.set(0.99, 0.95, 1.03);
+            hairVolume.position.set(0, 0.25, -0.03);
+            headGroup.add(hairVolume);
+
+            // 頭頂與前額多層次扁平髮束 (自然服貼且帶微翹層次)
+            const hairLocks = [
+                // 頭頂層次髮簇
+                { x: 0.0, y: 0.56, z: 0.08, rx: -0.55, ry: 0.0, rz: 0.0, sx: 1.4, sy: 0.9, sz: 0.7 },
+                { x: -0.16, y: 0.54, z: 0.06, rx: -0.45, ry: 0.2, rz: 0.42, sx: 1.3, sy: 0.85, sz: 0.7 },
+                { x: 0.16, y: 0.54, z: 0.06, rx: -0.45, ry: -0.2, rz: -0.42, sx: 1.3, sy: 0.85, sz: 0.7 },
+                { x: -0.28, y: 0.47, z: 0.04, rx: -0.3, ry: 0.3, rz: 0.75, sx: 1.2, sy: 0.8, sz: 0.65 },
+                { x: 0.28, y: 0.47, z: 0.04, rx: -0.3, ry: -0.3, rz: -0.75, sx: 1.2, sy: 0.8, sz: 0.65 },
+                // 前額自然碎瀏海
+                { x: -0.06, y: 0.42, z: 0.36, rx: 1.35, ry: 0.0, rz: 0.15, sx: 1.1, sy: 0.75, sz: 0.45 },
+                { x: 0.07, y: 0.43, z: 0.36, rx: 1.32, ry: 0.0, rz: -0.18, sx: 1.1, sy: 0.75, sz: 0.45 },
+                { x: -0.19, y: 0.40, z: 0.33, rx: 1.25, ry: 0.2, rz: 0.42, sx: 1.0, sy: 0.7, sz: 0.45 },
+                { x: 0.19, y: 0.40, z: 0.33, rx: 1.25, ry: -0.2, rz: -0.42, sx: 1.0, sy: 0.7, sz: 0.45 }
+            ];
+            const lockGeo = new THREE.ConeGeometry(0.14, 0.28, 6);
+            hairLocks.forEach(cfg => {
+                const lock = new THREE.Mesh(lockGeo, materials.hairBlack);
+                lock.position.set(cfg.x, cfg.y, cfg.z);
+                lock.rotation.set(cfg.rx, cfg.ry, cfg.rz);
+                lock.scale.set(cfg.sx, cfg.sy, cfg.sz);
+                headGroup.add(lock);
+            });
+
+            // -----------------------------------------------------------------
+            // D. 雙臂與巨拳系統 (Organic Muscular Arms & Sculpted Fists)
+            // -----------------------------------------------------------------
+            function createArm(side) {
+                // side: -1 為角色右臂 (畫面左側), +1 為角色左臂 (畫面右側)
+                const shoulderPivot = new THREE.Group();
+                shoulderPivot.position.set(side * 1.12, 0.68, 0.0);
+                chestGroup.add(shoulderPivot);
+
+                // 公仔風格肩關節環縫 (對應 Giant.jpg 肩膀與胸肌交界明顯關節線)
+                const jointRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.38, 0.025, 8, 22),
+                    materials.skinDark
+                );
+                jointRing.rotation.y = Math.PI / 2 + side * 0.15;
+                jointRing.position.set(side * -0.06, -0.04, 0.02);
+                shoulderPivot.add(jointRing);
+
+                // 飽滿三角肌 (Deltoid)
+                const deltoid = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.45, 18, 16),
+                    materials.skinMain
+                );
+                deltoid.scale.set(1.02, 1.14, 0.96);
+                deltoid.position.set(side * 0.12, -0.06, 0);
+                deltoid.castShadow = true;
+                shoulderPivot.add(deltoid);
+
+                // 上臂主體 (使用 CapsuleGeometry 消除邊緣接縫)
+                const upperArm = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.32, 0.42, 12, 16),
+                    materials.skinMain
+                );
+                upperArm.position.set(side * 0.22, -0.44, 0.01);
+                upperArm.rotation.z = side * 0.16;
+                upperArm.castShadow = true;
+                shoulderPivot.add(upperArm);
+
+                // 隆起二頭肌球體 (Bicep Peak)
+                const bicep = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.30, 16, 14),
+                    materials.skinLight
+                );
+                bicep.scale.set(0.92, 1.22, 1.05);
+                bicep.position.set(side * 0.20, -0.42, 0.13);
+                bicep.castShadow = true;
+                shoulderPivot.add(bicep);
+
+                // 外側三頭肌塊 (Tricep Horseshoe)
+                const tricep = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.30, 14, 12),
+                    materials.skinMain
+                );
+                tricep.scale.set(0.96, 1.20, 0.95);
+                tricep.position.set(side * 0.28, -0.40, -0.09);
+                shoulderPivot.add(tricep);
+
+                // 手肘關節點 (Elbow Pivot)
+                const elbowPivot = new THREE.Group();
+                elbowPivot.position.set(side * 0.28, -0.78, 0.03);
+                shoulderPivot.add(elbowPivot);
+
+                // 粗壯前臂 (使用平滑膠囊體 + 肱橈肌球體，彻底消除平頂圓柱感)
+                const forearmShaft = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.28, 0.46, 12, 16),
+                    materials.skinMain
+                );
+                forearmShaft.position.set(side * 0.04, -0.34, 0.12);
+                forearmShaft.rotation.x = 0.28;
+                forearmShaft.rotation.z = side * -0.08;
+                forearmShaft.castShadow = true;
+                elbowPivot.add(forearmShaft);
+
+                // 前臂上段飽滿肱橈肌 (Brachioradialis Bulge)
+                const forearmBulge = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.33, 16, 14),
+                    materials.skinLight
+                );
+                forearmBulge.scale.set(0.96, 1.28, 0.95);
+                forearmBulge.position.set(side * 0.06, -0.20, 0.08);
+                forearmBulge.rotation.x = 0.25;
+                forearmBulge.castShadow = true;
+                elbowPivot.add(forearmBulge);
+
+                // 緊握圓潤巨拳 (Sculpted Clenched Fist — 採用圓滑膠囊與球體組合)
+                const fistGroup = new THREE.Group();
+                fistGroup.position.set(side * 0.01, -0.74, 0.24);
+                fistGroup.rotation.x = 0.18;
+                fistGroup.rotation.y = side * -0.42;
+                elbowPivot.add(fistGroup);
+
+                // 圓厚手掌主體
+                const palmCore = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.26, 16, 14),
+                    materials.skinMain
+                );
+                palmCore.scale.set(0.92, 0.88, 1.05);
+                palmCore.castShadow = true;
+                fistGroup.add(palmCore);
+
+                // 四根彎曲緊握的手指與指節 (4 Curled Fingers & Knuckles)
+                for (let f = 0; f < 4; f++) {
+                    const zOff = (f - 1.5) * 0.095;
+                    const fingerRoll = new THREE.Mesh(
+                        new THREE.CapsuleGeometry(0.056, 0.16, 8, 10),
+                        materials.skinLight
+                    );
+                    fingerRoll.rotation.z = Math.PI / 2;
+                    fingerRoll.position.set(side * -0.10, -0.06, zOff);
+                    fistGroup.add(fingerRoll);
+
+                    const knuckle = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.065, 10, 10),
+                        materials.skinLight
+                    );
+                    knuckle.position.set(side * 0.05, -0.15, zOff);
+                    fistGroup.add(knuckle);
+                }
+
+                // 橫扣在拳頭前方的粗大拇指 (Locked Thumb)
+                const thumb = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.072, 0.18, 8, 10),
+                    materials.skinLight
+                );
+                thumb.rotation.x = Math.PI / 2 - 0.2;
+                thumb.rotation.z = side * 0.35;
+                thumb.position.set(side * -0.10, 0.04, 0.19);
+                fistGroup.add(thumb);
+
+                return { shoulderPivot, elbowPivot, fistGroup };
+            }
+
+            const rightArm = createArm(-1); // 角色右手 (畫面左方)
+            const leftArm = createArm(1);   // 角色左手 (畫面右方)
+
+            // -----------------------------------------------------------------
+            // E. 雙腿、破損紫褲 (含右膝破洞)、粗壯小腿與五趾大腳
+            // -----------------------------------------------------------------
+            function createLeg(side) {
+                // side: -1 為角色右腿 (畫面左側，膝蓋有破洞), +1 為角色左腿 (畫面右側)
+                const hipPivot = new THREE.Group();
+                hipPivot.position.set(side * 0.50, -0.14, 0);
+                pelvisGroup.add(hipPivot);
+
+                // 紫褲大腿主體 (平滑膠囊體與圓柱過渡)
+                const thighPants = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.41, 0.48, 14, 18),
+                    materials.pantsPurple
+                );
+                thighPants.scale.set(1.04, 1.0, 0.96);
+                thighPants.position.set(side * 0.05, -0.42, 0.02);
+                thighPants.rotation.z = side * 0.07;
+                thighPants.castShadow = true;
+                thighPants.receiveShadow = true;
+                hipPivot.add(thighPants);
+
+                // 紫褲大腿股四頭肌立體曲面
+                const quadContour = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.36, 14, 12),
+                    materials.pantsPurple
+                );
+                quadContour.scale.set(0.92, 1.35, 0.88);
+                quadContour.position.set(side * 0.04, -0.38, 0.09);
+                hipPivot.add(quadContour);
+
+                // 膝蓋關節點 (Knee Pivot)
+                const kneePivot = new THREE.Group();
+                kneePivot.position.set(side * 0.09, -0.88, 0.02);
+                hipPivot.add(kneePivot);
+
+                // 紫褲膝蓋下擺延伸段
+                const lowerPants = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.39, 0.36, 0.38, 18),
+                    materials.pantsPurple
+                );
+                lowerPants.position.set(0, -0.08, 0);
+                lowerPants.castShadow = true;
+                kneePivot.add(lowerPants);
+
+                // ★ 關鍵特徵還原：Giant.jpg 角色右膝外側 (side === -1) 紫褲破洞露出綠色膝蓋皮膚！
+                if (side === -1) {
+                    const kneeHoleRim = new THREE.Mesh(
+                        new THREE.TorusGeometry(0.125, 0.024, 8, 16),
+                        materials.pantsDark
+                    );
+                    kneeHoleRim.scale.set(0.85, 1.22, 0.55);
+                    kneeHoleRim.position.set(-0.20, -0.06, 0.31);
+                    kneeHoleRim.rotation.y = -0.48;
+                    kneePivot.add(kneeHoleRim);
+
+                    const exposedGreenKnee = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.135, 14, 12),
+                        materials.skinLight
+                    );
+                    exposedGreenKnee.scale.set(0.82, 1.18, 0.50);
+                    exposedGreenKnee.position.set(-0.19, -0.06, 0.30);
+                    exposedGreenKnee.rotation.y = -0.48;
+                    kneePivot.add(exposedGreenKnee);
+                }
+
+                // 紫褲底部鋸齒狀撕裂破布條 (Jagged Torn Shorts Hem)
+                const shredCount = 14;
+                const shredGeo = new THREE.ConeGeometry(0.09, 0.24, 4);
+                for (let s = 0; s < shredCount; s++) {
+                    const angle = (s / shredCount) * Math.PI * 2;
+                    const shred = new THREE.Mesh(shredGeo, materials.pantsPurple);
+                    const r = 0.352;
+                    const lenScale = (s % 2 === 0) ? 1.12 : 0.75;
+                    shred.scale.set(1.0, lenScale, 0.5);
+                    shred.position.set(
+                        Math.sin(angle) * r,
+                        -0.27 - (lenScale * 0.04),
+                        Math.cos(angle) * r
+                    );
+                    shred.rotation.x = Math.PI + Math.cos(angle) * 0.10;
+                    shred.rotation.z = -Math.sin(angle) * 0.10;
+                    shred.rotation.y = angle;
+                    kneePivot.add(shred);
+                }
+
+                // 粗壯綠色小腿肚 (Muscular Green Calf / Gastrocnemius)
+                const calfShaft = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.33, 0.24, 0.76, 18),
+                    materials.skinMain
+                );
+                calfShaft.position.set(0, -0.52, -0.02);
+                calfShaft.castShadow = true;
+                calfShaft.receiveShadow = true;
+                kneePivot.add(calfShaft);
+
+                // 小腿肚內外側腓腸肌塊
+                const calfMuscle = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.35, 16, 14),
+                    materials.skinLight
+                );
+                calfMuscle.scale.set(1.06, 1.22, 1.04);
+                calfMuscle.position.set(side * 0.02, -0.44, -0.07);
+                calfMuscle.castShadow = true;
+                kneePivot.add(calfMuscle);
+
+                // 公仔風格腳踝關節分割環 (對應 Giant.jpg 腳踝橫向接縫)
+                const ankleCuff = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.245, 0.022, 8, 20),
+                    materials.skinDark
+                );
+                ankleCuff.rotation.x = Math.PI / 2;
+                ankleCuff.position.set(0, -0.89, -0.02);
+                kneePivot.add(ankleCuff);
+
+                // 腳踝關節點 (Ankle Pivot)
+                const anklePivot = new THREE.Group();
+                anklePivot.position.set(0, -0.92, -0.02);
+                kneePivot.add(anklePivot);
+
+                // 寬厚有機雕塑巨型腳掌與五根腳趾 (Organic Bare Giant Foot & 5 Toes)
+                const footGroup = new THREE.Group();
+                // 微向外八字站姿 (還原 Giant.jpg 穩重站姿)
+                footGroup.rotation.y = side * -0.18;
+                anklePivot.add(footGroup);
+
+                // 圓潤腳跟
+                const heelSphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.24, 14, 12),
+                    materials.skinMain
+                );
+                heelSphere.scale.set(1.05, 0.65, 1.15);
+                heelSphere.position.set(0, -0.10, -0.06);
+                heelSphere.castShadow = true;
+                footGroup.add(heelSphere);
+
+                // 腳背足弓斜坡
+                const footArch = new THREE.Mesh(
+                    new THREE.CapsuleGeometry(0.22, 0.34, 12, 14),
+                    materials.skinLight
+                );
+                footArch.rotation.x = Math.PI / 2 + 0.24;
+                footArch.scale.set(1.18, 1.0, 0.68);
+                footArch.position.set(0, -0.08, 0.16);
+                footArch.castShadow = true;
+                footGroup.add(footArch);
+
+                // 前腳掌寬墊
+                const forefootPad = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.27, 16, 12),
+                    materials.skinMain
+                );
+                forefootPad.scale.set(1.18, 0.45, 0.95);
+                forefootPad.position.set(0, -0.14, 0.34);
+                forefootPad.castShadow = true;
+                forefootPad.receiveShadow = true;
+                footGroup.add(forefootPad);
+
+                // 五根立體腳趾與趾甲 (5 Sculpted Toes)
+                for (let t = 0; t < 5; t++) {
+                    // t=0 為大拇趾 (內側), t=4 為小趾 (外側)
+                    const innerToOuter = (t - 2) * 0.112 * side;
+                    const isBigToe = (t === 0);
+                    const toeRadius = isBigToe ? 0.074 : Math.max(0.044, 0.064 - t * 0.004);
+                    const toeLen = isBigToe ? 0.15 : Math.max(0.085, 0.13 - t * 0.01);
+                    const zForward = 0.54 - t * 0.025;
+
+                    const toeMesh = new THREE.Mesh(
+                        new THREE.CapsuleGeometry(toeRadius, toeLen, 8, 10),
+                        materials.skinLight
+                    );
+                    toeMesh.rotation.x = Math.PI / 2;
+                    toeMesh.scale.set(1.0, 1.0, 0.78);
+                    toeMesh.position.set(innerToOuter, -0.16, zForward);
+                    toeMesh.castShadow = true;
+                    footGroup.add(toeMesh);
+
+                    // 腳趾甲
+                    const nail = new THREE.Mesh(
+                        new THREE.SphereGeometry(toeRadius * 0.75, 8, 8),
+                        materials.nailMat
+                    );
+                    nail.scale.set(1.1, 0.25, 1.0);
+                    nail.position.set(innerToOuter, -0.16 + toeRadius * 0.65, zForward + toeLen * 0.35);
+                    nail.rotation.x = 0.25;
+                    footGroup.add(nail);
+                }
+
+                return { hipPivot, kneePivot, anklePivot };
+            }
+
+            const rightLeg = createLeg(-1); // 角色右腿 (畫面左側，含膝蓋破洞)
+            const leftLeg = createLeg(1);   // 角色左腿 (畫面右側)
+
+
+            // 面向玩家 (-Z 戰場方向)
+            root.rotation.y = Math.PI;
+
+            return {
+                root,
+                pelvisGroup,
+                spineGroup,
+                chestGroup,
+                neckGroup,
+                headGroup,
+                rightArm,
+                leftArm,
+                rightLeg,
+                leftLeg
+            };
+        }
+
+        /**
+         * 踏步衝擊波物件池 (Stomp Rings Pool — 遵守 three-best-practices object-pooling)
+         */
+        class StompRingsPool {
+            constructor(scene, maxRings = 8) {
+                this.scene = scene;
+                this.maxRings = maxRings;
+                this.rings = [];
+
+                const ringGeo = new THREE.RingGeometry(0.22, 0.45, 28);
+                ringGeo.rotateX(-Math.PI / 2);
+
+                for (let i = 0; i < maxRings; i++) {
+                    const ringMat = new THREE.MeshBasicMaterial({
+                        color: 0xa3e635,
+                        transparent: true,
+                        opacity: 0,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+                    const mesh = new THREE.Mesh(ringGeo, ringMat);
+                    mesh.position.set(0, -999, 0);
+                    mesh.visible = false;
+                    scene.add(mesh);
+                    this.rings.push({
+                        mesh,
+                        active: false,
+                        life: 0,
+                        maxLife: 0.60
+                    });
+                }
+            }
+
+            spawn(x, z) {
+                for (let i = 0; i < this.maxRings; i++) {
+                    const r = this.rings[i];
+                    if (!r.active) {
+                        r.active = true;
+                        r.life = 0;
+                        r.mesh.visible = true;
+                        r.mesh.position.set(x, 0.025, z);
+                        r.mesh.scale.set(1, 1, 1);
+                        r.mesh.material.opacity = 0.75;
+                        break;
+                    }
+                }
+            }
+
+            update(dt) {
+                for (let i = 0; i < this.maxRings; i++) {
+                    const r = this.rings[i];
+                    if (!r.active) continue;
+                    r.life += dt;
+                    const progress = r.life / r.maxLife;
+                    if (progress >= 1.0) {
+                        r.active = false;
+                        r.mesh.visible = false;
+                        r.mesh.position.set(0, -999, 0);
+                    } else {
+                        const s = 1.0 + progress * 2.8;
+                        r.mesh.scale.set(s, 1, s);
+                        r.mesh.material.opacity = 0.75 * (1.0 - progress);
+                    }
+                }
+            }
+
+            reset() {
+                for (let i = 0; i < this.maxRings; i++) {
+                    const r = this.rings[i];
+                    r.active = false;
+                    r.mesh.visible = false;
+                    r.mesh.position.set(0, -999, 0);
+                }
+            }
+        }
+
+        /**
+         * 綠巨人沉重步態動力學與狂暴咆哮解算器 (零 GC 分配，遵守 three-best-practices)
+         */
+        function updateGiantKinematics(giant, kState, dt, elapsed, stompPool, bossX, bossZ, onStomp) {
+            if (!giant) return;
+            const g = giant;
+
+            if (kState.isRoaring) {
+                kState.roarTimer += dt * 3.5;
+                const roarWave = Math.sin(kState.roarTimer * 2.5);
+
+                // 憤怒張臂咆哮姿勢
+                g.pelvisGroup.position.set(0, 2.12, 0);
+                g.pelvisGroup.rotation.set(0, 0, 0);
+                g.spineGroup.rotation.set(-0.12, 0, 0);
+                g.chestGroup.rotation.set(-0.16 + roarWave * 0.05, 0, 0);
+                g.headGroup.rotation.set(-0.20 + roarWave * 0.07, Math.sin(kState.roarTimer * 6) * 0.08, 0);
+
+                g.rightArm.shoulderPivot.rotation.set(-0.75 + roarWave * 0.22, 0, -0.45);
+                g.rightArm.elbowPivot.rotation.set(-1.05, 0, 0);
+                g.leftArm.shoulderPivot.rotation.set(-0.75 - roarWave * 0.22, 0, 0.45);
+                g.leftArm.elbowPivot.rotation.set(-1.05, 0, 0);
+
+                g.rightLeg.hipPivot.rotation.set(-0.16, 0, -0.05);
+                g.rightLeg.kneePivot.rotation.set(0.30, 0, 0);
+                g.leftLeg.hipPivot.rotation.set(-0.16, 0, 0.05);
+                g.leftLeg.kneePivot.rotation.set(0.30, 0, 0);
+                return;
+            }
+
+            // 推進步行相位 (沉重巨人步伐頻率)
+            const cycleFreq = 3.2 * (kState.walkSpeed || 1.0);
+            kState.walkPhase = (kState.walkPhase || 0) + dt * cycleFreq;
+            const p = kState.walkPhase;
+            const s = kState.strideScale || 1.0;
+
+            const sinP = Math.sin(p);
+            const cosP = Math.cos(p);
+
+            // 1. 骨盆重心上下起伏與左右轉移
+            const bounce = Math.abs(cosP) * 0.09 * s;
+            const lateralShift = sinP * 0.08 * s;
+            g.pelvisGroup.position.set(lateralShift, 2.18 - bounce, 0);
+            g.pelvisGroup.rotation.z = -sinP * 0.055 * s; // 骨盆重心側傾
+            g.pelvisGroup.rotation.y = sinP * 0.08 * s;   // 骨盆邁步扭轉
+            g.pelvisGroup.rotation.x = 0.06;              // 微向前傾壓迫感
+
+            // 2. 胸腔與上身反向扭轉 (Counter-Rotation) 與沉重晃動
+            g.spineGroup.rotation.y = -sinP * 0.10 * s;
+            g.spineGroup.rotation.z = sinP * 0.045 * s;
+            g.chestGroup.rotation.y = -sinP * 0.11 * s;
+            g.chestGroup.rotation.x = 0.05 + Math.abs(sinP) * 0.035 * s;
+
+            // 3. 頭部穩定向前直視
+            g.headGroup.rotation.y = sinP * 0.13 * s;
+            g.headGroup.rotation.z = -sinP * 0.035 * s;
+            g.headGroup.rotation.x = 0.04 + Math.cos(p * 2) * 0.03 * s;
+
+            // 4. 大腿、膝蓋與腳踝步態循環
+            const rightSwing = Math.sin(p);
+            const leftSwing = Math.sin(p + Math.PI);
+            const rightLift = Math.max(0, Math.cos(p));
+            const leftLift = Math.max(0, Math.cos(p + Math.PI));
+
+            // 髖關節前後邁步
+            g.rightLeg.hipPivot.rotation.x = -rightSwing * 0.44 * s - rightLift * 0.12 * s;
+            g.leftLeg.hipPivot.rotation.x = -leftSwing * 0.44 * s - leftLift * 0.12 * s;
+
+            // 膝關節邁步屈伸
+            g.rightLeg.kneePivot.rotation.x = (rightLift * 0.65 + Math.max(0, -rightSwing) * 0.16) * s;
+            g.leftLeg.kneePivot.rotation.x = (leftLift * 0.65 + Math.max(0, -leftSwing) * 0.16) * s;
+
+            // 腳踝平穩著地
+            g.rightLeg.anklePivot.rotation.x = (rightSwing * 0.22 - rightLift * 0.32) * s;
+            g.leftLeg.anklePivot.rotation.x = (leftSwing * 0.22 - leftLift * 0.32) * s;
+
+            // 5. 雙臂與巨拳反向擺動
+            g.rightArm.shoulderPivot.rotation.x = leftSwing * 0.40 * s + 0.06;
+            g.rightArm.shoulderPivot.rotation.z = -0.22 - Math.abs(sinP) * 0.04;
+            g.rightArm.elbowPivot.rotation.x = -0.42 - Math.max(0, -leftSwing) * 0.35 * s;
+
+            g.leftArm.shoulderPivot.rotation.x = rightSwing * 0.40 * s + 0.06;
+            g.leftArm.shoulderPivot.rotation.z = 0.22 + Math.abs(sinP) * 0.04;
+            g.leftArm.elbowPivot.rotation.x = -0.42 - Math.max(0, -rightSwing) * 0.35 * s;
+
+            // 6. 腳掌踏地判定與震波環 (因 root.rotation.y = Math.PI，角色右腳對應世界 +X，左腳對應世界 -X)
+            const rightStompNow = (rightSwing > 0.85);
+            if (rightStompNow && !kState.lastRightStomp) {
+                if (stompPool) {
+                    stompPool.spawn(bossX + 0.50, bossZ - 0.45);
+                }
+                if (onStomp) onStomp();
+            }
+            kState.lastRightStomp = rightStompNow;
+
+            const leftStompNow = (leftSwing > 0.85);
+            if (leftStompNow && !kState.lastLeftStomp) {
+                if (stompPool) {
+                    stompPool.spawn(bossX - 0.50, bossZ - 0.45);
+                }
+                if (onStomp) onStomp();
+            }
+            kState.lastLeftStomp = leftStompNow;
+        }
+
         // =========================================================================
         // 4. Three.js 場景與相機管理 (ThreeGameScene)
         // =========================================================================
@@ -2657,55 +3671,48 @@
             }
 
             initBoss() {
-                // 巨型 Boss：獨立 Mesh，體積 3.5 倍，附帶金屬刺甲與即時血條
+                // 巨型 Boss：階層式 3D 綠巨人角色模型 (高度 3.8 單位，面朝玩家 -Z)
                 const bossGroup = new THREE.Group();
 
-                const bodyGeo = new THREE.CylinderGeometry(0.9, 1.15, 2.2, 12);
-                this.bossBodyMat = new THREE.MeshLambertMaterial({
-                    color: 0xff2a4d,
-                    emissive: 0x660818
-                });
-                const body = new THREE.Mesh(bodyGeo, this.bossBodyMat);
-                body.position.y = 1.1;
-                bossGroup.add(body);
+                this.giantMaterials = createGiantMaterials();
+                this.giantBoss = createGiantBossModel(this.giantMaterials);
+                bossGroup.add(this.giantBoss.root);
 
-                // 金屬刺甲
-                const spikeGeo = new THREE.ConeGeometry(0.35, 0.7, 6);
-                this.bossSpikeMat = new THREE.MeshLambertMaterial({ color: 0xffd166 });
-                const leftSpike = new THREE.Mesh(spikeGeo, this.bossSpikeMat);
-                leftSpike.position.set(-1.0, 1.8, 0);
-                leftSpike.rotation.z = Math.PI / 4;
-                bossGroup.add(leftSpike);
-
-                const rightSpike = new THREE.Mesh(spikeGeo, this.bossSpikeMat);
-                rightSpike.position.set(1.0, 1.8, 0);
-                rightSpike.rotation.z = -Math.PI / 4;
-                bossGroup.add(rightSpike);
-
-                // 即時血條 Sprite
+                // 即時血條 Sprite (掛載於巨人頭頂 Y = 4.6 處)
                 const canvas = document.createElement('canvas');
-                canvas.width = 160;
-                canvas.height = 32;
+                canvas.width = 320;
+                canvas.height = 64;
                 this.bossHpCanvas = canvas;
                 this.bossHpCtx = canvas.getContext('2d');
                 this.bossHpTexture = new THREE.CanvasTexture(canvas);
 
-                const hpSpriteMat = new THREE.SpriteMaterial({ map: this.bossHpTexture });
+                const hpSpriteMat = new THREE.SpriteMaterial({ map: this.bossHpTexture, transparent: true });
                 this.bossHpSprite = new THREE.Sprite(hpSpriteMat);
-                this.bossHpSprite.position.set(0, 2.8, 0);
-                this.bossHpSprite.scale.set(2.8, 0.55, 1);
+                this.bossHpSprite.position.set(0, 4.6, 0);
+                this.bossHpSprite.scale.set(3.2, 0.64, 1);
                 bossGroup.add(this.bossHpSprite);
 
                 bossGroup.position.set(0, -999, 0);
                 this.bossGroup = bossGroup;
                 this.scene.add(bossGroup);
 
+                // 踏步震波物件池
+                this.stompRingsPool = new StompRingsPool(this.scene, 8);
+
                 this.boss = {
                     active: false,
                     x: 0, y: 0, z: 0,
                     vz: -2.2,
                     hp: 50,
-                    maxHp: 50
+                    maxHp: 50,
+                    enraged: false,
+                    isRoaring: false,
+                    roarTimer: 0,
+                    walkPhase: 0,
+                    walkSpeed: 1.0,
+                    strideScale: 1.0,
+                    lastRightStomp: false,
+                    lastLeftStomp: false
                 };
             }
 
@@ -2842,11 +3849,18 @@
             spawnBoss(z, hp = 50) {
                 this.boss.active = true;
                 this.boss.x = 0;
-                this.boss.vx = 0; // 嚴格直線下壓，不轉彎
+                this.boss.vx = 0; // 零轉彎直線推進
                 this.boss.y = 0;
                 this.boss.z = z;
                 this.boss.hp = hp;
                 this.boss.maxHp = hp;
+                this.boss.enraged = false;
+                this.boss.isRoaring = false;
+                this.boss.roarTimer = 0;
+                this.boss.vz = -2.2;
+                this.boss.walkPhase = 0;
+                this.boss.lastRightStomp = false;
+                this.boss.lastLeftStomp = false;
                 this.bossGroup.position.set(0, 0, z);
                 this.updateBossHpBar();
                 soundFX.playBossWarning();
@@ -2855,19 +3869,31 @@
             updateBossHpBar() {
                 if (!this.bossHpCtx) return;
                 const ctx = this.bossHpCtx;
-                ctx.clearRect(0, 0, 160, 32);
+                ctx.clearRect(0, 0, 320, 64);
 
-                ctx.fillStyle = 'rgba(0,0,0,0.75)';
-                ctx.fillRect(0, 0, 160, 32);
+                // 外框底色
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+                ctx.beginPath();
+                ctx.roundRect(4, 4, 312, 56, 12);
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = this.boss.enraged ? '#ef4444' : '#a3e635';
+                ctx.stroke();
 
+                // 內部血條槽
                 const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
-                ctx.fillStyle = '#ff3366';
-                ctx.fillRect(4, 4, (160 - 8) * ratio, 24);
+                ctx.fillStyle = this.boss.enraged ? '#dc2626' : '#65a30d';
+                ctx.beginPath();
+                ctx.roundRect(10, 10, (320 - 20) * ratio, 44, 8);
+                ctx.fill();
 
+                // 文字標籤
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 15px sans-serif';
+                ctx.font = 'bold 20px "Segoe UI", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(`BOSS: ${this.boss.hp}/${this.boss.maxHp}`, 80, 21);
+                ctx.textBaseline = 'middle';
+                const label = this.boss.enraged ? '狂暴巨人 (ENRAGED)' : 'GIANT BOSS';
+                ctx.fillText(`${label}  ${Math.ceil(this.boss.hp)} / ${this.boss.maxHp}`, 160, 32);
 
                 this.bossHpTexture.needsUpdate = true;
             }
@@ -2895,7 +3921,12 @@
                 this.gargoyleMesh.instanceMatrix.needsUpdate = true;
 
                 this.boss.active = false;
+                this.boss.enraged = false;
+                this.boss.isRoaring = false;
                 this.bossGroup.position.set(0, -999, 0);
+                if (this.stompRingsPool) {
+                    this.stompRingsPool.reset();
+                }
 
                 for (let i = 0; i < this.MAX_PARTICLES; i++) {
                     this.particleList[i].active = false;
@@ -3003,10 +4034,50 @@
                     this.gargoyleMesh.instanceMatrix.needsUpdate = true;
                 }
 
-                // 4. 更新 Boss
+                // 4. 更新 Boss (綠巨人步態動力學、踏步震波與狂暴狀態機)
                 if (this.boss.active) {
-                    this.boss.z += this.boss.vz * dt;
+                    // 狂暴觸發判定：初次低於 30% 生命值
+                    if (!this.boss.enraged && this.boss.hp <= this.boss.maxHp * 0.3 && this.boss.hp > 0) {
+                        this.boss.enraged = true;
+                        this.boss.isRoaring = true;
+                        this.boss.roarTimer = 0;
+                        soundFX.playGiantRoar();
+                        if (this.game) this.game.shakeAmount = 0.55;
+                        this.updateBossHpBar();
+                    }
+
+                    if (this.boss.isRoaring) {
+                        // 咆哮持續 2.0 秒 (roarTimer 隨 dt 累加，閾值對應 2.0 * 3.5 = 7.0)
+                        if (this.boss.roarTimer > 7.0) {
+                            this.boss.isRoaring = false;
+                            this.boss.vz = -2.86; // 咆哮結束後速度提升 30%
+                        }
+                    } else {
+                        this.boss.z += this.boss.vz * dt;
+                    }
+
                     this.bossGroup.position.set(this.boss.x, 0, this.boss.z);
+
+                    // 解算綠巨人關節動力學與步態
+                    this.elapsedTime = (this.elapsedTime || 0) + dt;
+                    updateGiantKinematics(
+                        this.giantBoss,
+                        this.boss,
+                        dt,
+                        this.elapsedTime,
+                        this.stompRingsPool,
+                        this.boss.x,
+                        this.boss.z,
+                        () => {
+                            soundFX.playStomp();
+                            if (this.game) this.game.shakeAmount = Math.max(this.game.shakeAmount, 0.12);
+                        }
+                    );
+                }
+
+                // 5. 更新踏步震波環物件池
+                if (this.stompRingsPool) {
+                    this.stompRingsPool.update(dt);
                 }
 
                 // 5. 更新粒子
@@ -3269,6 +4340,7 @@
                 this.container = document.getElementById('canvas-container');
                 this.threeScene = new ThreeGameScene(this.container);
                 this.entityMgr = new EntityManager(this.threeScene.scene);
+                this.entityMgr.game = this;
                 this.gateMgr = new GateManager(this.threeScene.scene);
 
                 this.state = 'MENU';
@@ -4142,15 +5214,15 @@
                 if (boss.active && boss.z > 0 && Math.abs(boss.x - beamX) < 1.6) {
                     boss.hp -= 50 * dt;
                     boss.z += 1.5 * dt; // 持續向後推擠擊退
-                    this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 1.2, boss.z, 2);
+                    this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 2.0, boss.z, 2);
                     this.entityMgr.updateBossHpBar();
                     if (boss.hp <= 0) {
                         boss.active = false;
                         this.entityMgr.bossGroup.position.set(0, -999, 0);
                         this.killsCount++;
                         this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
-                        this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
-                        this.shakeAmount = 0.8;
+                        this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
+                        this.shakeAmount = 0.9;
                         if (!hitSoundTriggered) {
                             soundFX.playHit();
                             hitSoundTriggered = true;
@@ -4190,7 +5262,7 @@
                         const t = m.targetEnemy;
                         if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
                             tx = this.entityMgr.boss.x;
-                            ty = 1.5;
+                            ty = 2.0;
                             tz = this.entityMgr.boss.z;
                             targetValid = true;
                         } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
@@ -4212,7 +5284,7 @@
                         if (m.targetEnemy) {
                             const t = m.targetEnemy;
                             if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
-                                tx = this.entityMgr.boss.x; ty = 1.5; tz = this.entityMgr.boss.z; targetValid = true;
+                                tx = this.entityMgr.boss.x; ty = 2.0; tz = this.entityMgr.boss.z; targetValid = true;
                             } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
                                 tx = t.ref.x; ty = t.ref.y; tz = t.ref.z; targetValid = true;
                             } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
@@ -4260,8 +5332,8 @@
                     if (m.targetEnemy) {
                         const t = m.targetEnemy;
                         if (t.type === 'boss' && this.entityMgr.boss.active) {
-                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
-                            if (dsq < 2.25) { hit = true; hitType = 'boss'; }
+                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 2.0)**2 + (m.z - this.entityMgr.boss.z)**2;
+                            if (dsq < 3.24) { hit = true; hitType = 'boss'; }
                         } else if (t.type === 'gargoyle' && t.ref.active) {
                             const dsq = (m.x - t.ref.x)**2 + (m.y - t.ref.y)**2 + (m.z - t.ref.z)**2;
                             if (dsq < 0.9) { hit = true; hitType = 'gargoyle'; hitRef = t.ref; hitIndex = t.index; }
@@ -4321,8 +5393,8 @@
                                 this.entityMgr.bossGroup.position.set(0, -999, 0);
                                 this.killsCount++;
                                 this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
-                                this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
-                                this.shakeAmount = 0.8;
+                                this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
+                                this.shakeAmount = 0.9;
                             }
                         } else if (hitType === 'gargoyle' && hitRef) {
                             hitRef.hp -= 30;
