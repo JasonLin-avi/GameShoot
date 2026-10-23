@@ -1,0 +1,230 @@
+diff --git a/index.html b/index.html
+index 443020b..73b2219 100644
+--- a/index.html
++++ b/index.html
+@@ -2021,6 +2021,22 @@
+                 this.ironMan.root.position.set(0, 0.20, 0); // 雙腳穩踩戰術基座頂部
+                 this.cannonGroup.add(this.ironMan.root);
+ 
++                // 鋼鐵人運動學與姿態快取狀態 (零 GC 記憶體配置，遵守 three-best-practices)
++                this.recoilTimer = 0;
++                this.flashTimer = 0;
++                this.lastCannonX = 0;
++                this.ironManBank = 0;
++
++                this.rShoulderX = 0.12; this.rShoulderY = 0; this.rShoulderZ = -0.22;
++                this.rElbowX = -0.25;   this.rElbowY = 0;    this.rElbowZ = 0.10;
++                this.rHandX = 0;        this.rHandY = 0;     this.rHandZ = 0;
++
++                this.lShoulderX = 0.12; this.lShoulderY = 0; this.lShoulderZ = 0.22;
++                this.lElbowX = -0.25;   this.lElbowY = 0;    this.lElbowZ = -0.10;
++                this.lHandX = 0;        this.lHandY = 0;     this.lHandZ = 0;
++
++                this.chestRotX = 0;
++
+                 this.cannonGroup.position.set(0, 0, 0);
+                 this.scene.add(this.cannonGroup);
+ 
+@@ -2119,6 +2135,174 @@
+                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
+             }
++
++            /**
++             * 更新鋼鐵人運動學、後座力與多聯裝姿態切換
++             * 遵循 three-best-practices：零迴圈內 GC 記憶體分配、平滑插值 (LERP)
++             *
++             * @param {number} dt 幀間隔 Delta Time
++             * @param {number} time 累積總時間
++             * @param {boolean} isFiring 當前幀是否觸發開火
++             * @param {number} streamCount 彈道聯裝數 (2, 3, 4)
++             * @param {boolean} [isPlaying=true] 是否處於戰鬥遊戲中
++             */
++            updateIronManKinematics(dt, time, isFiring, streamCount, isPlaying = true) {
++                if (!this.ironMan) return;
++
++                // 1. 水平跟隨與懸浮推進微浮動 (Bobbing)
++                this.ironMan.root.position.y = 0.20 + Math.sin(time * 4.0) * 0.03;
++
++                // 2. 轉彎側傾角 (Banking) 平滑解算
++                const currentX = this.cannonGroup.position.x;
++                const vx = (currentX - this.lastCannonX) / Math.max(dt, 0.001);
++                this.lastCannonX = currentX;
++
++                // 相機自 -Z 望向 +Z：向右移動 (vx < 0) 身體向右傾 (Z 軸正轉)；向左移動 (vx > 0) 身體向左傾 (Z 軸反轉)
++                const targetBank = isPlaying ? -Math.max(-0.25, Math.min(0.25, vx * 0.035)) : 0;
++                this.ironManBank += (targetBank - this.ironManBank) * Math.min(1.0, dt * 10.0);
++                this.ironMan.root.rotation.z = this.ironManBank;
++
++                // 3. 後座力與掌心閃光精靈觸發
++                if (isFiring && isPlaying) {
++                    this.recoilTimer = 0.12;
++                    this.flashTimer = 0.05;
++                    this.ironMan.rightArm.flashSprite.visible = true;
++                    if (streamCount >= 3) {
++                        this.ironMan.leftArm.flashSprite.visible = true;
++                    } else {
++                        this.ironMan.leftArm.flashSprite.visible = false;
++                    }
++                }
++
++                // 閃光精靈倒數與自動隱藏
++                if (this.flashTimer > 0) {
++                    this.flashTimer -= dt;
++                    const flashScale = 0.65 + (Math.max(0, this.flashTimer) / 0.05) * 0.25;
++                    if (this.ironMan.rightArm.flashSprite.visible) {
++                        this.ironMan.rightArm.flashSprite.scale.set(flashScale, flashScale, 1);
++                    }
++                    if (this.ironMan.leftArm.flashSprite.visible) {
++                        this.ironMan.leftArm.flashSprite.scale.set(flashScale, flashScale, 1);
++                    }
++                    if (this.flashTimer <= 0) {
++                        this.ironMan.rightArm.flashSprite.visible = false;
++                        this.ironMan.leftArm.flashSprite.visible = false;
++                    }
++                } else {
++                    this.ironMan.rightArm.flashSprite.visible = false;
++                    this.ironMan.leftArm.flashSprite.visible = false;
++                }
++
++                // 計算後座力振幅 kick
++                let kick = 0;
++                if (this.recoilTimer > 0) {
++                    kick = Math.max(0, Math.sin(this.recoilTimer * 40.0)) * 0.10;
++                    this.recoilTimer -= dt;
++                    if (this.recoilTimer < 0) this.recoilTimer = 0;
++                }
++
++                // 4. 多聯裝姿態目標角度判定 (Single vs Dual-Arm Stance vs Idle)
++                let targetRShoulderX = 0.12, targetRShoulderY = 0, targetRShoulderZ = -0.22;
++                let targetRElbowX = -0.25, targetRElbowY = 0, targetRElbowZ = 0.10;
++                let targetRHandX = 0, targetRHandY = 0, targetRHandZ = 0;
++
++                let targetLShoulderX = 0.12, targetLShoulderY = 0, targetLShoulderZ = 0.22;
++                let targetLElbowX = -0.25, targetLElbowY = 0, targetLElbowZ = -0.10;
++                let targetLHandX = 0, targetLHandY = 0, targetLHandZ = 0;
++
++                if (isPlaying) {
++                    if (streamCount <= 2) {
++                        // 雙聯裝：右手平舉瞄準 +Z，左手戒備微屈
++                        targetRShoulderX = -1.45; targetRShoulderY = 0; targetRShoulderZ = 0;
++                        targetRElbowX = -0.15;    targetRElbowY = 0;    targetRElbowZ = 0;
++                        targetRHandX = Math.PI / 2; targetRHandY = 0;   targetRHandZ = 0;
++
++                        targetLShoulderX = 0.18;  targetLShoulderY = 0; targetLShoulderZ = 0.28;
++                        targetLElbowX = -0.45;    targetLElbowY = 0;    targetLElbowZ = -0.15;
++                        targetLHandX = 0;         targetLHandY = 0;     targetLHandZ = 0;
++                    } else {
++                        // 3 聯裝或 4 聯裝：雙手齊射姿態 (Dual-Repulsor Aiming)
++                        targetRShoulderX = -1.45; targetRShoulderY = 0; targetRShoulderZ = -0.08;
++                        targetRElbowX = -0.15;    targetRElbowY = 0;    targetRElbowZ = 0;
++                        targetRHandX = Math.PI / 2; targetRHandY = 0;   targetRHandZ = 0;
++
++                        targetLShoulderX = -1.45; targetLShoulderY = 0; targetLShoulderZ = 0.08;
++                        targetLElbowX = -0.15;    targetLElbowY = 0;    targetLElbowZ = 0;
++                        targetLHandX = Math.PI / 2; targetLHandY = 0;   targetLHandZ = 0;
++                    }
++                }
++
++                // 5. 關節平滑插值 (LERP)
++                const blend = Math.min(1.0, dt * 10.0);
++                this.rShoulderX += (targetRShoulderX - this.rShoulderX) * blend;
++                this.rShoulderY += (targetRShoulderY - this.rShoulderY) * blend;
++                this.rShoulderZ += (targetRShoulderZ - this.rShoulderZ) * blend;
++                this.rElbowX += (targetRElbowX - this.rElbowX) * blend;
++                this.rElbowY += (targetRElbowY - this.rElbowY) * blend;
++                this.rElbowZ += (targetRElbowZ - this.rElbowZ) * blend;
++                this.rHandX += (targetRHandX - this.rHandX) * blend;
++                this.rHandY += (targetRHandY - this.rHandY) * blend;
++                this.rHandZ += (targetRHandZ - this.rHandZ) * blend;
++
++                this.lShoulderX += (targetLShoulderX - this.lShoulderX) * blend;
++                this.lShoulderY += (targetLShoulderY - this.lShoulderY) * blend;
++                this.lShoulderZ += (targetLShoulderZ - this.lShoulderZ) * blend;
++                this.lElbowX += (targetLElbowX - this.lElbowX) * blend;
++                this.lElbowY += (targetLElbowY - this.lElbowY) * blend;
++                this.lElbowZ += (targetLElbowZ - this.lElbowZ) * blend;
++                this.lHandX += (targetLHandX - this.lHandX) * blend;
++                this.lHandY += (targetLHandY - this.lHandY) * blend;
++                this.lHandZ += (targetLHandZ - this.lHandZ) * blend;
++
++                // 6. 應用關節旋轉與後座力疊加
++                const rKick = kick;
++                const lKick = (streamCount >= 3) ? kick : 0;
++
++                this.ironMan.rightArm.shoulderPivot.rotation.set(
++                    this.rShoulderX - rKick,
++                    this.rShoulderY,
++                    this.rShoulderZ
++                );
++                this.ironMan.rightArm.elbowPivot.rotation.set(this.rElbowX, this.rElbowY, this.rElbowZ);
++                this.ironMan.rightArm.handGroup.rotation.set(this.rHandX, this.rHandY, this.rHandZ);
++
++                this.ironMan.leftArm.shoulderPivot.rotation.set(
++                    this.lShoulderX - lKick,
++                    this.lShoulderY,
++                    this.lShoulderZ
++                );
++                this.ironMan.leftArm.elbowPivot.rotation.set(this.lElbowX, this.lElbowY, this.lElbowZ);
++                this.ironMan.leftArm.handGroup.rotation.set(this.lHandX, this.lHandY, this.lHandZ);
++
++                // 胸部後座微後仰
++                const targetChestX = -kick * 0.4;
++                this.chestRotX += (targetChestX - this.chestRotX) * Math.min(1.0, dt * 18.0);
++                this.ironMan.chestGroup.rotation.x = this.chestRotX;
++
++                // 7. 推進噴嘴火焰細節動畫
++                if (isPlaying) {
++                    const flameScale = 0.85 + Math.sin(time * 25.0) * 0.25;
++                    if (this.ironMan.leftLeg.bootFlame) {
++                        this.ironMan.leftLeg.bootFlame.visible = true;
++                        this.ironMan.leftLeg.bootFlame.scale.set(1, flameScale, 1);
++                    }
++                    if (this.ironMan.rightLeg.bootFlame) {
++                        this.ironMan.rightLeg.bootFlame.visible = true;
++                        this.ironMan.rightLeg.bootFlame.scale.set(1, flameScale, 1);
++                    }
++                    if (this.ironMan.backFlames) {
++                        const backVisible = Math.abs(vx) > 0.5 || isFiring;
++                        this.ironMan.backFlames.forEach(f => {
++                            f.visible = backVisible;
++                            if (backVisible) f.scale.set(1, flameScale, 1);
++                        });
++                    }
++                } else {
++                    if (this.ironMan.leftLeg.bootFlame) this.ironMan.leftLeg.bootFlame.visible = false;
++                    if (this.ironMan.rightLeg.bootFlame) this.ironMan.rightLeg.bootFlame.visible = false;
++                    if (this.ironMan.backFlames) this.ironMan.backFlames.forEach(f => { f.visible = false; });
++                }
++            }
+         }
+ 
+         // =========================================================================
+@@ -3384,6 +3568,8 @@
+             loop() {
+                 const dt = Math.min(this.clock.getDelta(), 0.1);
+                 const time = this.clock.getElapsedTime();
++                let isFiring = false;
++                const streamCount = gameStorage.getStreamColumnCount();
+ 
+                 if (this.state === 'PLAYING') {
+                     this.gameTime += dt;
+@@ -3401,7 +3587,7 @@
+                     const fireInterval = gameStorage.getFireInterval();
+                     if (time - this.lastShootTime >= fireInterval) {
+                         this.lastShootTime = time;
+-                        const streamCount = gameStorage.getStreamColumnCount();
++                        isFiring = true;
+                         const spacing = 0.4;
+                         for (let s = 0; s < streamCount; s++) {
+                             const offset = (s - (streamCount - 1) / 2) * spacing;
+@@ -3493,6 +3679,9 @@
+                     this.entityMgr.update(dt);
+                 }
+ 
++                // 更新鋼鐵人運動學、後座力與多聯裝姿態切換 (零 GC)
++                this.threeScene.updateIronManKinematics(dt, time, isFiring, streamCount, this.state === 'PLAYING');
++
+                 // 相機震動
+                 if (this.shakeAmount > 0) {
+                     this.threeScene.camera.position.x = (Math.random() - 0.5) * this.shakeAmount;

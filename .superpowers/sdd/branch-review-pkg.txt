@@ -1,0 +1,1819 @@
+diff --git a/index.html b/index.html
+index 7569aff..c4434df 100644
+--- a/index.html
++++ b/index.html
+@@ -249,6 +249,105 @@
+             50% { opacity: 0.45; transform: translateX(-50%) scale(0.96); }
+         }
+ 
++        /* 鋼鐵人英雄技能 HUD 樣式 */
++        #hero-skill-bar {
++            position: absolute;
++            right: 18px;
++            bottom: 26px;
++            display: flex;
++            flex-direction: column;
++            gap: 12px;
++            z-index: 25;
++            pointer-events: auto;
++        }
++
++        .hero-skill-btn {
++            position: relative;
++            width: 56px;
++            height: 56px;
++            border-radius: 50%;
++            background: rgba(14, 23, 38, 0.88);
++            backdrop-filter: blur(12px);
++            -webkit-backdrop-filter: blur(12px);
++            border: 2px solid rgba(56, 189, 248, 0.55);
++            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(56, 189, 248, 0.18);
++            display: flex;
++            align-items: center;
++            justify-content: center;
++            cursor: pointer;
++            overflow: hidden;
++            outline: none;
++            transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
++        }
++
++        .hero-skill-btn:hover {
++            transform: scale(1.08);
++            border-color: #38bdf8;
++            box-shadow: 0 0 20px rgba(56, 189, 248, 0.65), inset 0 0 16px rgba(56, 189, 248, 0.25);
++        }
++
++        .hero-skill-btn:active {
++            transform: scale(0.94);
++        }
++
++        .hero-skill-btn .skill-icon {
++            font-size: 24px;
++            line-height: 1;
++            pointer-events: none;
++            z-index: 2;
++            filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
++        }
++
++        .hero-skill-btn .skill-key {
++            position: absolute;
++            top: 2px;
++            right: 5px;
++            font-size: 10px;
++            font-weight: 800;
++            font-family: Consolas, monospace;
++            color: #38bdf8;
++            pointer-events: none;
++            z-index: 2;
++            text-shadow: 0 0 5px rgba(56, 189, 248, 0.9);
++        }
++
++        .hero-skill-btn .skill-cd-mask {
++            position: absolute;
++            bottom: 0;
++            left: 0;
++            width: 100%;
++            height: 0%;
++            background: rgba(15, 23, 42, 0.78);
++            pointer-events: none;
++            z-index: 3;
++            transition: height 0.1s linear;
++        }
++
++        .hero-skill-btn .skill-cd-text {
++            position: absolute;
++            top: 50%;
++            left: 50%;
++            transform: translate(-50%, -50%);
++            font-size: 15px;
++            font-weight: 900;
++            font-family: Consolas, monospace;
++            color: #ffffff;
++            pointer-events: none;
++            z-index: 4;
++            text-shadow: 0 0 6px #000;
++            display: none;
++        }
++
++        .hero-skill-btn.on-cd {
++            opacity: 0.75;
++            cursor: not-allowed;
++            border-color: rgba(255, 255, 255, 0.2);
++        }
++
++        .hero-skill-btn.on-cd .skill-cd-text {
++            display: block;
++        }
++
+         /* 模態彈窗 (主頁、升級、過關、失敗) */
+         .modal-overlay {
+             position: absolute;
+@@ -601,7 +700,23 @@
+ 
+         <div class="drag-guide" id="drag-guide">
+             <span>↔️</span>
+-            <span>左右滑動或使用 A/D 鍵操控砲台</span>
++            <span>左右滑動或使用 A/D 操控 | [E] 胸口集束砲 | [Q] 追蹤導彈</span>
++        </div>
++
++        <!-- 鋼鐵人英雄技能 HUD -->
++        <div id="hero-skill-bar">
++            <button class="hero-skill-btn" id="btn-skill-unibeam" title="胸口集束巨砲 [E]">
++                <div class="skill-icon">⚡</div>
++                <div class="skill-key">E</div>
++                <div class="skill-cd-mask" id="cd-mask-unibeam"></div>
++                <div class="skill-cd-text" id="cd-text-unibeam"></div>
++            </button>
++            <button class="hero-skill-btn" id="btn-skill-missiles" title="肩部微型導彈 [Q]">
++                <div class="skill-icon">🚀</div>
++                <div class="skill-key">Q</div>
++                <div class="skill-cd-mask" id="cd-mask-missiles"></div>
++                <div class="skill-cd-text" id="cd-text-missiles"></div>
++            </button>
+         </div>
+     </div>
+ 
+@@ -1005,6 +1120,103 @@
+                 osc.stop(t + 0.5);
+             }
+ 
++            // 胸口集束巨砲高能雷射充能與貫穿音效 (Unibeam Blast FX)
++            // 包含瞬間蓄能重低音 (70Hz 鋸齒波向下掃描至 30Hz) 與高能能量貫穿共振音
++            playUnibeam() {
++                if (!this.ctx || this.muted) return;
++                const t = this.ctx.currentTime;
++
++                // 1. 瞬間蓄能重低音 (70Hz 鋸齒波向下掃描至 30Hz)
++                const oscBass = this.ctx.createOscillator();
++                const gainBass = this.ctx.createGain();
++                oscBass.type = 'sawtooth';
++                oscBass.frequency.setValueAtTime(70, t);
++                oscBass.frequency.exponentialRampToValueAtTime(30, t + 1.2);
++                gainBass.gain.setValueAtTime(0.40, t);
++                gainBass.gain.linearRampToValueAtTime(0.001, t + 1.2);
++                oscBass.connect(gainBass);
++                gainBass.connect(this.ctx.destination);
++                oscBass.start(t);
++                oscBass.stop(t + 1.2);
++
++                // 2. 高能能量貫穿共振撕裂音 (880Hz -> 330Hz 搭配帶通濾波共振)
++                const oscBeam = this.ctx.createOscillator();
++                const filterBeam = this.ctx.createBiquadFilter();
++                const gainBeam = this.ctx.createGain();
++
++                oscBeam.type = 'sawtooth';
++                oscBeam.frequency.setValueAtTime(880, t);
++                oscBeam.frequency.exponentialRampToValueAtTime(330, t + 1.1);
++
++                filterBeam.type = 'bandpass';
++                filterBeam.frequency.setValueAtTime(950, t);
++                filterBeam.Q.setValueAtTime(4.0, t);
++
++                gainBeam.gain.setValueAtTime(0.25, t);
++                gainBeam.gain.linearRampToValueAtTime(0.001, t + 1.1);
++
++                oscBeam.connect(filterBeam);
++                filterBeam.connect(gainBeam);
++                gainBeam.connect(this.ctx.destination);
++
++                oscBeam.start(t);
++                oscBeam.stop(t + 1.1);
++            }
++
++            // 微型導彈發射推進音效：短促清脆的推進器點火呼嘯音 (頻率由 200Hz 迅速滑升至 700Hz)
++            playMissileLaunch() {
++                if (!this.ctx || this.muted) return;
++                const t = this.ctx.currentTime;
++                const osc = this.ctx.createOscillator();
++                const gain = this.ctx.createGain();
++
++                osc.type = 'sawtooth';
++                osc.frequency.setValueAtTime(200, t);
++                osc.frequency.exponentialRampToValueAtTime(700, t + 0.14);
++
++                gain.gain.setValueAtTime(0.02, t);
++                gain.gain.linearRampToValueAtTime(0.18, t + 0.025);
++                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
++
++                osc.connect(gain);
++                gain.connect(this.ctx.destination);
++
++                osc.start(t);
++                osc.stop(t + 0.16);
++            }
++
++            // 微型導彈命中爆裂轟鳴：低頻衝擊與金屬破片立體打擊感
++            playMissileHit() {
++                if (!this.ctx || this.muted) return;
++                const t = this.ctx.currentTime;
++
++                // 1. 低頻重擊衝擊波
++                const oscThud = this.ctx.createOscillator();
++                const gainThud = this.ctx.createGain();
++                oscThud.type = 'triangle';
++                oscThud.frequency.setValueAtTime(120, t);
++                oscThud.frequency.exponentialRampToValueAtTime(28, t + 0.25);
++                gainThud.gain.setValueAtTime(0.35, t);
++                gainThud.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
++                oscThud.connect(gainThud);
++                gainThud.connect(this.ctx.destination);
++                oscThud.start(t);
++                oscThud.stop(t + 0.25);
++
++                // 2. 高能量金屬爆裂碎片感
++                const oscBurst = this.ctx.createOscillator();
++                const gainBurst = this.ctx.createGain();
++                oscBurst.type = 'sawtooth';
++                oscBurst.frequency.setValueAtTime(240, t);
++                oscBurst.frequency.exponentialRampToValueAtTime(45, t + 0.12);
++                gainBurst.gain.setValueAtTime(0.20, t);
++                gainBurst.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
++                oscBurst.connect(gainBurst);
++                gainBurst.connect(this.ctx.destination);
++                oscBurst.start(t);
++                oscBurst.stop(t + 0.12);
++            }
++
+             // 通關勝利奏鳴
+             playVictory() {
+                 if (!this.ctx || this.muted) return;
+@@ -1293,6 +1505,484 @@
+         const _tempMatrix = new THREE.Matrix4();
+         const _dummy = new THREE.Object3D();
+ 
++        // =========================================================================
++        // 3.5 鋼鐵人 3D 英雄材質與關節模型構建系統 (IronMan Mark IV PBR Hero System)
++        // =========================================================================
++
++        /**
++         * 建立高質感純金屬 PBR 材質庫 (免外部圖片依賴，100% 離線相容)
++         */
++        function createIronManMaterials() {
++            // 掌心閃光紋理 (Canvas Texture，離線 0 依賴，支援主題色彩動態著色)
++            const flashCanvas = document.createElement('canvas');
++            flashCanvas.width = 128;
++            flashCanvas.height = 128;
++            const fCtx = flashCanvas.getContext('2d');
++            const grad = fCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
++            grad.addColorStop(0, '#ffffff');
++            grad.addColorStop(0.35, '#ffffff');
++            grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)');
++            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
++            fCtx.fillStyle = grad;
++            fCtx.fillRect(0, 0, 128, 128);
++
++            const flashTex = new THREE.CanvasTexture(flashCanvas);
++            const flashMat = new THREE.SpriteMaterial({
++                map: flashTex,
++                color: 0x00f0ff,
++                transparent: true,
++                blending: THREE.AdditiveBlending
++            });
++
++            return {
++                armorRed: new THREE.MeshStandardMaterial({
++                    color: 0xb91c1c,
++                    roughness: 0.28,
++                    metalness: 0.85
++                }),
++                armorGold: new THREE.MeshStandardMaterial({
++                    color: 0xf59e0b,
++                    roughness: 0.24,
++                    metalness: 0.90
++                }),
++                jointDark: new THREE.MeshStandardMaterial({
++                    color: 0x1f2937,
++                    roughness: 0.55,
++                    metalness: 0.70
++                }),
++                arcGlow: new THREE.MeshBasicMaterial({
++                    color: 0x00f0ff
++                }),
++                flashMat
++            };
++        }
++
++        /**
++         * 構建階層式 3D 鋼鐵人英雄模型 (面朝 +Z，等比例適配跑道，總高度約 2.0 單位)
++         */
++        function createIronManHero(materials = createIronManMaterials()) {
++            const root = new THREE.Group();
++            root.name = 'IronManHeroRoot';
++            // 面朝戰場前方 +Z 跑道 (背面朝向玩家相機 -Z)
++            root.rotation.y = 0;
++            // 縮放約 0.62，使總高度約 2.08 單位，完美適配 11 寬度直式跑道
++            root.scale.set(0.62, 0.62, 0.62);
++
++            // 1. 骨盆與下腹節點 (Pelvis Group，未縮放下基準高 Y = 1.62)
++            const pelvisGroup = new THREE.Group();
++            pelvisGroup.position.set(0, 1.62, 0);
++            root.add(pelvisGroup);
++
++            // 骨盆裝甲 (Codpiece)
++            const codPiece = new THREE.Mesh(
++                new THREE.CylinderGeometry(0.36, 0.32, 0.32, 18),
++                materials.armorRed
++            );
++            codPiece.scale.set(1.12, 1.0, 0.88);
++            codPiece.position.y = -0.06;
++            pelvisGroup.add(codPiece);
++
++            // 骨盆兩側金色動力護板
++            [-0.34, 0.34].forEach(xOff => {
++                const hipPlate = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.12, 0.24, 0.28),
++                    materials.armorGold
++                );
++                hipPlate.position.set(xOff, -0.05, 0.02);
++                pelvisGroup.add(hipPlate);
++            });
++
++            // 2. 脊椎與腹部護板 (Spine Group)
++            const spineGroup = new THREE.Group();
++            spineGroup.position.set(0, 0.16, 0);
++            pelvisGroup.add(spineGroup);
++
++            // 腹部核心結構
++            const abdomenCore = new THREE.Mesh(
++                new THREE.CylinderGeometry(0.40, 0.34, 0.44, 20),
++                materials.jointDark
++            );
++            abdomenCore.scale.set(1.08, 1.0, 0.82);
++            abdomenCore.position.y = 0.22;
++            spineGroup.add(abdomenCore);
++
++            // 腹部三段流線護板 (金紅相間)
++            const abPlates = [
++                { y: 0.34, w: 0.32, h: 0.10, d: 0.16, mat: materials.armorGold },
++                { y: 0.22, w: 0.30, h: 0.09, d: 0.15, mat: materials.armorRed },
++                { y: 0.10, w: 0.28, h: 0.08, d: 0.14, mat: materials.armorGold }
++            ];
++            abPlates.forEach(p => {
++                const abMesh = new THREE.Mesh(
++                    new THREE.BoxGeometry(p.w, p.h, p.d),
++                    p.mat
++                );
++                abMesh.position.set(0, p.y, 0.24);
++                spineGroup.add(abMesh);
++            });
++
++            // 3. 胸腔總成節點 (Chest Group)
++            const chestGroup = new THREE.Group();
++            chestGroup.position.set(0, 0.46, 0);
++            spineGroup.add(chestGroup);
++
++            // 胸甲紅底本體
++            const chestBase = new THREE.Mesh(
++                new THREE.SphereGeometry(0.56, 24, 20),
++                materials.armorRed
++            );
++            chestBase.scale.set(1.18, 0.95, 0.80);
++            chestBase.position.set(0, 0.24, -0.02);
++            chestGroup.add(chestBase);
++
++            // 左右胸肌飾板與金色領口飾板
++            [-1, 1].forEach(side => {
++                const pec = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.36, 0.34, 0.20),
++                    materials.armorRed
++                );
++                pec.position.set(side * 0.24, 0.28, 0.28);
++                pec.rotation.y = side * 0.18;
++                pec.rotation.z = side * -0.08;
++                chestGroup.add(pec);
++
++                const collarGold = new THREE.Mesh(
++                    new THREE.CapsuleGeometry(0.08, 0.32, 8, 12),
++                    materials.armorGold
++                );
++                collarGold.rotation.z = side * 1.15;
++                collarGold.position.set(side * 0.26, 0.46, 0.18);
++                chestGroup.add(collarGold);
++            });
++
++            // 方舟反應爐 (Arc Reactor)
++            const reactorGroup = new THREE.Group();
++            reactorGroup.position.set(0, 0.28, 0.38);
++            chestGroup.add(reactorGroup);
++
++            const reactorRing = new THREE.Mesh(
++                new THREE.CylinderGeometry(0.14, 0.15, 0.05, 24),
++                materials.jointDark
++            );
++            reactorRing.rotation.x = Math.PI / 2;
++            reactorGroup.add(reactorRing);
++
++            const reactorCore = new THREE.Mesh(
++                new THREE.CylinderGeometry(0.11, 0.11, 0.06, 24),
++                materials.arcGlow
++            );
++            reactorCore.rotation.x = Math.PI / 2;
++            reactorGroup.add(reactorCore);
++
++            // 背部推進噴嘴與飛行擾流片 (Back Thrusters & Flaps，朝向相機 -Z)
++            const backGroup = new THREE.Group();
++            backGroup.position.set(0, 0.26, -0.32);
++            chestGroup.add(backGroup);
++
++            const spineVent = new THREE.Mesh(
++                new THREE.BoxGeometry(0.16, 0.52, 0.12),
++                materials.armorGold
++            );
++            backGroup.add(spineVent);
++
++            const leftFlap = new THREE.Mesh(
++                new THREE.BoxGeometry(0.24, 0.38, 0.05),
++                materials.armorRed
++            );
++            leftFlap.position.set(0.25, 0.05, -0.06);
++            leftFlap.rotation.y = 0.22;
++            backGroup.add(leftFlap);
++
++            const rightFlap = new THREE.Mesh(
++                new THREE.BoxGeometry(0.24, 0.38, 0.05),
++                materials.armorRed
++            );
++            rightFlap.position.set(-0.25, 0.05, -0.06);
++            rightFlap.rotation.y = -0.22;
++            backGroup.add(rightFlap);
++
++            const thrusterGeo = new THREE.CylinderGeometry(0.08, 0.10, 0.12, 16);
++            thrusterGeo.rotateX(Math.PI / 2);
++            const backFlames = [];
++            [-0.18, 0.18].forEach(x => {
++                const nozzle = new THREE.Mesh(thrusterGeo, materials.jointDark);
++                nozzle.position.set(x, 0.14, -0.08);
++                backGroup.add(nozzle);
++
++                const thrusterFlame = new THREE.Mesh(
++                    new THREE.ConeGeometry(0.06, 0.35, 12),
++                    materials.arcGlow
++                );
++                thrusterFlame.rotation.x = -Math.PI / 2;
++                thrusterFlame.position.set(x, 0.14, -0.26);
++                thrusterFlame.visible = false;
++                backGroup.add(thrusterFlame);
++                backFlames.push(thrusterFlame);
++            });
++
++            // 4. 頸部與頭部 (Head Group)
++            const neckGroup = new THREE.Group();
++            neckGroup.position.set(0, 0.54, 0.03);
++            chestGroup.add(neckGroup);
++
++            const neckJoint = new THREE.Mesh(
++                new THREE.CylinderGeometry(0.18, 0.24, 0.20, 16),
++                materials.jointDark
++            );
++            neckJoint.position.y = 0.06;
++            neckGroup.add(neckJoint);
++
++            const headGroup = new THREE.Group();
++            headGroup.position.set(0, 0.20, 0.02);
++            neckGroup.add(headGroup);
++
++            const helmetBase = new THREE.Mesh(
++                new THREE.SphereGeometry(0.28, 24, 20),
++                materials.armorRed
++            );
++            helmetBase.scale.set(0.86, 1.10, 0.98);
++            helmetBase.position.set(0, 0.10, 0);
++            headGroup.add(helmetBase);
++
++            const faceplate = new THREE.Mesh(
++                new THREE.BoxGeometry(0.32, 0.36, 0.16),
++                materials.armorGold
++            );
++            faceplate.position.set(0, 0.08, 0.18);
++            headGroup.add(faceplate);
++
++            const chinPlate = new THREE.Mesh(
++                new THREE.BoxGeometry(0.16, 0.12, 0.14),
++                materials.armorGold
++            );
++            chinPlate.position.set(0, -0.10, 0.18);
++            headGroup.add(chinPlate);
++
++            // 雙眼青藍發光目鏡
++            const eyeGeo = new THREE.BoxGeometry(0.07, 0.022, 0.04);
++            [-0.085, 0.085].forEach(x => {
++                const eye = new THREE.Mesh(eyeGeo, materials.arcGlow);
++                eye.position.set(x, 0.11, 0.26);
++                eye.rotation.z = (x < 0 ? 0.12 : -0.12);
++                headGroup.add(eye);
++            });
++
++            // 兩側耳部圓盤飾蓋
++            [-0.26, 0.26].forEach(x => {
++                const earPuck = new THREE.Mesh(
++                    new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16),
++                    materials.armorGold
++                );
++                earPuck.rotation.z = Math.PI / 2;
++                earPuck.position.set(x, 0.08, 0.01);
++                headGroup.add(earPuck);
++            });
++
++            // 5. 掌心閃光材質 (取自 materials，支援主題動態適配)
++            const flashMat = materials.flashMat;
++
++            // 6. 雙臂與掌心脈衝砲 (Arms Hierarchy)
++            function createArm(side) {
++                const shoulderPivot = new THREE.Group();
++                shoulderPivot.position.set(side * 0.62, 0.44, 0.0);
++                chestGroup.add(shoulderPivot);
++
++                const pauldron = new THREE.Mesh(
++                    new THREE.SphereGeometry(0.28, 18, 14),
++                    materials.armorRed
++                );
++                pauldron.scale.set(1.10, 1.25, 0.95);
++                pauldron.position.set(side * 0.08, 0.02, 0);
++                shoulderPivot.add(pauldron);
++
++                const upperArm = new THREE.Mesh(
++                    new THREE.CapsuleGeometry(0.18, 0.32, 10, 14),
++                    materials.armorRed
++                );
++                upperArm.position.set(side * 0.05, -0.28, 0);
++                shoulderPivot.add(upperArm);
++
++                const bicepGold = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.14, 0.24, 0.14),
++                    materials.armorGold
++                );
++                bicepGold.position.set(side * 0.05, -0.28, 0.08);
++                shoulderPivot.add(bicepGold);
++
++                const elbowPivot = new THREE.Group();
++                elbowPivot.position.set(side * 0.06, -0.52, 0.02);
++                shoulderPivot.add(elbowPivot);
++
++                const elbowJoint = new THREE.Mesh(
++                    new THREE.SphereGeometry(0.14, 12, 10),
++                    materials.jointDark
++                );
++                elbowPivot.add(elbowJoint);
++
++                const forearm = new THREE.Mesh(
++                    new THREE.CapsuleGeometry(0.17, 0.36, 12, 14),
++                    materials.armorRed
++                );
++                forearm.position.set(0, -0.24, 0.04);
++                elbowPivot.add(forearm);
++
++                const gauntletGold = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.16, 0.28, 0.12),
++                    materials.armorGold
++                );
++                gauntletGold.position.set(0, -0.22, 0.12);
++                elbowPivot.add(gauntletGold);
++
++                const handGroup = new THREE.Group();
++                handGroup.position.set(0, -0.52, 0.08);
++                elbowPivot.add(handGroup);
++
++                const palmMesh = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.18, 0.14, 0.12),
++                    materials.armorRed
++                );
++                handGroup.add(palmMesh);
++
++                const repulsorNode = new THREE.Mesh(
++                    new THREE.CylinderGeometry(0.065, 0.065, 0.03, 16),
++                    materials.arcGlow
++                );
++                repulsorNode.rotation.x = Math.PI / 2;
++                repulsorNode.position.set(0, 0, 0.07);
++                handGroup.add(repulsorNode);
++
++                const flashSprite = new THREE.Sprite(flashMat);
++                flashSprite.scale.set(0.75, 0.75, 1);
++                flashSprite.position.set(0, 0, 0.22);
++                flashSprite.visible = false;
++                handGroup.add(flashSprite);
++
++                for (let f = 0; f < 4; f++) {
++                    const xOff = (f - 1.5) * 0.045;
++                    const finger = new THREE.Mesh(
++                        new THREE.CapsuleGeometry(0.022, 0.09, 6, 6),
++                        materials.armorGold
++                    );
++                    finger.position.set(xOff, -0.10, 0.02);
++                    finger.rotation.x = 0.35;
++                    handGroup.add(finger);
++                }
++
++                return { shoulderPivot, elbowPivot, handGroup, flashSprite };
++            }
++
++            const rightArm = createArm(-1);
++            const leftArm = createArm(1);
++
++            // 初始自然戰鬥戒備站姿 (手臂微曲、雙手待發)
++            rightArm.shoulderPivot.rotation.set(0.12, 0, -0.22);
++            rightArm.elbowPivot.rotation.set(-0.25, 0, 0.10);
++            leftArm.shoulderPivot.rotation.set(0.12, 0, 0.22);
++            leftArm.elbowPivot.rotation.set(-0.25, 0, -0.10);
++
++            // 7. 雙腿與推進戰靴 (Legs Hierarchy)
++            function createLeg(side) {
++                const hipPivot = new THREE.Group();
++                hipPivot.position.set(side * 0.32, -0.12, 0);
++                pelvisGroup.add(hipPivot);
++
++                const thighGold = new THREE.Mesh(
++                    new THREE.CapsuleGeometry(0.22, 0.44, 12, 16),
++                    materials.armorGold
++                );
++                thighGold.position.set(0, -0.32, 0.02);
++                hipPivot.add(thighGold);
++
++                const thighRedOuter = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.12, 0.42, 0.24),
++                    materials.armorRed
++                );
++                thighRedOuter.position.set(side * 0.14, -0.32, 0.01);
++                hipPivot.add(thighRedOuter);
++
++                const kneePivot = new THREE.Group();
++                kneePivot.position.set(0, -0.66, 0.02);
++                hipPivot.add(kneePivot);
++
++                const kneeCap = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.18, 0.18, 0.14),
++                    materials.armorGold
++                );
++                kneeCap.position.set(0, 0, 0.12);
++                kneePivot.add(kneeCap);
++
++                const calfShaft = new THREE.Mesh(
++                    new THREE.CapsuleGeometry(0.19, 0.48, 12, 16),
++                    materials.armorRed
++                );
++                calfShaft.position.set(0, -0.34, -0.01);
++                kneePivot.add(calfShaft);
++
++                const calfFin = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.08, 0.28, 0.16),
++                    materials.armorGold
++                );
++                calfFin.position.set(0, -0.30, -0.16);
++                kneePivot.add(calfFin);
++
++                const anklePivot = new THREE.Group();
++                anklePivot.position.set(0, -0.68, 0);
++                kneePivot.add(anklePivot);
++
++                const bootBase = new THREE.Mesh(
++                    new THREE.BoxGeometry(0.24, 0.14, 0.44),
++                    materials.armorRed
++                );
++                bootBase.position.set(0, -0.07, 0.08);
++                anklePivot.add(bootBase);
++
++                const bootThruster = new THREE.Mesh(
++                    new THREE.CylinderGeometry(0.06, 0.07, 0.04, 14),
++                    materials.arcGlow
++                );
++                bootThruster.position.set(0, -0.14, 0.08);
++                anklePivot.add(bootThruster);
++
++                const bootFlame = new THREE.Mesh(
++                    new THREE.ConeGeometry(0.08, 0.45, 12),
++                    materials.arcGlow
++                );
++                bootFlame.rotation.x = Math.PI;
++                bootFlame.position.set(0, -0.38, 0.08);
++                bootFlame.visible = false;
++                anklePivot.add(bootFlame);
++
++                return { hipPivot, kneePivot, anklePivot, bootFlame };
++            }
++
++            const rightLeg = createLeg(-1);
++            const leftLeg = createLeg(1);
++
++            // 雙腿微開穩健站姿
++            rightLeg.hipPivot.rotation.set(0, 0, -0.06);
++            rightLeg.kneePivot.rotation.set(0, 0, 0.04);
++            leftLeg.hipPivot.rotation.set(0, 0, 0.06);
++            leftLeg.kneePivot.rotation.set(0, 0, -0.04);
++
++            return {
++                root,
++                pelvisGroup,
++                spineGroup,
++                chestGroup,
++                neckGroup,
++                headGroup,
++                leftArm,
++                rightArm,
++                leftLeg,
++                rightLeg,
++                reactorCore,
++                flashSprites: [leftArm.flashSprite, rightArm.flashSprite],
++                backFlames,
++                leftFlap,
++                rightFlap
++            };
++        }
++
+         // =========================================================================
+         // 4. Three.js 場景與相機管理 (ThreeGameScene)
+         // =========================================================================
+@@ -1331,6 +2021,7 @@
+                 // 建立跑道與底座
+                 this.createTrack();
+                 this.createPlayerCannon();
++                this.initHeroSkillsFX();
+ 
+                 window.addEventListener('resize', () => this.onWindowResize());
+             }
+@@ -1388,15 +2079,31 @@
+             createPlayerCannon() {
+                 this.cannonGroup = new THREE.Group();
+ 
+-                // 砲台底盤 (加寬以容納多聯裝砲管)
+-                const baseGeo = new THREE.CylinderGeometry(1.0, 1.25, 0.45, 18);
+-                this.baseMat = new THREE.MeshLambertMaterial({ color: 0x0077b6, emissive: 0x002244 });
++                // 科技戰術圓盤底座 (Tactical Deployment Disc)
++                const baseGeo = new THREE.CylinderGeometry(1.05, 1.25, 0.20, 24);
++                this.baseMat = new THREE.MeshStandardMaterial({
++                    color: 0x111c2e,
++                    roughness: 0.35,
++                    metalness: 0.8
++                });
+                 const base = new THREE.Mesh(baseGeo, this.baseMat);
+-                base.position.y = 0.22;
++                base.position.y = 0.10;
+                 this.cannonGroup.add(base);
+ 
+-                // 砲管專用材質 (快取複用)
+-                this.barrelMat = new THREE.MeshLambertMaterial({ color: 0x00f0ff, emissive: 0x003366 });
++                // 底座外圈青藍霓虹光環 (Tactical Energy Ring)
++                const ringGeo = new THREE.TorusGeometry(1.05, 0.025, 8, 32);
++                ringGeo.rotateX(Math.PI / 2);
++                this.ringMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
++                const ringMesh = new THREE.Mesh(ringGeo, this.ringMat);
++                ringMesh.position.y = 0.20;
++                this.cannonGroup.add(ringMesh);
++
++                // 砲管/微型發射口專用材質 (快取複用)
++                this.barrelMat = new THREE.MeshStandardMaterial({
++                    color: 0x00f0ff,
++                    roughness: 0.3,
++                    metalness: 0.8
++                });
+                 this.barrelsGroup = null;
+ 
+                 // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
+@@ -1408,13 +2115,35 @@
+                     opacity: 0.22
+                 });
+                 const aimLine = new THREE.Mesh(aimGeo, this.aimMat);
+-                aimLine.position.set(0, 0.06, 18.5);
++                aimLine.position.set(0, 0.04, 18.5);
+                 this.cannonGroup.add(aimLine);
+ 
++                // 建立鋼鐵人 3D 英雄模型並掛載至戰術砲台節點
++                this.ironManMaterials = createIronManMaterials();
++                this.ironMan = createIronManHero(this.ironManMaterials);
++                this.ironMan.root.position.set(0, 0.20, 0); // 雙腳穩踩戰術基座頂部
++                this.cannonGroup.add(this.ironMan.root);
++
++                // 鋼鐵人運動學與姿態快取狀態 (零 GC 記憶體配置，遵守 three-best-practices)
++                this.recoilTimer = 0;
++                this.flashTimer = 0;
++                this.lastCannonX = 0;
++                this.ironManBank = 0;
++
++                this.rShoulderX = 0.12; this.rShoulderY = 0; this.rShoulderZ = -0.22;
++                this.rElbowX = -0.25;   this.rElbowY = 0;    this.rElbowZ = 0.10;
++                this.rHandX = 0;        this.rHandY = 0;     this.rHandZ = 0;
++
++                this.lShoulderX = 0.12; this.lShoulderY = 0; this.lShoulderZ = 0.22;
++                this.lElbowX = -0.25;   this.lElbowY = 0;    this.lElbowZ = -0.10;
++                this.lHandX = 0;        this.lHandY = 0;     this.lHandZ = 0;
++
++                this.chestRotX = 0;
++
+                 this.cannonGroup.position.set(0, 0, 0);
+                 this.scene.add(this.cannonGroup);
+ 
+-                // 預設建立雙聯裝砲管
++                // 預設建立雙聯裝微型發射埠
+                 this.updateCannonBarrels(2);
+             }
+ 
+@@ -1432,20 +2161,132 @@
+ 
+                 this.barrelsGroup = new THREE.Group();
+                 const spacing = 0.4;
+-                const radius = (streamCount >= 4) ? 0.15 : (streamCount === 3 ? 0.18 : 0.22);
+ 
++                // 隱蔽整合至戰術圓盤邊緣的微型能量發射埠 (提供多聯裝升級的微妙科技反饋，不遮擋鋼鐵人英姿)
+                 for (let i = 0; i < streamCount; i++) {
+                     const offset = (i - (streamCount - 1) / 2) * spacing;
+-                    const barrelGeo = new THREE.CylinderGeometry(radius * 0.8, radius, 1.3, 12);
+-                    barrelGeo.rotateX(Math.PI / 2);
+-                    const barrel = new THREE.Mesh(barrelGeo, this.barrelMat);
+-                    barrel.position.set(offset, 0.4, 0.55);
+-                    this.barrelsGroup.add(barrel);
++                    const portGeo = new THREE.CylinderGeometry(0.045, 0.055, 0.12, 12);
++                    portGeo.rotateX(Math.PI / 2);
++                    const port = new THREE.Mesh(portGeo, this.barrelMat);
++                    port.position.set(offset, 0.12, 1.12);
++                    this.barrelsGroup.add(port);
+                 }
+ 
+                 this.cannonGroup.add(this.barrelsGroup);
+             }
+ 
++            /**
++             * 構建鋼鐵人專屬英雄技能 3D 視覺物件池與特效
++             * 遵循 three-best-practices：啟動時預先分配 12 枚導彈與集束砲，循環中 0 GC 記憶體分配
++             */
++            initHeroSkillsFX() {
++                // 1. 胸口集束巨砲 (Unibeam Blast 3D 群組)
++                this.unibeamGroup = new THREE.Group();
++                this.unibeamGroup.position.set(0, 1.55, 0); // 鋼鐵人方舟反應爐胸口高度
++
++                // 外層高亮青藍能量光柱
++                const outerGeo = new THREE.CylinderGeometry(0.5, 0.5, 75, 16);
++                outerGeo.rotateX(Math.PI / 2);
++                this.unibeamOuterMat = new THREE.MeshBasicMaterial({
++                    color: 0x00f0ff,
++                    transparent: true,
++                    opacity: 0,
++                    blending: THREE.AdditiveBlending
++                });
++                this.unibeamOuterMesh = new THREE.Mesh(outerGeo, this.unibeamOuterMat);
++                this.unibeamOuterMesh.position.set(0, 0, 37.5);
++                this.unibeamGroup.add(this.unibeamOuterMesh);
++
++                // 內核心超能純白激光柱
++                const innerGeo = new THREE.CylinderGeometry(0.22, 0.22, 75, 16);
++                innerGeo.rotateX(Math.PI / 2);
++                this.unibeamInnerMat = new THREE.MeshBasicMaterial({
++                    color: 0xffffff,
++                    transparent: true,
++                    opacity: 0,
++                    blending: THREE.AdditiveBlending
++                });
++                this.unibeamInnerMesh = new THREE.Mesh(innerGeo, this.unibeamInnerMat);
++                this.unibeamInnerMesh.position.set(0, 0, 37.5);
++                this.unibeamGroup.add(this.unibeamInnerMesh);
++
++                // 沿光柱分佈的同軸旋轉能量光環 (4~6 環)
++                this.unibeamRings = [];
++                this.unibeamRingMat = new THREE.MeshBasicMaterial({
++                    color: 0x00f0ff,
++                    transparent: true,
++                    opacity: 0,
++                    blending: THREE.AdditiveBlending
++                });
++                const ringDistances = [6, 18, 32, 48, 64];
++                for (let i = 0; i < ringDistances.length; i++) {
++                    const ringGeo = new THREE.TorusGeometry(0.8, 0.05, 8, 20);
++                    const ringMesh = new THREE.Mesh(ringGeo, this.unibeamRingMat);
++                    ringMesh.position.set(0, 0, ringDistances[i]);
++                    this.unibeamGroup.add(ringMesh);
++                    this.unibeamRings.push(ringMesh);
++                }
++
++                this.unibeamGroup.visible = false;
++                this.cannonGroup.add(this.unibeamGroup);
++
++                // 2. 肩部微型追蹤導彈物件池 (Missile Pool: 12 枚)
++                this.missileGroup = new THREE.Group();
++                this.scene.add(this.missileGroup);
++                this.missilePool = [];
++
++                const missileBodyGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.4, 8);
++                missileBodyGeo.rotateX(Math.PI / 2);
++                const missileHeadGeo = new THREE.ConeGeometry(0.06, 0.12, 8);
++                missileHeadGeo.rotateX(Math.PI / 2);
++                const missileFlameGeo = new THREE.ConeGeometry(0.04, 0.18, 6);
++                missileFlameGeo.rotateX(-Math.PI / 2);
++
++                const missileMatGold = new THREE.MeshStandardMaterial({
++                    color: 0xd4af37,
++                    metalness: 0.85,
++                    roughness: 0.25
++                });
++                const missileMatRed = new THREE.MeshStandardMaterial({
++                    color: 0xaa1818,
++                    metalness: 0.85,
++                    roughness: 0.3
++                });
++                this.missileFlameMat = new THREE.MeshBasicMaterial({
++                    color: 0x00f0ff,
++                    transparent: true,
++                    opacity: 0.85
++                });
++
++                for (let i = 0; i < 12; i++) {
++                    const mMesh = new THREE.Group();
++                    const body = new THREE.Mesh(missileBodyGeo, (i % 2 === 0) ? missileMatGold : missileMatRed);
++                    mMesh.add(body);
++
++                    const head = new THREE.Mesh(missileHeadGeo, (i % 2 === 0) ? missileMatRed : missileMatGold);
++                    head.position.set(0, 0, 0.25);
++                    mMesh.add(head);
++
++                    const flame = new THREE.Mesh(missileFlameGeo, this.missileFlameMat);
++                    flame.position.set(0, 0, -0.28);
++                    mMesh.add(flame);
++
++                    mMesh.visible = false;
++                    this.missileGroup.add(mMesh);
++
++                    this.missilePool.push({
++                        mesh: mMesh,
++                        flameMesh: flame,
++                        active: false,
++                        x: 0, y: 0, z: 0,
++                        vx: 0, vy: 0, vz: 0,
++                        targetEnemy: null,
++                        life: 0,
++                        maxLife: 3.5
++                    });
++                }
++            }
++
+             applyTheme(theme) {
+                 if (!theme) return;
+                 this.scene.background.set(theme.sceneBg);
+@@ -1474,6 +2315,10 @@
+                     this.shieldBarMat.color.set(theme.railColor);
+                     this.shieldBarMat.needsUpdate = true;
+                 }
++                if (this.ringMat) {
++                    this.ringMat.color.set(theme.railColor || theme.blueTroopColor);
++                    this.ringMat.needsUpdate = true;
++                }
+                 if (this.baseMat) {
+                     this.baseMat.color.set(theme.cannonBaseColor);
+                     this.baseMat.emissive.set(theme.cannonBaseEmissive);
+@@ -1489,6 +2334,28 @@
+                     this.aimMat.opacity = theme.aimLineOpacity;
+                     this.aimMat.needsUpdate = true;
+                 }
++                if (this.ironManMaterials) {
++                    if (this.ironManMaterials.arcGlow) {
++                        this.ironManMaterials.arcGlow.color.set(theme.blueTroopColor || theme.railColor);
++                        this.ironManMaterials.arcGlow.needsUpdate = true;
++                    }
++                    if (this.ironManMaterials.flashMat) {
++                        this.ironManMaterials.flashMat.color.set(theme.blueTroopColor || theme.railColor);
++                        this.ironManMaterials.flashMat.needsUpdate = true;
++                    }
++                }
++                if (this.unibeamOuterMat) {
++                    this.unibeamOuterMat.color.set(theme.blueTroopColor || theme.railColor);
++                    this.unibeamOuterMat.needsUpdate = true;
++                }
++                if (this.unibeamRingMat) {
++                    this.unibeamRingMat.color.set(theme.blueTroopColor || theme.railColor);
++                    this.unibeamRingMat.needsUpdate = true;
++                }
++                if (this.missileFlameMat) {
++                    this.missileFlameMat.color.set(theme.blueTroopColor || theme.railColor);
++                    this.missileFlameMat.needsUpdate = true;
++                }
+                 if (this.gridHelper) {
+                     this.scene.remove(this.gridHelper);
+                     if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
+@@ -1509,6 +2376,212 @@
+                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
+             }
++
++            /**
++             * 更新鋼鐵人運動學、後座力與多聯裝姿態切換
++             * 遵循 three-best-practices：零迴圈內 GC 記憶體分配、平滑插值 (LERP)
++             *
++             * @param {number} dt 幀間隔 Delta Time
++             * @param {number} time 累積總時間
++             * @param {boolean} isFiring 當前幀是否觸發開火
++             * @param {number} streamCount 彈道聯裝數 (2, 3, 4)
++             * @param {boolean} [isPlaying=true] 是否處於戰鬥遊戲中
++             * @param {boolean} [isUnibeamActive=false] 胸口集束砲是否正在激發
++             */
++            updateIronManKinematics(dt, time, isFiring, streamCount, isPlaying = true, isUnibeamActive = false) {
++                if (!this.ironMan) return;
++
++                // 1. 水平跟隨與懸浮推進微浮動 (Bobbing)
++                this.ironMan.root.position.y = 0.20 + Math.sin(time * 4.0) * 0.03;
++
++                // 2. 轉彎側傾角 (Banking) 平滑解算
++                const currentX = this.cannonGroup.position.x;
++                const vx = (currentX - this.lastCannonX) / Math.max(dt, 0.001);
++                this.lastCannonX = currentX;
++
++                // 相機自 -Z 望向 +Z：向右移動 (vx < 0) 身體向右傾 (Z 軸正轉)；向左移動 (vx > 0) 身體向左傾 (Z 軸反轉)
++                const targetBank = isPlaying ? -Math.max(-0.25, Math.min(0.25, vx * 0.035)) : 0;
++                this.ironManBank += (targetBank - this.ironManBank) * Math.min(1.0, dt * 10.0);
++                this.ironMan.root.rotation.z = this.ironManBank;
++
++                // 3. 後座力與掌心閃光精靈觸發
++                if (isFiring && isPlaying) {
++                    this.recoilTimer = 0.12;
++                    this.flashTimer = 0.05;
++                    this.ironMan.rightArm.flashSprite.visible = true;
++                    if (streamCount >= 3) {
++                        this.ironMan.leftArm.flashSprite.visible = true;
++                    } else {
++                        this.ironMan.leftArm.flashSprite.visible = false;
++                    }
++                }
++
++                // 閃光精靈倒數與自動隱藏
++                if (this.flashTimer > 0) {
++                    this.flashTimer -= dt;
++                    const flashScale = 0.65 + (Math.max(0, this.flashTimer) / 0.05) * 0.25;
++                    if (this.ironMan.rightArm.flashSprite.visible) {
++                        this.ironMan.rightArm.flashSprite.scale.set(flashScale, flashScale, 1);
++                    }
++                    if (this.ironMan.leftArm.flashSprite.visible) {
++                        this.ironMan.leftArm.flashSprite.scale.set(flashScale, flashScale, 1);
++                    }
++                    if (this.flashTimer <= 0) {
++                        this.ironMan.rightArm.flashSprite.visible = false;
++                        this.ironMan.leftArm.flashSprite.visible = false;
++                    }
++                } else {
++                    this.ironMan.rightArm.flashSprite.visible = false;
++                    this.ironMan.leftArm.flashSprite.visible = false;
++                }
++
++                // 計算後座力振幅 kick
++                let kick = 0;
++                if (this.recoilTimer > 0) {
++                    kick = Math.max(0, Math.sin(this.recoilTimer * 40.0)) * 0.10;
++                    this.recoilTimer -= dt;
++                    if (this.recoilTimer < 0) this.recoilTimer = 0;
++                }
++
++                // 4. 多聯裝與英雄技能姿態目標角度判定 (Unibeam Stance vs Single vs Dual-Arm Stance vs Idle)
++                let targetRShoulderX = 0.12, targetRShoulderY = 0, targetRShoulderZ = -0.22;
++                let targetRElbowX = -0.25, targetRElbowY = 0, targetRElbowZ = 0.10;
++                let targetRHandX = 0, targetRHandY = 0, targetRHandZ = 0;
++
++                let targetLShoulderX = 0.12, targetLShoulderY = 0, targetLShoulderZ = 0.22;
++                let targetLElbowX = -0.25, targetLElbowY = 0, targetLElbowZ = -0.10;
++                let targetLHandX = 0, targetLHandY = 0, targetLHandZ = 0;
++
++                if (isPlaying) {
++                    if (isUnibeamActive) {
++                        // 鋼鐵人胸口集束巨砲姿態：挺胸傲立，雙臂向後下沉蓄能穩定身體
++                        targetRShoulderX = 0.35; targetRShoulderY = 0; targetRShoulderZ = -0.38;
++                        targetRElbowX = -0.35;   targetRElbowY = 0;    targetRElbowZ = 0.15;
++                        targetRHandX = 0;        targetRHandY = 0;     targetRHandZ = 0;
++
++                        targetLShoulderX = 0.35; targetLShoulderY = 0; targetLShoulderZ = 0.38;
++                        targetLElbowX = -0.35;   targetLElbowY = 0;    targetLElbowZ = -0.15;
++                        targetLHandX = 0;        targetLHandY = 0;     targetLHandZ = 0;
++                    } else if (streamCount <= 2) {
++                        // 雙聯裝：右手平舉瞄準 +Z，左手戒備微屈
++                        targetRShoulderX = -1.45; targetRShoulderY = 0; targetRShoulderZ = 0;
++                        targetRElbowX = -0.15;    targetRElbowY = 0;    targetRElbowZ = 0;
++                        targetRHandX = Math.PI / 2; targetRHandY = 0;   targetRHandZ = 0;
++
++                        targetLShoulderX = 0.18;  targetLShoulderY = 0; targetLShoulderZ = 0.28;
++                        targetLElbowX = -0.45;    targetLElbowY = 0;    targetLElbowZ = -0.15;
++                        targetLHandX = 0;         targetLHandY = 0;     targetLHandZ = 0;
++                    } else {
++                        // 3 聯裝或 4 聯裝：雙手齊射姿態 (Dual-Repulsor Aiming)
++                        targetRShoulderX = -1.45; targetRShoulderY = 0; targetRShoulderZ = -0.08;
++                        targetRElbowX = -0.15;    targetRElbowY = 0;    targetRElbowZ = 0;
++                        targetRHandX = Math.PI / 2; targetRHandY = 0;   targetRHandZ = 0;
++
++                        targetLShoulderX = -1.45; targetLShoulderY = 0; targetLShoulderZ = 0.08;
++                        targetLElbowX = -0.15;    targetLElbowY = 0;    targetLElbowZ = 0;
++                        targetLHandX = Math.PI / 2; targetLHandY = 0;   targetLHandZ = 0;
++                    }
++                }
++
++                // 5. 關節平滑插值 (LERP)
++                const blend = Math.min(1.0, dt * 10.0);
++                this.rShoulderX += (targetRShoulderX - this.rShoulderX) * blend;
++                this.rShoulderY += (targetRShoulderY - this.rShoulderY) * blend;
++                this.rShoulderZ += (targetRShoulderZ - this.rShoulderZ) * blend;
++                this.rElbowX += (targetRElbowX - this.rElbowX) * blend;
++                this.rElbowY += (targetRElbowY - this.rElbowY) * blend;
++                this.rElbowZ += (targetRElbowZ - this.rElbowZ) * blend;
++                this.rHandX += (targetRHandX - this.rHandX) * blend;
++                this.rHandY += (targetRHandY - this.rHandY) * blend;
++                this.rHandZ += (targetRHandZ - this.rHandZ) * blend;
++
++                this.lShoulderX += (targetLShoulderX - this.lShoulderX) * blend;
++                this.lShoulderY += (targetLShoulderY - this.lShoulderY) * blend;
++                this.lShoulderZ += (targetLShoulderZ - this.lShoulderZ) * blend;
++                this.lElbowX += (targetLElbowX - this.lElbowX) * blend;
++                this.lElbowY += (targetLElbowY - this.lElbowY) * blend;
++                this.lElbowZ += (targetLElbowZ - this.lElbowZ) * blend;
++                this.lHandX += (targetLHandX - this.lHandX) * blend;
++                this.lHandY += (targetLHandY - this.lHandY) * blend;
++                this.lHandZ += (targetLHandZ - this.lHandZ) * blend;
++
++                // 6. 應用關節旋轉與後座力疊加
++                const rKick = kick;
++                const lKick = (streamCount >= 3) ? kick : 0;
++
++                this.ironMan.rightArm.shoulderPivot.rotation.set(
++                    this.rShoulderX - rKick,
++                    this.rShoulderY,
++                    this.rShoulderZ
++                );
++                this.ironMan.rightArm.elbowPivot.rotation.set(this.rElbowX, this.rElbowY, this.rElbowZ);
++                this.ironMan.rightArm.handGroup.rotation.set(this.rHandX, this.rHandY, this.rHandZ);
++
++                this.ironMan.leftArm.shoulderPivot.rotation.set(
++                    this.lShoulderX - lKick,
++                    this.lShoulderY,
++                    this.lShoulderZ
++                );
++                this.ironMan.leftArm.elbowPivot.rotation.set(this.lElbowX, this.lElbowY, this.lElbowZ);
++                this.ironMan.leftArm.handGroup.rotation.set(this.lHandX, this.lHandY, this.lHandZ);
++
++                // 胸部挺起或後座微後仰
++                const targetChestX = isUnibeamActive ? 0.22 : (-kick * 0.4);
++                this.chestRotX += (targetChestX - this.chestRotX) * Math.min(1.0, dt * 18.0);
++                this.ironMan.chestGroup.rotation.x = this.chestRotX;
++
++                // 方舟反應爐高能充能脈衝與集束砲視覺連動
++                if (this.ironMan.reactorCore) {
++                    if (isUnibeamActive) {
++                        const pulse = 1.35 + Math.sin(time * 35.0) * 0.25;
++                        this.ironMan.reactorCore.scale.set(pulse, pulse, pulse);
++                    } else {
++                        this.ironMan.reactorCore.scale.set(1.0, 1.0, 1.0);
++                    }
++                }
++
++                // 胸口集束砲光柱動畫與旋轉同軸光環
++                if (this.unibeamGroup) {
++                    if (isUnibeamActive) {
++                        this.unibeamGroup.visible = true;
++                        const pulse = 0.75 + Math.sin(time * 30.0) * 0.2;
++                        if (this.unibeamOuterMat) this.unibeamOuterMat.opacity = Math.min(1.0, pulse * 0.75);
++                        if (this.unibeamInnerMat) this.unibeamInnerMat.opacity = Math.min(1.0, pulse * 0.95);
++                        if (this.unibeamRingMat) this.unibeamRingMat.opacity = Math.min(1.0, pulse * 0.85);
++                        if (this.unibeamRings) {
++                            for (let r = 0; r < this.unibeamRings.length; r++) {
++                                this.unibeamRings[r].rotation.z += dt * (8.0 + r * 2.5);
++                            }
++                        }
++                    } else {
++                        this.unibeamGroup.visible = false;
++                    }
++                }
++
++                // 7. 推進噴嘴火焰細節動畫
++                if (isPlaying) {
++                    const flameScale = 0.85 + Math.sin(time * 25.0) * 0.25;
++                    if (this.ironMan.leftLeg.bootFlame) {
++                        this.ironMan.leftLeg.bootFlame.visible = true;
++                        this.ironMan.leftLeg.bootFlame.scale.set(1, flameScale, 1);
++                    }
++                    if (this.ironMan.rightLeg.bootFlame) {
++                        this.ironMan.rightLeg.bootFlame.visible = true;
++                        this.ironMan.rightLeg.bootFlame.scale.set(1, flameScale, 1);
++                    }
++                    if (this.ironMan.backFlames) {
++                        const backVisible = Math.abs(vx) > 0.5 || isFiring;
++                        this.ironMan.backFlames.forEach(f => {
++                            f.visible = backVisible;
++                            if (backVisible) f.scale.set(1, flameScale, 1);
++                        });
++                    }
++                } else {
++                    if (this.ironMan.leftLeg.bootFlame) this.ironMan.leftLeg.bootFlame.visible = false;
++                    if (this.ironMan.rightLeg.bootFlame) this.ironMan.rightLeg.bootFlame.visible = false;
++                    if (this.ironMan.backFlames) this.ironMan.backFlames.forEach(f => { f.visible = false; });
++                }
++            }
+         }
+ 
+         // =========================================================================
+@@ -2258,6 +3331,28 @@
+                 this.keyMoveLeft = false;
+                 this.keyMoveRight = false;
+ 
++                // 英雄主動專屬技能資料結構 (遵守 Task 3 規格)
++                this.heroSkills = {
++                    unibeam: {
++                        cooldown: 12.0,
++                        timer: 0,
++                        duration: 1.2,
++                        activeTimer: 0,
++                        active: false
++                    },
++                    missiles: {
++                        cooldown: 8.0,
++                        timer: 0
++                    }
++                };
++
++                // 尋標目標快取槽 (100% 零 GC 記憶體分配，避免陣列或物件配置)
++                this._targetSlots = Array.from({ length: 16 }, () => ({
++                    type: null,
++                    ref: null,
++                    index: -1
++                }));
++
+                 this.bindUI();
+                 this.bindInputs();
+                 this.initTheme();
+@@ -2358,6 +3453,34 @@
+                 document.getElementById('btn-upg-coins').addEventListener('click', () => {
+                     if (gameStorage.upgrade('coinMultiplier')) this.renderMenu();
+                 });
++
++                // 鋼鐵人英雄專屬技能 HUD 按鈕與遮罩 DOM 快取
++                this.btnSkillUnibeam = document.getElementById('btn-skill-unibeam');
++                this.cdMaskUnibeam = document.getElementById('cd-mask-unibeam');
++                this.cdTextUnibeam = document.getElementById('cd-text-unibeam');
++                this.btnSkillMissiles = document.getElementById('btn-skill-missiles');
++                this.cdMaskMissiles = document.getElementById('cd-mask-missiles');
++                this.cdTextMissiles = document.getElementById('cd-text-missiles');
++
++                if (this.btnSkillUnibeam) {
++                    const handleUnibeam = (e) => {
++                        e.stopPropagation();
++                        e.preventDefault();
++                        this.triggerUnibeam();
++                    };
++                    this.btnSkillUnibeam.addEventListener('pointerdown', handleUnibeam);
++                    this.btnSkillUnibeam.addEventListener('click', handleUnibeam);
++                }
++
++                if (this.btnSkillMissiles) {
++                    const handleMissiles = (e) => {
++                        e.stopPropagation();
++                        e.preventDefault();
++                        this.fireMicroMissiles();
++                    };
++                    this.btnSkillMissiles.addEventListener('pointerdown', handleMissiles);
++                    this.btnSkillMissiles.addEventListener('click', handleMissiles);
++                }
+             }
+ 
+             initTheme() {
+@@ -2480,7 +3603,7 @@
+                 window.addEventListener('pointerup', () => { isDragging = false; });
+                 window.addEventListener('pointercancel', () => { isDragging = false; });
+ 
+-                // 鍵盤 A/D / 左右箭頭控制
++                // 鍵盤 A/D / 左右箭頭操控 與 [E]/[Q] 英雄技能快捷鍵
+                 window.addEventListener('keydown', (e) => {
+                     if (this.state !== 'PLAYING') return;
+                     if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+@@ -2489,6 +3612,12 @@
+                     if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                         this.keyMoveRight = true;
+                     }
++                    if (e.key === 'e' || e.key === 'E' || e.code === 'KeyE') {
++                        this.triggerUnibeam();
++                    }
++                    if (e.key === 'q' || e.key === 'Q' || e.code === 'KeyQ') {
++                        this.fireMicroMissiles();
++                    }
+                     const guide = document.getElementById('drag-guide');
+                     if (guide) guide.style.opacity = '0';
+                 });
+@@ -2516,6 +3645,22 @@
+                 this.shakeAmount = 0;
+                 this.entityMgr.resetAll();
+ 
++                // 重設英雄專屬主動技能狀態與物件池
++                this.heroSkills.unibeam.active = false;
++                this.heroSkills.unibeam.activeTimer = 0;
++                this.heroSkills.unibeam.timer = 0;
++                this.heroSkills.missiles.timer = 0;
++                if (this.threeScene.unibeamGroup) {
++                    this.threeScene.unibeamGroup.visible = false;
++                }
++                if (this.threeScene.missilePool) {
++                    this.threeScene.missilePool.forEach(m => {
++                        m.active = false;
++                        m.mesh.visible = false;
++                    });
++                }
++                this.updateHeroSkillsHUD();
++
+                 // 同步當前等級的砲管外觀
+                 this.threeScene.updateCannonBarrels(gameStorage.getStreamColumnCount());
+ 
+@@ -2556,6 +3701,17 @@
+                 this.state = 'GAMEOVER';
+                 this.lastResultWon = isVictory;
+ 
++                // 關閉集束砲與導彈視覺效果
++                this.heroSkills.unibeam.active = false;
++                this.heroSkills.unibeam.activeTimer = 0;
++                if (this.threeScene.unibeamGroup) this.threeScene.unibeamGroup.visible = false;
++                if (this.threeScene.missilePool) {
++                    this.threeScene.missilePool.forEach(m => {
++                        m.active = false;
++                        m.mesh.visible = false;
++                    });
++                }
++
+                 if (isVictory) {
+                     soundFX.playVictory();
+                     if (this.currentStageId === gameStorage.data.unlockedStage && gameStorage.data.unlockedStage < 10) {
+@@ -2771,9 +3927,444 @@
+                 }
+             }
+ 
++            /**
++             * 觸發胸口集束巨砲 [E] (Unibeam Blast)
++             * 冷卻 12 秒，持續 1.2 秒沿 +Z 貫穿整個戰場
++             */
++            triggerUnibeam() {
++                if (this.state !== 'PLAYING') return;
++                if (this.heroSkills.unibeam.timer > 0) return;
++
++                soundFX.init();
++                this.heroSkills.unibeam.active = true;
++                this.heroSkills.unibeam.activeTimer = this.heroSkills.unibeam.duration;
++                this.heroSkills.unibeam.timer = this.heroSkills.unibeam.cooldown;
++
++                this.shakeAmount = 0.6;
++                if (soundFX.playUnibeam) soundFX.playUnibeam();
++                else soundFX.playBossWarning();
++
++                this.updateHeroSkillsHUD();
++            }
++
++            /**
++             * 觸發肩部微型追蹤導彈 [Q] (Shoulder Micro-Missiles)
++             * 冷卻 8 秒，從左右雙肩發射 6 枚高動態弧線追蹤導彈
++             */
++            fireMicroMissiles() {
++                if (this.state !== 'PLAYING') return;
++                if (this.heroSkills.missiles.timer > 0) return;
++
++                soundFX.init();
++                this.heroSkills.missiles.timer = this.heroSkills.missiles.cooldown;
++                this.shakeAmount = Math.max(this.shakeAmount, 0.2);
++
++                const leftX = this.cannonX - 0.38;
++                const rightX = this.cannonX + 0.38;
++                const spawnY = 1.6;
++                const spawnZ = 0.3;
++
++                let launched = 0;
++                const needed = 6;
++                for (let i = 0; i < this.threeScene.missilePool.length && launched < needed; i++) {
++                    const m = this.threeScene.missilePool[i];
++                    if (!m.active) {
++                        m.active = true;
++                        m.mesh.visible = true;
++                        const isLeft = (launched < 3);
++                        m.x = isLeft ? leftX : rightX;
++                        m.y = spawnY;
++                        m.z = spawnZ;
++                        m.vx = (Math.random() - 0.5) * 3.0 + (isLeft ? -1.2 : 1.2);
++                        m.vy = 6.0 + Math.random() * 3.0;
++                        m.vz = 10.0 + Math.random() * 4.0;
++                        m.life = 0;
++                        m.maxLife = 3.5;
++                        m.targetEnemy = this.findMissileTarget(launched);
++                        m.mesh.position.set(m.x, m.y, m.z);
++                        launched++;
++                    }
++                }
++
++                if (soundFX.playMissileLaunch) soundFX.playMissileLaunch();
++                else soundFX.playShoot();
++
++                this.updateHeroSkillsHUD();
++            }
++
++            /**
++             * 微型導彈自動導航搜尋前方活動敵軍（優先鎖定 Boss，其次石像鬼，其次紅軍步兵）
++             * 單次線性迴圈遍歷 (Single-pass scan)，100% 零 GC 記憶體配置，避免任何臨時陣列或物件配置
++             * @param {number} missileIndex 導彈索引，用於群體分散鎖定目標
++             */
++            findMissileTarget(missileIndex = 0) {
++                const slot = this._targetSlots[missileIndex % this._targetSlots.length];
++
++                // 1. 優先鎖定活躍且在射程內的 Boss
++                const boss = this.entityMgr.boss;
++                if (boss.active && boss.z > 0.5) {
++                    slot.type = 'boss';
++                    slot.ref = boss;
++                    slot.index = 0;
++                    return slot;
++                }
++
++                // 2. 其次單次線性遍歷石像鬼，尋找距離最近者 (最小 z)
++                let bestGargoyle = null;
++                let bestGargoyleIdx = -1;
++                let minGargoyleScore = Infinity;
++
++                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
++                    const g = this.entityMgr.gargoyleList[k];
++                    if (g.active && g.z > 0.5) {
++                        const score = g.z + ((k + missileIndex) % 3) * 0.4;
++                        if (score < minGargoyleScore) {
++                            minGargoyleScore = score;
++                            bestGargoyle = g;
++                            bestGargoyleIdx = k;
++                        }
++                    }
++                }
++                if (bestGargoyle) {
++                    slot.type = 'gargoyle';
++                    slot.ref = bestGargoyle;
++                    slot.index = bestGargoyleIdx;
++                    return slot;
++                }
++
++                // 3. 其次單次線性遍歷紅軍步兵，尋找距離最近者 (最小 z)
++                let bestRed = null;
++                let bestRedIdx = -1;
++                let minRedScore = Infinity;
++
++                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
++                    const r = this.entityMgr.redList[j];
++                    if (r.active && r.z > 0.5) {
++                        const score = r.z + ((j + missileIndex * 3) % 5) * 0.5;
++                        if (score < minRedScore) {
++                            minRedScore = score;
++                            bestRed = r;
++                            bestRedIdx = j;
++                        }
++                    }
++                }
++                if (bestRed) {
++                    slot.type = 'red';
++                    slot.ref = bestRed;
++                    slot.index = bestRedIdx;
++                    return slot;
++                }
++
++                return null;
++            }
++
++            /**
++             * 每幀更新英雄技能倒數與 HUD 遮罩
++             */
++            updateHeroSkills(dt) {
++                // 胸口集束巨砲倒數
++                if (this.heroSkills.unibeam.timer > 0) {
++                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - dt);
++                }
++                if (this.heroSkills.unibeam.active) {
++                    this.heroSkills.unibeam.activeTimer = Math.max(0, this.heroSkills.unibeam.activeTimer - dt);
++                    if (this.heroSkills.unibeam.activeTimer <= 0) {
++                        this.heroSkills.unibeam.active = false;
++                        if (this.threeScene.unibeamGroup) {
++                            this.threeScene.unibeamGroup.visible = false;
++                        }
++                    }
++                }
++
++                // 肩部微型導彈倒數
++                if (this.heroSkills.missiles.timer > 0) {
++                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - dt);
++                }
++
++                this.updateHeroSkillsHUD();
++            }
++
++            /**
++             * 同步更新 HUD 上英雄技能冷卻遮罩與倒數數字
++             */
++            updateHeroSkillsHUD() {
++                // Unibeam HUD
++                if (this.btnSkillUnibeam && this.cdMaskUnibeam && this.cdTextUnibeam) {
++                    const u = this.heroSkills.unibeam;
++                    if (u.timer > 0) {
++                        this.btnSkillUnibeam.classList.add('on-cd', 'disabled');
++                        const pct = (u.timer / u.cooldown) * 100;
++                        this.cdMaskUnibeam.style.height = `${pct.toFixed(1)}%`;
++                        this.cdTextUnibeam.innerText = `${u.timer.toFixed(1)}s`;
++                    } else {
++                        this.btnSkillUnibeam.classList.remove('on-cd', 'disabled');
++                        this.cdMaskUnibeam.style.height = '0%';
++                        this.cdTextUnibeam.innerText = '';
++                    }
++                }
++
++                // Missiles HUD
++                if (this.btnSkillMissiles && this.cdMaskMissiles && this.cdTextMissiles) {
++                    const m = this.heroSkills.missiles;
++                    if (m.timer > 0) {
++                        this.btnSkillMissiles.classList.add('on-cd', 'disabled');
++                        const pct = (m.timer / m.cooldown) * 100;
++                        this.cdMaskMissiles.style.height = `${pct.toFixed(1)}%`;
++                        this.cdTextMissiles.innerText = `${m.timer.toFixed(1)}s`;
++                    } else {
++                        this.btnSkillMissiles.classList.remove('on-cd', 'disabled');
++                        this.cdMaskMissiles.style.height = '0%';
++                        this.cdTextMissiles.innerText = '';
++                    }
++                }
++            }
++
++            /**
++             * 胸口集束巨砲全跑道貫穿傷害判定 (Unibeam Collisions)
++             */
++            updateUnibeamCollisions(dt) {
++                if (!this.heroSkills.unibeam.active) return;
++
++                const redList = this.entityMgr.redList;
++                const gargoyleList = this.entityMgr.gargoyleList;
++                const boss = this.entityMgr.boss;
++                const beamX = this.cannonX;
++
++                // 1. 貫穿消滅射線路徑上的所有紅軍步兵
++                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
++                    const r = redList[j];
++                    if (r.active && r.z > 0 && Math.abs(r.x - beamX) < 1.3) {
++                        r.active = false;
++                        _tempMatrix.makeTranslation(0, -999, 0);
++                        this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
++                        this.killsCount++;
++                        this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
++                        this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 6);
++                        soundFX.playHit();
++                    }
++                }
++
++                // 2. 射線路徑上的石像鬼承受高額重創
++                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
++                    const g = gargoyleList[k];
++                    if (g.active && g.z > 0 && Math.abs(g.x - beamX) < 1.4) {
++                        g.hp -= 25.0 * dt;
++                        this.entityMgr.spawnExplosion(g.x, g.y, g.z, 2);
++                        if (g.hp <= 0) {
++                            g.active = false;
++                            _tempMatrix.makeTranslation(0, -999, 0);
++                            this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
++                            this.killsCount++;
++                            this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
++                            this.entityMgr.spawnExplosion(g.x, g.y, g.z, 6);
++                            soundFX.playHit();
++                        }
++                    }
++                }
++
++                // 3. 巨型 Boss 處於集束射線中每秒承受 50 點重創並被擊退
++                if (boss.active && boss.z > 0 && Math.abs(boss.x - beamX) < 1.6) {
++                    boss.hp -= 50 * dt;
++                    boss.z += 1.5 * dt; // 持續向後推擠擊退
++                    this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 1.2, boss.z, 2);
++                    this.entityMgr.updateBossHpBar();
++                    if (boss.hp <= 0) {
++                        boss.active = false;
++                        this.entityMgr.bossGroup.position.set(0, -999, 0);
++                        this.killsCount++;
++                        this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
++                        this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
++                        this.shakeAmount = 0.8;
++                        soundFX.playHit();
++                    }
++                }
++            }
++
++            /**
++             * 推進微型追蹤導彈，進行 Lerp 弧線導航與爆破解算 (0 GC)
++             */
++            updateMicroMissiles(dt) {
++                const pool = this.threeScene.missilePool;
++                if (!pool) return;
++
++                for (let i = 0; i < pool.length; i++) {
++                    const m = pool[i];
++                    if (!m.active) continue;
++
++                    m.life += dt;
++                    if (m.life >= m.maxLife) {
++                        m.active = false;
++                        m.mesh.visible = false;
++                        this.entityMgr.spawnExplosion(m.x, m.y, m.z, 4);
++                        continue;
++                    }
++
++                    // 1. 獲取目標即時座標或重新鎖定
++                    let tx = m.x, ty = 1.0, tz = m.z + 20.0;
++                    let targetValid = false;
++
++                    if (m.targetEnemy) {
++                        const t = m.targetEnemy;
++                        if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
++                            tx = this.entityMgr.boss.x;
++                            ty = 1.5;
++                            tz = this.entityMgr.boss.z;
++                            targetValid = true;
++                        } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
++                            tx = t.ref.x;
++                            ty = t.ref.y;
++                            tz = t.ref.z;
++                            targetValid = true;
++                        } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
++                            tx = t.ref.x;
++                            ty = 0.4;
++                            tz = t.ref.z;
++                            targetValid = true;
++                        }
++                    }
++
++                    // 若原目標失效，嘗試動態重新捕獲新目標
++                    if (!targetValid) {
++                        m.targetEnemy = this.findMissileTarget(i);
++                        if (m.targetEnemy) {
++                            const t = m.targetEnemy;
++                            if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
++                                tx = this.entityMgr.boss.x; ty = 1.5; tz = this.entityMgr.boss.z; targetValid = true;
++                            } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
++                                tx = t.ref.x; ty = t.ref.y; tz = t.ref.z; targetValid = true;
++                            } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
++                                tx = t.ref.x; ty = 0.4; tz = t.ref.z; targetValid = true;
++                            }
++                        }
++                    }
++
++                    // 2. 平滑轉向目標推進 (Homing Steering with Lerp)
++                    if (targetValid) {
++                        const dx = tx - m.x;
++                        const dy = ty - m.y;
++                        const dz = tz - m.z;
++                        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
++                        if (dist > 0.1) {
++                            const targetSpeed = 24.0;
++                            const desiredVx = (dx / dist) * targetSpeed;
++                            const desiredVy = (dy / dist) * targetSpeed;
++                            const desiredVz = (dz / dist) * targetSpeed;
++                            const steer = Math.min(1.0, dt * 7.5);
++                            m.vx += (desiredVx - m.vx) * steer;
++                            m.vy += (desiredVy - m.vy) * steer;
++                            m.vz += (desiredVz - m.vz) * steer;
++                        }
++                    }
++
++                    // 3. 更新位置與網格姿態 (朝向速度向量，0 GC)
++                    m.x += m.vx * dt;
++                    m.y += m.vy * dt;
++                    m.z += m.vz * dt;
++                    m.mesh.position.set(m.x, m.y, m.z);
++                    m.mesh.lookAt(m.x + m.vx, m.y + m.vy, m.z + m.vz);
++
++                    if (m.flameMesh) {
++                        m.flameMesh.scale.set(1, 1, 0.8 + Math.random() * 0.5);
++                    }
++
++                    // 4. 碰撞命中檢測 (歐式距離平方判定)
++                    let hit = false;
++                    let hitType = null;
++                    let hitRef = null;
++                    let hitIndex = -1;
++
++                    // 優先判定鎖定目標
++                    if (m.targetEnemy) {
++                        const t = m.targetEnemy;
++                        if (t.type === 'boss' && this.entityMgr.boss.active) {
++                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
++                            if (dsq < 2.25) { hit = true; hitType = 'boss'; }
++                        } else if (t.type === 'gargoyle' && t.ref.active) {
++                            const dsq = (m.x - t.ref.x)**2 + (m.y - t.ref.y)**2 + (m.z - t.ref.z)**2;
++                            if (dsq < 0.9) { hit = true; hitType = 'gargoyle'; hitRef = t.ref; hitIndex = t.index; }
++                        } else if (t.type === 'red' && t.ref.active) {
++                            const dsq = (m.x - t.ref.x)**2 + (m.y - 0.4)**2 + (m.z - t.ref.z)**2;
++                            if (dsq < 0.8) { hit = true; hitType = 'red'; hitRef = t.ref; hitIndex = t.index; }
++                        }
++                    }
++
++                    // 範圍擦碰檢測 (若未命中指定目標)
++                    if (!hit) {
++                        if (this.entityMgr.boss.active) {
++                            const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
++                            if (dsq < 2.25) { hit = true; hitType = 'boss'; }
++                        }
++                    }
++                    if (!hit) {
++                        for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
++                            const g = this.entityMgr.gargoyleList[k];
++                            if (g.active) {
++                                const dsq = (m.x - g.x)**2 + (m.y - g.y)**2 + (m.z - g.z)**2;
++                                if (dsq < 0.9) { hit = true; hitType = 'gargoyle'; hitRef = g; hitIndex = k; break; }
++                            }
++                        }
++                    }
++                    if (!hit) {
++                        for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
++                            const r = this.entityMgr.redList[j];
++                            if (r.active) {
++                                const dsq = (m.x - r.x)**2 + (m.y - 0.4)**2 + (m.z - r.z)**2;
++                                if (dsq < 0.8) { hit = true; hitType = 'red'; hitRef = r; hitIndex = j; break; }
++                            }
++                        }
++                    }
++
++                    // 接觸地面或超出場景邊界自爆
++                    if (!hit && (m.y <= 0.1 || m.z >= 75)) {
++                        hit = true;
++                    }
++
++                    // 5. 命中解算與爆破傷害 (30 點傷害)
++                    if (hit) {
++                        m.active = false;
++                        m.mesh.visible = false;
++                        this.entityMgr.spawnExplosion(m.x, m.y, m.z, 6);
++                        if (soundFX.playMissileHit) soundFX.playMissileHit();
++                        else soundFX.playHit();
++
++                        if (hitType === 'boss') {
++                            const boss = this.entityMgr.boss;
++                            boss.hp -= 30;
++                            boss.z += 0.4; // 爆破推力擊退
++                            this.entityMgr.updateBossHpBar();
++                            if (boss.hp <= 0) {
++                                boss.active = false;
++                                this.entityMgr.bossGroup.position.set(0, -999, 0);
++                                this.killsCount++;
++                                this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
++                                this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
++                                this.shakeAmount = 0.8;
++                            }
++                        } else if (hitType === 'gargoyle' && hitRef) {
++                            hitRef.hp -= 30;
++                            if (hitRef.hp <= 0) {
++                                hitRef.active = false;
++                                _tempMatrix.makeTranslation(0, -999, 0);
++                                this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
++                                this.killsCount++;
++                                this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
++                            }
++                        } else if (hitType === 'red' && hitRef) {
++                            hitRef.active = false;
++                            _tempMatrix.makeTranslation(0, -999, 0);
++                            this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
++                            this.killsCount++;
++                            this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
++                        }
++                    }
++                }
++            }
++
+             loop() {
+                 const dt = Math.min(this.clock.getDelta(), 0.1);
+                 const time = this.clock.getElapsedTime();
++                let isFiring = false;
++                const streamCount = gameStorage.getStreamColumnCount();
+ 
+                 if (this.state === 'PLAYING') {
+                     this.gameTime += dt;
+@@ -2791,7 +4382,7 @@
+                     const fireInterval = gameStorage.getFireInterval();
+                     if (time - this.lastShootTime >= fireInterval) {
+                         this.lastShootTime = time;
+-                        const streamCount = gameStorage.getStreamColumnCount();
++                        isFiring = true;
+                         const spacing = 0.4;
+                         for (let s = 0; s < streamCount; s++) {
+                             const offset = (s - (streamCount - 1) / 2) * spacing;
+@@ -2800,6 +4391,9 @@
+                         soundFX.playShoot();
+                     }
+ 
++                    // 英雄專屬技能冷卻倒數
++                    this.updateHeroSkills(dt);
++
+                     // 波次生成
+                     if (this.mode === 'STAGE') {
+                         this.waveTime += dt;
+@@ -2876,13 +4470,27 @@
+                     this.gateMgr.update(time, dt);
+                     this.entityMgr.update(dt);
+                     this.handleCollisions();
++                    this.updateUnibeamCollisions(dt);
++                    this.updateMicroMissiles(dt);
+ 
+                     this.updateHUD();
+                 } else {
++                    this.updateHeroSkills(dt);
++                    this.updateMicroMissiles(dt);
+                     this.gateMgr.update(time, dt);
+                     this.entityMgr.update(dt);
+                 }
+ 
++                // 更新鋼鐵人運動學、後座力、多聯裝與英雄技能姿態切換 (零 GC)
++                this.threeScene.updateIronManKinematics(
++                    dt,
++                    time,
++                    isFiring,
++                    streamCount,
++                    this.state === 'PLAYING',
++                    this.heroSkills.unibeam.active
++                );
++
+                 // 相機震動
+                 if (this.shakeAmount > 0) {
+                     this.threeScene.camera.position.x = (Math.random() - 0.5) * this.shakeAmount;

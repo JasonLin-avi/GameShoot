@@ -1565,8 +1565,8 @@
             root.name = 'IronManHeroRoot';
             // 面朝戰場前方 +Z 跑道 (背面朝向玩家相機 -Z)
             root.rotation.y = 0;
-            // 縮放約 0.62，使總高度約 2.08 單位，完美適配 11 寬度直式跑道
-            root.scale.set(0.62, 0.62, 0.62);
+            // 縮放約 0.93 (原本 0.62 的 1.5 倍)，英雄身形更具霸氣與視覺存在感
+            root.scale.set(0.93, 0.93, 0.93);
 
             // 1. 骨盆與下腹節點 (Pelvis Group，未縮放下基準高 Y = 1.62)
             const pelvisGroup = new THREE.Group();
@@ -2079,31 +2079,10 @@
             createPlayerCannon() {
                 this.cannonGroup = new THREE.Group();
 
-                // 科技戰術圓盤底座 (Tactical Deployment Disc)
-                const baseGeo = new THREE.CylinderGeometry(1.05, 1.25, 0.20, 24);
-                this.baseMat = new THREE.MeshStandardMaterial({
-                    color: 0x111c2e,
-                    roughness: 0.35,
-                    metalness: 0.8
-                });
-                const base = new THREE.Mesh(baseGeo, this.baseMat);
-                base.position.y = 0.10;
-                this.cannonGroup.add(base);
-
-                // 底座外圈青藍霓虹光環 (Tactical Energy Ring)
-                const ringGeo = new THREE.TorusGeometry(1.05, 0.025, 8, 32);
-                ringGeo.rotateX(Math.PI / 2);
-                this.ringMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-                const ringMesh = new THREE.Mesh(ringGeo, this.ringMat);
-                ringMesh.position.y = 0.20;
-                this.cannonGroup.add(ringMesh);
-
-                // 砲管/微型發射口專用材質 (快取複用)
-                this.barrelMat = new THREE.MeshStandardMaterial({
-                    color: 0x00f0ff,
-                    roughness: 0.3,
-                    metalness: 0.8
-                });
+                // 移除早期模擬槍管留下的圓盤底座與發射口，保持地面俐落與英雄純粹站姿
+                this.baseMat = null;
+                this.ringMat = null;
+                this.barrelMat = null;
                 this.barrelsGroup = null;
 
                 // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
@@ -2118,10 +2097,10 @@
                 aimLine.position.set(0, 0.04, 18.5);
                 this.cannonGroup.add(aimLine);
 
-                // 建立鋼鐵人 3D 英雄模型並掛載至戰術砲台節點
+                // 建立鋼鐵人 3D 英雄模型並掛載至操作節點 (雙腳穩穩踩在地面)
                 this.ironManMaterials = createIronManMaterials();
                 this.ironMan = createIronManHero(this.ironManMaterials);
-                this.ironMan.root.position.set(0, 0.20, 0); // 雙腳穩踩戰術基座頂部
+                this.ironMan.root.position.set(0, 0, 0); // 鋼鐵人雙腳穩立於地面 (原 0.20 底座圓盤已移除)
                 this.cannonGroup.add(this.ironMan.root);
 
                 // 鋼鐵人運動學與姿態快取狀態 (零 GC 記憶體配置，遵守 three-best-practices)
@@ -2143,12 +2122,12 @@
                 this.cannonGroup.position.set(0, 0, 0);
                 this.scene.add(this.cannonGroup);
 
-                // 預設建立雙聯裝微型發射埠
+                // 初始彈道狀態 (不再生成懸浮實體砲管)
                 this.updateCannonBarrels(2);
             }
 
             updateCannonBarrels(streamCount = 2) {
-                if (this.currentBarrelCount === streamCount && this.barrelsGroup) return;
+                if (this.currentBarrelCount === streamCount) return;
                 this.currentBarrelCount = streamCount;
 
                 // 妥善釋放舊幾何體記憶體 (遵守 three-best-practices memory-dispose)
@@ -2157,22 +2136,8 @@
                     this.barrelsGroup.traverse(child => {
                         if (child.geometry) child.geometry.dispose();
                     });
+                    this.barrelsGroup = null;
                 }
-
-                this.barrelsGroup = new THREE.Group();
-                const spacing = 0.4;
-
-                // 隱蔽整合至戰術圓盤邊緣的微型能量發射埠 (提供多聯裝升級的微妙科技反饋，不遮擋鋼鐵人英姿)
-                for (let i = 0; i < streamCount; i++) {
-                    const offset = (i - (streamCount - 1) / 2) * spacing;
-                    const portGeo = new THREE.CylinderGeometry(0.045, 0.055, 0.12, 12);
-                    portGeo.rotateX(Math.PI / 2);
-                    const port = new THREE.Mesh(portGeo, this.barrelMat);
-                    port.position.set(offset, 0.12, 1.12);
-                    this.barrelsGroup.add(port);
-                }
-
-                this.cannonGroup.add(this.barrelsGroup);
             }
 
             /**
@@ -2182,7 +2147,7 @@
             initHeroSkillsFX() {
                 // 1. 胸口集束巨砲 (Unibeam Blast 3D 群組)
                 this.unibeamGroup = new THREE.Group();
-                this.unibeamGroup.position.set(0, 1.55, 0); // 鋼鐵人方舟反應爐胸口高度
+                this.unibeamGroup.position.set(0, 2.30, 0); // 鋼鐵人放大 1.5 倍後方舟反應爐胸口高度 (基準 Y=0)
 
                 // 外層高亮青藍能量光柱
                 const outerGeo = new THREE.CylinderGeometry(0.5, 0.5, 75, 16);
@@ -2391,8 +2356,8 @@
             updateIronManKinematics(dt, time, isFiring, streamCount, isPlaying = true, isUnibeamActive = false) {
                 if (!this.ironMan) return;
 
-                // 1. 水平跟隨與懸浮推進微浮動 (Bobbing)
-                this.ironMan.root.position.y = 0.20 + Math.sin(time * 4.0) * 0.03;
+                // 1. 水平跟隨與懸浮推進微浮動 (Bobbing, 圓盤移除後以跑道地面 Y=0 為穩固基準)
+                this.ironMan.root.position.y = Math.sin(time * 4.0) * 0.02;
 
                 // 2. 轉彎側傾角 (Banking) 平滑解算
                 const currentX = this.cannonGroup.position.x;
@@ -3959,9 +3924,9 @@
                 this.heroSkills.missiles.timer = this.heroSkills.missiles.cooldown;
                 this.shakeAmount = Math.max(this.shakeAmount, 0.2);
 
-                const leftX = this.cannonX - 0.38;
-                const rightX = this.cannonX + 0.38;
-                const spawnY = 1.6;
+                const leftX = this.cannonX - 0.55;
+                const rightX = this.cannonX + 0.55;
+                const spawnY = 2.4;
                 const spawnZ = 0.3;
 
                 let launched = 0;
