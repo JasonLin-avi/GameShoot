@@ -4430,10 +4430,23 @@
 
             setupLevelGates(gatesConfig) {
                 this.clear();
+                this.nextGateId = 0;
                 if (!gatesConfig) return;
                 gatesConfig.forEach((cfg, idx) => {
                     this.createGate(cfg, idx);
+                    this.nextGateId = Math.max(this.nextGateId, idx + 1);
                 });
+            }
+
+            hasActivePowerUpGate() {
+                return this.gateObjects.some(g => g.isPowerUp && !g.completed);
+            }
+
+            spawnPowerUpGate(config) {
+                this.nextGateId = (this.nextGateId || 20) + 1;
+                const gate = this.createGate(config, this.nextGateId);
+                gate.scaleAnim = 1.35;
+                return gate;
             }
 
             update(time, dt) {
@@ -4544,14 +4557,21 @@
                         this.threeScene.updateCannonBarrels(this.inRunBarrels);
                         this.showPowerUpToast(`🔱 聯裝重砲升級！當前為 ${this.inRunBarrels} 管齊射！`, '#ffd166');
                     } else {
-                        this.showPowerUpToast(`🔱 聯裝重砲已達頂階 4 管！轉化為滿載能量！`, '#ffd166');
+                        this.shieldHp = Math.min(this.maxShieldHp, this.shieldHp + 1);
+                        this.heroSkills.unibeam.timer = Math.min(this.heroSkills.unibeam.cooldown, this.heroSkills.unibeam.timer + 6);
+                        this.heroSkills.missiles.timer = Math.min(this.heroSkills.missiles.cooldown, this.heroSkills.missiles.timer + 5);
+                        this.updateHeroSkillsHUD();
+                        this.showPowerUpToast(`🔱 聯裝重砲滿階！轉化為底線護盾與超載充能！`, '#ffd166');
                     }
                 } else if (type === 'power_rate') {
                     if (this.inRunRateTier < 3) {
                         this.inRunRateTier++;
                         this.showPowerUpToast(`⚡ 射速超頻 +25%！當前為 Lv.${this.inRunRateTier} 極速！`, '#00f0ff');
                     } else {
-                        this.showPowerUpToast(`⚡ 射速超頻已達極限！狂暴加特林全開！`, '#00f0ff');
+                        this.heroSkills.unibeam.timer = Math.min(this.heroSkills.unibeam.cooldown, this.heroSkills.unibeam.timer + 6);
+                        this.heroSkills.missiles.timer = Math.min(this.heroSkills.missiles.cooldown, this.heroSkills.missiles.timer + 5);
+                        this.updateHeroSkillsHUD();
+                        this.showPowerUpToast(`⚡ 射速超頻已達頂點！狂暴能量超載大招！`, '#00f0ff');
                     }
                 } else if (type === 'power_shield') {
                     this.shieldHp = Math.min(5, this.shieldHp + 1);
@@ -4609,6 +4629,11 @@
                 this.endlessSpawnTimer = 0;
                 this.endlessDifficultyTimer = 0;
                 this.endlessInterval = 1.6;
+
+                // 多輪戰術強化門系統
+                this.powerUpRound = 1;
+                this.powerUpRespawnTimer = 0;
+                this.powerUpCooldown = 9.0;
 
                 this.shakeAmount = 0;
                 this.keyMoveLeft = false;
@@ -4943,6 +4968,11 @@
                     this.endlessDifficultyTimer = 0;
                     this.endlessInterval = 1.6;
                 }
+
+                // 重置多輪戰術強化門輪次與計時
+                this.powerUpRound = 1;
+                this.powerUpRespawnTimer = 0;
+                this.powerUpCooldown = (this.mode === 'STAGE') ? 9.0 : 11.0;
 
                 this.updateHUD();
             }
@@ -5633,6 +5663,106 @@
                 }
             }
 
+            updatePowerUpRounds(dt) {
+                if (this.state !== 'PLAYING') return;
+
+                // 若場上仍有活躍中的強化門，重置生成冷卻倒數
+                if (this.gateMgr && this.gateMgr.hasActivePowerUpGate()) {
+                    this.powerUpRespawnTimer = 0;
+                    return;
+                }
+
+                // 關卡模式若所有波次已出完且無任何殘存敵軍，等待通關結算不額外生成新門
+                if (this.mode === 'STAGE' && this.nextWaveIdx >= this.stageWaves.length) {
+                    let enemiesRemaining = 0;
+                    if (this.entityMgr.boss.active) enemiesRemaining++;
+                    for (let i = 0; i < this.entityMgr.MAX_RED; i++) {
+                        if (this.entityMgr.redList[i].active) enemiesRemaining++;
+                    }
+                    for (let i = 0; i < this.entityMgr.MAX_GARGOYLES; i++) {
+                        if (this.entityMgr.gargoyleList[i].active) enemiesRemaining++;
+                    }
+                    if (enemiesRemaining === 0) return;
+                }
+
+                this.powerUpRespawnTimer += dt;
+                if (this.powerUpRespawnTimer >= this.powerUpCooldown) {
+                    this.powerUpRespawnTimer = 0;
+                    this.spawnNextPowerUpRound();
+                }
+            }
+
+            spawnNextPowerUpRound() {
+                this.powerUpRound++;
+
+                // 智慧加權候選清單：優先投送未達到上限的屬性
+                const candidates = [];
+                if (this.inRunBarrels < 4) {
+                    candidates.push({ type: 'power_barrel', weight: 45 });
+                }
+                if (this.inRunRateTier < 3) {
+                    candidates.push({ type: 'power_rate', weight: 35 });
+                }
+                if (this.shieldHp < this.maxShieldHp) {
+                    candidates.push({ type: 'power_shield', weight: 30 });
+                }
+                // 戰術大招充能永遠保持高吸引力
+                candidates.push({ type: 'power_skill', weight: 25 });
+
+                let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+                let rand = Math.random() * totalWeight;
+                let selectedType = candidates[0].type;
+                for (const c of candidates) {
+                    if (rand < c.weight) {
+                        selectedType = c.type;
+                        break;
+                    }
+                    rand -= c.weight;
+                }
+
+                // 充能彈數計算：適配火力成長
+                let baseCharge = 10;
+                if (selectedType === 'power_barrel') baseCharge = 14;
+                else if (selectedType === 'power_rate') baseCharge = 12;
+                else if (selectedType === 'power_shield') baseCharge = 10;
+                else if (selectedType === 'power_skill') baseCharge = 8;
+
+                if (this.mode === 'ENDLESS') {
+                    baseCharge = Math.min(25, baseCharge + Math.floor(this.gameTime * 0.05) + (this.inRunBarrels - 2) * 2);
+                }
+
+                // 隨機動態巡弋設定
+                const moveSpeed = 1.8 + Math.random() * 0.6;
+                const moveAmp = 1.6 + Math.random() * 0.4;
+                const spawnZ = 15.5 + (Math.random() - 0.5) * 1.5;
+
+                const gateCfg = {
+                    x: (Math.random() - 0.5) * 0.8,
+                    z: spawnZ,
+                    type: selectedType,
+                    charge: baseCharge,
+                    moving: true,
+                    amplitude: moveAmp,
+                    speed: moveSpeed
+                };
+
+                const gate = this.gateMgr.spawnPowerUpGate(gateCfg);
+
+                const typeNames = {
+                    'power_barrel': '🔱 聯裝重砲',
+                    'power_rate': '⚡ 射速超頻',
+                    'power_shield': '🛡️ 護盾修復',
+                    'power_skill': '💥 戰術充能'
+                };
+                const gateName = typeNames[selectedType] || '戰術強化門';
+                this.showPowerUpToast(`⭐ 第 ${this.powerUpRound} 輪【${gateName}】空投降臨！`, '#ffd166');
+                soundFX.playGateChime();
+
+                if (this.entityMgr && gate && gate.mesh) {
+                    this.entityMgr.spawnExplosion(gate.mesh.position.x, 1.2, gate.z, 20);
+                }
+            }
+
             loop() {
                 const dt = Math.min(this.clock.getDelta(), 0.1);
                 const time = this.clock.getElapsedTime();
@@ -5740,6 +5870,7 @@
                         }
                     }
 
+                    this.updatePowerUpRounds(dt);
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
                     this.handleCollisions();
