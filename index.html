@@ -667,9 +667,11 @@
     <div id="ui-layer">
         <div class="hud-header">
             <div class="hud-left">
-                <div class="stat-badge coins">
-                    <span>🪙</span>
-                    <span id="hud-coins">0</span>
+                <div class="stat-badge" id="hud-firepower-badge" style="color: #ffd166; font-weight:800; border:1px solid rgba(255,209,102,0.3); background:rgba(255,209,102,0.1);">
+                    <span>🔱</span>
+                    <span id="hud-firepower">2 管</span>
+                    <span style="color:#00f0ff; margin-left:4px;">⚡</span>
+                    <span id="hud-overdrive" style="color:#00f0ff;">Lv.0</span>
                 </div>
                 <div class="stat-badge shield">
                     <span>🛡️</span>
@@ -756,37 +758,28 @@
                 <div style="font-size:12px; color:#cbd5e0;" id="endless-record-text">最高生存時間：0 秒 | 總擊殺：0</div>
             </div>
 
-            <!-- 三維數值養成升級 -->
-            <div class="upgrade-grid">
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <h4>發射射速 (Lv.<span id="lvl-fire-rate">1</span>)</h4>
-                        <p id="desc-fire-rate">每秒 2.5 發</p>
-                    </div>
-                    <button class="btn-upgrade" id="btn-upg-rate">
-                        <span>🪙</span>
-                        <span id="cost-fire-rate">100</span>
-                    </button>
+            <!-- 戰場實體強化門即時養成導引 -->
+            <div class="powerup-guide-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; text-align: left;">
+                <div style="font-size: 13px; font-weight: 800; color: #ffd166; margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
+                    <span>⚡</span> 戰場實體強化門（射擊充能當場升級）
                 </div>
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <h4>多聯裝彈道 (Lv.<span id="lvl-initial-troops">1</span>)</h4>
-                        <p id="desc-initial-troops">2 顆並排齊射</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                    <div style="background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.25); padding: 7px 9px; border-radius: 9px;">
+                        <b style="color: #ffd166;">🔱 聯裝重砲</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">雙排➜三排➜四管齊射</div>
                     </div>
-                    <button class="btn-upgrade" id="btn-upg-troops">
-                        <span>🪙</span>
-                        <span id="cost-initial-troops">150</span>
-                    </button>
-                </div>
-                <div class="upgrade-item">
-                    <div class="upgrade-info">
-                        <h4>金幣倍率 (Lv.<span id="lvl-coin-mult">1</span>)</h4>
-                        <p id="desc-coin-mult">金幣收益 +0%</p>
+                    <div style="background: rgba(0,240,255,0.08); border: 1px solid rgba(0,240,255,0.25); padding: 7px 9px; border-radius: 9px;">
+                        <b style="color: #00f0ff;">⚡ 射速超頻</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">射速 +25%（最高3疊加）</div>
                     </div>
-                    <button class="btn-upgrade" id="btn-upg-coins">
-                        <span>🪙</span>
-                        <span id="cost-coin-mult">200</span>
-                    </button>
+                    <div style="background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); padding: 7px 9px; border-radius: 9px;">
+                        <b style="color: #4ade80;">🛡️ 護盾修復</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">底線耐久 +1 點</div>
+                    </div>
+                    <div style="background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); padding: 7px 9px; border-radius: 9px;">
+                        <b style="color: #f43f5e;">💥 戰術充能</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">雷射/導彈 CD 立即歸零</div>
+                    </div>
                 </div>
             </div>
 
@@ -812,14 +805,11 @@
                     <span style="color:#8fa0b5;">存活時間 / 進度</span>
                     <span style="font-weight:700;" id="res-time">100%</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; color:var(--gold-accent); font-weight:800; font-size:15px;">
-                    <span>獲得金幣</span>
-                    <span id="res-coins">+0 🪙</span>
-                </div>
+
             </div>
 
             <button class="btn-primary" id="btn-res-action">繼續下一關</button>
-            <button class="btn-secondary" id="btn-res-menu">返回大廳升級</button>
+            <button class="btn-secondary" id="btn-res-menu">返回大廳選關</button>
         </div>
     </div>
 
@@ -1076,6 +1066,49 @@
 
                 osc.start(t);
                 osc.stop(t + 0.22);
+            }
+
+            // 強化門吸收子彈充能音效（音調隨充能程度遞增）
+            playPowerUpCharge(pitchMult = 1.0) {
+                if (!this.ctx || this.muted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const t = this.ctx.currentTime;
+
+                osc.type = 'sine';
+                const baseFreq = 540 * Math.min(2.4, pitchMult);
+                osc.frequency.setValueAtTime(baseFreq, t);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, t + 0.08);
+
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.08);
+            }
+
+            // 強化充能完成升級音效（金色衝擊波升級琶音）
+            playPowerUpComplete() {
+                if (!this.ctx || this.muted) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major arpeggio
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const t = this.ctx.currentTime + idx * 0.07;
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, t);
+
+                    gain.gain.setValueAtTime(0.24, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.24);
+                });
             }
 
             // 小兵碰撞消滅打擊感
@@ -1404,7 +1437,8 @@
                 name: '第 1 關：初陣啟動',
                 gates: [
                     { x: -1.8, z: 12, type: 'add', value: 10, moving: false },
-                    { x: 1.8, z: 12, type: 'mult', value: 2, moving: false }
+                    { x: 1.8, z: 12, type: 'mult', value: 2, moving: false },
+                    { x: 0, z: 22, type: 'power_rate', charge: 10, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 12, xSpan: 2.5 },
@@ -1417,7 +1451,8 @@
                 name: '第 2 關：倍增洪流',
                 gates: [
                     { x: -2.0, z: 13, type: 'mult', value: 2, moving: false },
-                    { x: 2.0, z: 13, type: 'mult', value: 3, moving: false }
+                    { x: 2.0, z: 13, type: 'mult', value: 3, moving: false },
+                    { x: 0, z: 22, type: 'power_barrel', charge: 15, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
@@ -1429,8 +1464,9 @@
                 id: 3,
                 name: '第 3 關：巡弋防線',
                 gates: [
-                    { x: 0, z: 14, type: 'mult', value: 3, moving: true, amplitude: 2.2, speed: 2.0 },
-                    { x: 0, z: 23, type: 'add', value: 15, moving: true, amplitude: 2.0, speed: 1.6, phase: Math.PI }
+                    { x: -1.8, z: 14, type: 'mult', value: 3, moving: true, amplitude: 1.6, speed: 2.0 },
+                    { x: 1.8, z: 14, type: 'add', value: 15, moving: true, amplitude: 1.6, speed: 1.6, phase: Math.PI },
+                    { x: 0, z: 24, type: 'power_shield', charge: 10, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 25, xSpan: 3.5 },
@@ -1442,9 +1478,10 @@
                 id: 4,
                 name: '第 4 關：空降石像鬼',
                 gates: [
-                    { x: -1.8, z: 13, type: 'mult', value: 2, moving: false },
-                    { x: 1.8, z: 13, type: 'mult', value: 3, moving: false },
-                    { x: 0, z: 23, type: 'add', value: 20, moving: true, amplitude: 2.0, speed: 2.2 }
+                    { x: -2.0, z: 13, type: 'mult', value: 2, moving: false },
+                    { x: 2.0, z: 13, type: 'mult', value: 3, moving: false },
+                    { x: -1.8, z: 23, type: 'power_skill', charge: 8, moving: false },
+                    { x: 1.8, z: 23, type: 'power_barrel', charge: 15, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
@@ -1459,7 +1496,7 @@
                 gates: [
                     { x: -2.0, z: 12, type: 'mult', value: 3, moving: false },
                     { x: 2.0, z: 12, type: 'add', value: 25, moving: false },
-                    { x: 0, z: 21, type: 'mult', value: 2, moving: true, amplitude: 2.0, speed: 1.8 }
+                    { x: 0, z: 21, type: 'power_rate', charge: 12, moving: true, amplitude: 1.8, speed: 2.0 }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 30, xSpan: 4.0 },
@@ -1469,11 +1506,11 @@
             },
             {
                 id: 6,
-                name: '第 6 關：險峻陷阱',
+                name: '第 6 關：險峻突圍',
                 gates: [
                     { x: -2.0, z: 13, type: 'mult', value: 3, moving: false },
-                    { x: 2.0, z: 13, type: 'sub', value: 10, moving: false },
-                    { x: 0, z: 23, type: 'mult', value: 2, moving: true, amplitude: 2.4, speed: 2.5 }
+                    { x: 2.0, z: 13, type: 'add', value: 30, moving: false },
+                    { x: 0, z: 23, type: 'power_barrel', charge: 15, moving: true, amplitude: 2.0, speed: 2.2 }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 35, xSpan: 4.0 },
@@ -1487,7 +1524,7 @@
                 gates: [
                     { x: -1.6, z: 13, type: 'mult', value: 3, moving: true, amplitude: 1.8, speed: 2.2 },
                     { x: 1.6, z: 13, type: 'add', value: 20, moving: true, amplitude: 1.8, speed: 2.2, phase: Math.PI },
-                    { x: 0, z: 24, type: 'mult', value: 2, moving: true, amplitude: 2.4, speed: 2.8 }
+                    { x: 0, z: 24, type: 'power_shield', charge: 10, moving: true, amplitude: 1.6, speed: 2.0 }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 40, xSpan: 4.0 },
@@ -1500,8 +1537,8 @@
                 name: '第 8 關：夜行狂襲',
                 gates: [
                     { x: -2.2, z: 13, type: 'mult', value: 4, moving: false },
-                    { x: 2.2, z: 13, type: 'div', value: 2, moving: false },
-                    { x: 0, z: 24, type: 'add', value: 30, moving: true, amplitude: 2.2, speed: 2.5 }
+                    { x: 2.2, z: 13, type: 'mult', value: 3, moving: false },
+                    { x: 0, z: 24, type: 'power_rate', charge: 12, moving: true, amplitude: 2.0, speed: 2.5 }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 45, xSpan: 4.5 },
@@ -1516,7 +1553,7 @@
                 gates: [
                     { x: -2.0, z: 12, type: 'mult', value: 3, moving: true, amplitude: 1.6, speed: 1.8 },
                     { x: 2.0, z: 12, type: 'mult', value: 4, moving: true, amplitude: 1.6, speed: 1.8, phase: Math.PI },
-                    { x: 0, z: 23, type: 'add', value: 35, moving: false }
+                    { x: 0, z: 23, type: 'power_skill', charge: 8, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'boss', hp: 35, count: 1 },
@@ -1530,7 +1567,8 @@
                 gates: [
                     { x: -2.2, z: 12, type: 'mult', value: 4, moving: true, amplitude: 1.5, speed: 2.5 },
                     { x: 2.2, z: 12, type: 'mult', value: 5, moving: true, amplitude: 1.5, speed: 2.5, phase: Math.PI },
-                    { x: 0, z: 23, type: 'add', value: 50, moving: true, amplitude: 2.4, speed: 3.0 }
+                    { x: -1.8, z: 23, type: 'power_barrel', charge: 15, moving: false },
+                    { x: 1.8, z: 23, type: 'power_skill', charge: 8, moving: false }
                 ],
                 waves: [
                     { time: 1.0, type: 'red', count: 50, xSpan: 4.5 },
@@ -4167,65 +4205,129 @@
                 this.scene = scene;
                 this.gateObjects = [];
                 this.activeTheme = THEME_PRESETS.arcade;
+                this.onPowerUpComplete = null;
+                this.game = null;
             }
 
             clear() {
                 for (const g of this.gateObjects) {
                     this.scene.remove(g.mesh);
                     if (g.texture) g.texture.dispose();
+                    if (g.curtainMat) g.curtainMat.dispose();
+                    if (g.pillarMat) g.pillarMat.dispose();
                 }
                 this.gateObjects = [];
             }
 
-            drawGateCanvas(ctx, config, bgCss) {
+            drawGateCanvas(ctx, config, bgCss, gateObj = null) {
                 ctx.clearRect(0, 0, 256, 128);
-                // 背景厚重膠囊卡片
-                ctx.fillStyle = bgCss;
-                ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
-                ctx.fill();
 
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 7;
-                ctx.stroke();
+                const isPowerUp = config.type && config.type.startsWith('power_');
 
-                // 文字標籤
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '900 68px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+                if (isPowerUp) {
+                    // 強化門科技質感漸層
+                    const grad = ctx.createLinearGradient(0, 0, 256, 128);
+                    grad.addColorStop(0, bgCss);
+                    grad.addColorStop(1, '#0f172a');
+                    ctx.fillStyle = grad;
+                    ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
+                    ctx.fill();
 
-                let labelText = '';
-                if (config.type === 'add') labelText = `+${config.value}`;
-                else if (config.type === 'mult') labelText = `×${config.value}`;
-                else if (config.type === 'sub') labelText = `-${config.value}`;
-                else if (config.type === 'div') labelText = `÷${config.value}`;
+                    ctx.strokeStyle = '#ffd166';
+                    ctx.lineWidth = 6;
+                    ctx.stroke();
 
-                ctx.fillText(labelText, 128, 64);
+                    // 上半部圖標與名稱
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '800 30px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    let title = '';
+                    if (config.type === 'power_barrel') title = '🔱 聯裝重砲';
+                    else if (config.type === 'power_rate') title = '⚡ 射速超頻';
+                    else if (config.type === 'power_shield') title = '🛡️ 護盾修復';
+                    else if (config.type === 'power_skill') title = '💥 戰術充能';
+                    ctx.fillText(title, 128, 42);
+
+                    // 下半部剩餘充能數
+                    const currentCharge = (gateObj && gateObj.chargeRemaining !== undefined) ? gateObj.chargeRemaining : (config.charge || 10);
+                    const maxCharge = (gateObj && gateObj.maxCharge) ? gateObj.maxCharge : (config.charge || 10);
+
+                    ctx.fillStyle = '#ffd166';
+                    ctx.font = '900 32px monospace';
+                    ctx.fillText(`[ 充能: ${currentCharge} 發 ]`, 128, 82);
+
+                    // 底部充能進度條
+                    const progress = Math.max(0, Math.min(1, 1 - (currentCharge / maxCharge)));
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fillRect(24, 104, 208, 8);
+                    ctx.fillStyle = '#ffd166';
+                    ctx.fillRect(24, 104, 208 * progress, 8);
+                } else {
+                    // 普通正向倍率門
+                    ctx.fillStyle = bgCss;
+                    ctx.roundRect ? ctx.roundRect(8, 8, 240, 112, 22) : ctx.rect(8, 8, 240, 112);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 7;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 68px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    let labelText = '';
+                    if (config.type === 'add') labelText = `+${config.value}`;
+                    else if (config.type === 'mult') labelText = `×${config.value}`;
+
+                    ctx.fillText(labelText, 128, 64);
+                }
             }
 
             createGate(config, gateId) {
                 const gateWidth = 2.5;
                 const gateHeight = 2.4;
-
                 const group = new THREE.Group();
 
-                const isPositive = (config.type === 'add' || config.type === 'mult');
-                const themeColor = isPositive ? (this.activeTheme ? this.activeTheme.gateBlue : 0x00f0ff) : (this.activeTheme ? this.activeTheme.gateRed : 0xff385c);
-                const bgCss = isPositive ? (this.activeTheme ? this.activeTheme.gateBlueCss : 'rgba(0, 240, 255, 0.95)') : (this.activeTheme ? this.activeTheme.gateRedCss : 'rgba(255, 56, 92, 0.95)');
+                const isPowerUp = config.type && config.type.startsWith('power_');
+                let themeColor = 0x00f0ff;
+                let bgCss = 'rgba(0, 240, 255, 0.95)';
+
+                if (isPowerUp) {
+                    if (config.type === 'power_barrel') {
+                        themeColor = 0xffd166;
+                        bgCss = 'rgba(255, 183, 3, 0.95)';
+                    } else if (config.type === 'power_rate') {
+                        themeColor = 0x00f0ff;
+                        bgCss = 'rgba(0, 240, 255, 0.95)';
+                    } else if (config.type === 'power_shield') {
+                        themeColor = 0x4ade80;
+                        bgCss = 'rgba(34, 197, 94, 0.95)';
+                    } else if (config.type === 'power_skill') {
+                        themeColor = 0xf43f5e;
+                        bgCss = 'rgba(244, 63, 94, 0.95)';
+                    }
+                } else {
+                    themeColor = this.activeTheme ? this.activeTheme.gateBlue : 0x00f0ff;
+                    bgCss = this.activeTheme ? this.activeTheme.gateBlueCss : 'rgba(0, 240, 255, 0.95)';
+                }
 
                 // 1. 半透明能量光幕
                 const curtainGeo = new THREE.PlaneGeometry(gateWidth, gateHeight);
                 const curtainMat = new THREE.MeshBasicMaterial({
                     color: themeColor,
                     transparent: true,
-                    opacity: 0.28,
+                    opacity: isPowerUp ? 0.38 : 0.28,
                     side: THREE.DoubleSide
                 });
                 const curtain = new THREE.Mesh(curtainGeo, curtainMat);
                 curtain.position.y = gateHeight / 2;
                 group.add(curtain);
 
-                // 2. 邊框外線條立體光柱
+                // 2. 邊框立體光柱
                 const pillarGeo = new THREE.BoxGeometry(0.18, gateHeight, 0.18);
                 const pillarMat = new THREE.MeshLambertMaterial({ color: themeColor });
 
@@ -4247,9 +4349,34 @@
                 canvas.width = 256;
                 canvas.height = 128;
                 const ctx = canvas.getContext('2d');
-                this.drawGateCanvas(ctx, config, bgCss);
+
+                const maxCharge = config.charge || (config.type === 'power_barrel' ? 15 : (config.type === 'power_rate' ? 12 : (config.type === 'power_shield' ? 10 : 8)));
+                const gateObj = {
+                    id: gateId,
+                    bitmask: (1 << (gateId % 30)),
+                    config: config,
+                    mesh: group,
+                    curtainMat: curtainMat,
+                    pillarMat: pillarMat,
+                    canvas: canvas,
+                    ctx: ctx,
+                    bgCss: bgCss,
+                    isPowerUp: isPowerUp,
+                    maxCharge: maxCharge,
+                    chargeRemaining: maxCharge,
+                    width: gateWidth,
+                    baseX: config.x,
+                    z: config.z,
+                    timeOffset: config.phase || 0,
+                    scaleAnim: 1.0,
+                    completed: false
+                };
+
+                this.drawGateCanvas(ctx, config, bgCss, gateObj);
 
                 const texture = new THREE.CanvasTexture(canvas);
+                gateObj.texture = texture;
+
                 const labelMat = new THREE.MeshBasicMaterial({
                     map: texture,
                     transparent: true,
@@ -4257,30 +4384,12 @@
                 });
                 const labelGeo = new THREE.PlaneGeometry(2.3, 1.15);
                 const labelMesh = new THREE.Mesh(labelGeo, labelMat);
-                // 旋轉 180 度使其正面朝向相機 (Z-)，保證文字不鏡像反轉
                 labelMesh.rotation.y = Math.PI;
                 labelMesh.position.set(0, gateHeight / 2, -0.05);
                 group.add(labelMesh);
 
                 group.position.set(config.x, 0, config.z);
                 this.scene.add(group);
-
-                const gateObj = {
-                    id: gateId,
-                    bitmask: (1 << gateId),
-                    config: config,
-                    mesh: group,
-                    curtainMat: curtainMat,
-                    pillarMat: pillarMat,
-                    canvas: canvas,
-                    ctx: ctx,
-                    texture: texture,
-                    width: gateWidth,
-                    baseX: config.x,
-                    z: config.z,
-                    timeOffset: config.phase || 0,
-                    scaleAnim: 1.0
-                };
 
                 this.gateObjects.push(gateObj);
                 return gateObj;
@@ -4290,9 +4399,9 @@
                 if (!theme) return;
                 this.activeTheme = theme;
                 for (const g of this.gateObjects) {
-                    const isPositive = (g.config.type === 'add' || g.config.type === 'mult');
-                    const themeColor = isPositive ? theme.gateBlue : theme.gateRed;
-                    const bgCss = isPositive ? theme.gateBlueCss : theme.gateRedCss;
+                    if (g.isPowerUp) continue;
+                    const themeColor = theme.gateBlue;
+                    const bgCss = theme.gateBlueCss;
 
                     if (g.curtainMat) {
                         g.curtainMat.color.set(themeColor);
@@ -4303,7 +4412,7 @@
                         g.pillarMat.needsUpdate = true;
                     }
                     if (g.ctx && g.canvas && g.texture) {
-                        this.drawGateCanvas(g.ctx, g.config, bgCss);
+                        this.drawGateCanvas(g.ctx, g.config, bgCss, g);
                         g.texture.needsUpdate = true;
                     }
                 }
@@ -4318,7 +4427,17 @@
             }
 
             update(time, dt) {
-                for (const g of this.gateObjects) {
+                for (let i = this.gateObjects.length - 1; i >= 0; i--) {
+                    const g = this.gateObjects[i];
+                    if (g.completed) {
+                        this.scene.remove(g.mesh);
+                        if (g.texture) g.texture.dispose();
+                        if (g.curtainMat) g.curtainMat.dispose();
+                        if (g.pillarMat) g.pillarMat.dispose();
+                        this.gateObjects.splice(i, 1);
+                        continue;
+                    }
+
                     if (g.config.moving) {
                         const amp = g.config.amplitude || 2.0;
                         const spd = g.config.speed || 2.0;
@@ -4333,44 +4452,66 @@
 
             checkTroopPass(troop, spawnCallback) {
                 for (const g of this.gateObjects) {
-                    if ((troop.passedGateMask & g.bitmask) !== 0) continue;
+                    if (g.completed) continue;
+                    if (!g.isPowerUp && (troop.passedGateMask & g.bitmask) !== 0) continue;
 
                     const gateX = g.mesh.position.x;
                     const halfW = g.width / 2;
                     if (troop.x >= gateX - halfW && troop.x <= gateX + halfW) {
                         if (Math.abs(troop.z - g.z) < 0.65) {
-                            troop.passedGateMask |= g.bitmask;
-                            g.scaleAnim = 1.3;
-                            soundFX.playGateChime();
-
-                            const cfg = g.config;
-                            if (cfg.type === 'add') {
-                                for (let i = 0; i < cfg.value; i++) {
-                                    // 平行直排對稱展開，嚴格直直向前推進 (零橫向偏角，不轉彎)
-                                    const sign = (i % 2 === 0 ? 1 : -1);
-                                    const layer = Math.floor(i / 2) + 1;
-                                    const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
-                                    const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
-                                    if (newTroop) newTroop.passedGateMask |= g.bitmask;
-                                }
-                            } else if (cfg.type === 'mult') {
-                                const count = cfg.value - 1;
-                                for (let i = 0; i < count; i++) {
-                                    // 平行直排對稱展開，嚴格直直向前推進 (零橫向偏角，不轉彎)
-                                    const sign = (i % 2 === 0 ? 1 : -1);
-                                    const layer = Math.floor(i / 2) + 1;
-                                    const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
-                                    const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
-                                    if (newTroop) newTroop.passedGateMask |= g.bitmask;
-                                }
-                            } else if (cfg.type === 'sub') {
+                            if (g.isPowerUp) {
+                                // 模式 A：吸收子彈作為戰術充能
                                 troop.active = false;
-                            } else if (cfg.type === 'div') {
-                                if (Math.random() < 0.5) {
-                                    troop.active = false;
+                                g.chargeRemaining--;
+                                g.scaleAnim = 1.18;
+
+                                soundFX.playPowerUpCharge(1.0 + (g.maxCharge - g.chargeRemaining) * 0.05);
+
+                                if (this.game && this.game.entityMgr) {
+                                    this.game.entityMgr.spawnExplosion(troop.x, 0.4, troop.z, 2);
                                 }
+
+                                this.drawGateCanvas(g.ctx, g.config, g.bgCss, g);
+                                g.texture.needsUpdate = true;
+
+                                if (g.chargeRemaining <= 0) {
+                                    g.completed = true;
+                                    soundFX.playPowerUpComplete();
+                                    if (this.game && this.game.entityMgr) {
+                                        this.game.entityMgr.spawnExplosion(gateX, 1.2, g.z, 20);
+                                    }
+                                    if (this.onPowerUpComplete) {
+                                        this.onPowerUpComplete(g.config.type);
+                                    }
+                                }
+                                break;
+                            } else {
+                                // 普通正向倍率門
+                                troop.passedGateMask |= g.bitmask;
+                                g.scaleAnim = 1.3;
+                                soundFX.playGateChime();
+
+                                const cfg = g.config;
+                                if (cfg.type === 'add') {
+                                    for (let i = 0; i < cfg.value; i++) {
+                                        const sign = (i % 2 === 0 ? 1 : -1);
+                                        const layer = Math.floor(i / 2) + 1;
+                                        const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
+                                        const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
+                                        if (newTroop) newTroop.passedGateMask |= g.bitmask;
+                                    }
+                                } else if (cfg.type === 'mult') {
+                                    const count = cfg.value - 1;
+                                    for (let i = 0; i < count; i++) {
+                                        const sign = (i % 2 === 0 ? 1 : -1);
+                                        const layer = Math.floor(i / 2) + 1;
+                                        const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
+                                        const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
+                                        if (newTroop) newTroop.passedGateMask |= g.bitmask;
+                                    }
+                                }
+                                break;
                             }
-                            break;
                         }
                     }
                 }
@@ -4382,21 +4523,69 @@
         // 整合鍵盤+觸控雙操作、2.5D 高效碰撞檢測、波次排程與 LocalStorage 存檔
         // =========================================================================
         class GameController {
+            /**
+             * 處理戰場實體強化門充能完成回調 (模式 A 戰術升級)
+             */
+            handlePowerUp(type) {
+                if (type === 'power_barrel') {
+                    if (this.inRunBarrels < 4) {
+                        this.inRunBarrels++;
+                        this.threeScene.updateCannonBarrels(this.inRunBarrels);
+                        this.showPowerUpToast(`🔱 聯裝重砲升級！當前為 ${this.inRunBarrels} 管齊射！`, '#ffd166');
+                    } else {
+                        this.showPowerUpToast(`🔱 聯裝重砲已達頂階 4 管！轉化為滿載能量！`, '#ffd166');
+                    }
+                } else if (type === 'power_rate') {
+                    if (this.inRunRateTier < 3) {
+                        this.inRunRateTier++;
+                        this.showPowerUpToast(`⚡ 射速超頻 +25%！當前為 Lv.${this.inRunRateTier} 極速！`, '#00f0ff');
+                    } else {
+                        this.showPowerUpToast(`⚡ 射速超頻已達極限！狂暴加特林全開！`, '#00f0ff');
+                    }
+                } else if (type === 'power_shield') {
+                    this.shieldHp = Math.min(5, this.shieldHp + 1);
+                    this.maxShieldHp = Math.max(this.maxShieldHp, this.shieldHp);
+                    this.showPowerUpToast(`🛡️ 底線護盾修復 +1！當前護盾：${this.shieldHp}/${this.maxShieldHp}`, '#4ade80');
+                } else if (type === 'power_skill') {
+                    this.heroSkills.unibeam.timer = 999;
+                    this.heroSkills.missiles.timer = 999;
+                    this.updateHeroSkillsHUD();
+                    this.showPowerUpToast(`💥 戰術終極大招就緒！雷射與導彈已充飽！`, '#f43f5e');
+                }
+                this.updateHUD();
+            }
+
+            showPowerUpToast(text, color = '#ffd166') {
+                if (this.themeToast) {
+                    this.themeToast.innerText = text;
+                    this.themeToast.style.borderColor = color;
+                    this.themeToast.classList.add('show');
+                    if (this.toastTimer) clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => {
+                        this.themeToast.classList.remove('show');
+                    }, 2200);
+                }
+            }
             constructor() {
                 this.container = document.getElementById('canvas-container');
                 this.threeScene = new ThreeGameScene(this.container);
                 this.entityMgr = new EntityManager(this.threeScene.scene);
                 this.entityMgr.game = this;
                 this.gateMgr = new GateManager(this.threeScene.scene);
+                this.gateMgr.game = this;
+                this.gateMgr.onPowerUpComplete = (type) => this.handlePowerUp(type);
 
                 this.state = 'MENU';
                 this.mode = 'STAGE';
                 this.currentStageId = 1;
                 this.gameTime = 0;
                 this.killsCount = 0;
-                this.coinsEarned = 0;
                 this.shieldHp = 3;
                 this.maxShieldHp = 3;
+
+                // 局內即時養成戰力
+                this.inRunBarrels = 2;   // 預設雙管齊射
+                this.inRunRateTier = 0;  // 預設 0 階超頻
 
                 this.cannonX = 0;
                 this.targetCannonX = 0;
@@ -4527,15 +4716,7 @@
                     this.renderMenu();
                 });
 
-                document.getElementById('btn-upg-rate').addEventListener('click', () => {
-                    if (gameStorage.upgrade('fireRate')) this.renderMenu();
-                });
-                document.getElementById('btn-upg-troops').addEventListener('click', () => {
-                    if (gameStorage.upgrade('initialTroops')) this.renderMenu();
-                });
-                document.getElementById('btn-upg-coins').addEventListener('click', () => {
-                    if (gameStorage.upgrade('coinMultiplier')) this.renderMenu();
-                });
+                // 局外金幣三維按鈕已移除，全面轉為局內戰場強化門養成
 
                 // 鋼鐵人英雄專屬技能 HUD 按鈕與遮罩 DOM 快取
                 this.btnSkillUnibeam = document.getElementById('btn-skill-unibeam');
@@ -4610,35 +4791,8 @@
             }
 
             renderMenu() {
-                this.hudCoins.innerText = gameStorage.data.coins;
-
-                const lvlRate = gameStorage.data.upgrades.fireRate;
-                const costRate = gameStorage.getUpgradeCost('fireRate');
-                document.getElementById('lvl-fire-rate').innerText = lvlRate;
-                document.getElementById('desc-fire-rate').innerText = `每秒 ${(1 / gameStorage.getFireInterval()).toFixed(1)} 發`;
-                const btnRate = document.getElementById('btn-upg-rate');
-                document.getElementById('cost-fire-rate').innerText = costRate;
-                btnRate.disabled = (gameStorage.data.coins < costRate);
-
-                const lvlTroops = gameStorage.data.upgrades.initialTroops;
-                const costTroops = gameStorage.getUpgradeCost('initialTroops');
-                const streamCount = gameStorage.getStreamColumnCount();
-                document.getElementById('lvl-initial-troops').innerText = lvlTroops;
-                document.getElementById('desc-initial-troops').innerText = `${streamCount} 聯裝並排 (每次 ${streamCount} 顆)`;
-                const btnTroops = document.getElementById('btn-upg-troops');
-                document.getElementById('cost-initial-troops').innerText = costTroops;
-                btnTroops.disabled = (gameStorage.data.coins < costTroops);
-
-                // 即時在大廳同步 3D 砲台管數外觀
-                this.threeScene.updateCannonBarrels(streamCount);
-
-                const lvlCoins = gameStorage.data.upgrades.coinMultiplier;
-                const costCoins = gameStorage.getUpgradeCost('coinMultiplier');
-                document.getElementById('lvl-coin-mult').innerText = lvlCoins;
-                document.getElementById('desc-coin-mult').innerText = `金幣收益 +${Math.round((gameStorage.getCoinBonusMultiplier() - 1) * 100)}%`;
-                const btnCoins = document.getElementById('btn-upg-coins');
-                document.getElementById('cost-coin-mult').innerText = costCoins;
-                btnCoins.disabled = (gameStorage.data.coins < costCoins);
+                // 在大廳重置預覽砲台外觀為雙管
+                this.threeScene.updateCannonBarrels(2);
 
                 const grid = document.getElementById('stage-grid');
                 grid.innerHTML = '';
@@ -4719,9 +4873,10 @@
                 this.state = 'PLAYING';
                 this.gameTime = 0;
                 this.killsCount = 0;
-                this.coinsEarned = 0;
                 this.shieldHp = 3;
                 this.maxShieldHp = 3;
+                this.inRunBarrels = 2;   // 開局雙管齊射
+                this.inRunRateTier = 0;  // 開局 0 階超頻
                 this.cannonX = 0;
                 this.targetCannonX = 0;
                 this.lastShootTime = -999; // 立即觸發首波並排齊射
@@ -4744,15 +4899,15 @@
                 }
                 this.updateHeroSkillsHUD();
 
-                // 同步當前等級的砲管外觀
-                this.threeScene.updateCannonBarrels(gameStorage.getStreamColumnCount());
+                // 開局同步雙管外觀
+                this.threeScene.updateCannonBarrels(this.inRunBarrels);
 
                 this.mainMenuModal.classList.add('hidden');
                 this.gameOverModal.classList.add('hidden');
                 this.bossWarning.classList.remove('show');
 
                 // 開局預備前鋒（若有微量守護小兵）
-                const initTroops = gameStorage.getInitialTroopsCount();
+                const initTroops = 0;
                 for (let i = 0; i < initTroops; i++) {
                     const spreadX = (i - (initTroops - 1) / 2) * 0.45;
                     this.entityMgr.spawnBlueTroop(spreadX, 2.5);
@@ -4770,7 +4925,8 @@
                     this.hudModeTitle.innerText = '無盡生存模式';
                     this.gateMgr.setupLevelGates([
                         { x: -2.0, z: 14, type: 'mult', value: 2, moving: true, amplitude: 1.5, speed: 2.0 },
-                        { x: 2.0, z: 14, type: 'add', value: 20, moving: true, amplitude: 1.5, speed: 2.0, phase: Math.PI }
+                        { x: 2.0, z: 14, type: 'add', value: 20, moving: true, amplitude: 1.5, speed: 2.0, phase: Math.PI },
+                        { x: 0, z: 23, type: 'power_rate', charge: 10, moving: true, amplitude: 1.8, speed: 2.0 }
                     ]);
                     this.endlessSpawnTimer = 0;
                     this.endlessDifficultyTimer = 0;
@@ -4800,7 +4956,6 @@
                     if (this.currentStageId === gameStorage.data.unlockedStage && gameStorage.data.unlockedStage < 10) {
                         gameStorage.data.unlockedStage++;
                     }
-                    this.coinsEarned += Math.round(150 * gameStorage.getCoinBonusMultiplier());
                 } else {
                     soundFX.playDefeat();
                 }
@@ -4814,7 +4969,6 @@
                     }
                 }
 
-                gameStorage.data.coins += this.coinsEarned;
                 gameStorage.save();
 
                 const resTitle = document.getElementById('result-title');
@@ -4842,7 +4996,7 @@
 
                 document.getElementById('res-kills').innerText = this.killsCount;
                 document.getElementById('res-time').innerText = (this.mode === 'STAGE') ? '100%' : `${Math.floor(this.gameTime)} 秒`;
-                document.getElementById('res-coins').innerText = `+${this.coinsEarned} 🪙`;
+                // res-coins 已移除
 
                 this.gameOverModal.classList.remove('hidden');
                 this.bossWarning.classList.remove('show');
@@ -4860,7 +5014,11 @@
             }
 
             updateHUD() {
-                this.hudCoins.innerText = gameStorage.data.coins + this.coinsEarned;
+                const fpEl = document.getElementById('hud-firepower');
+                if (fpEl) fpEl.innerText = `${this.inRunBarrels} 管`;
+                const odEl = document.getElementById('hud-overdrive');
+                if (odEl) odEl.innerText = `Lv.${this.inRunRateTier}`;
+
                 this.hudShield.innerText = `${this.shieldHp} / ${this.maxShieldHp}`;
                 this.hudSwarmCount.innerText = this.entityMgr.getActiveBlueCount();
 
@@ -4908,7 +5066,7 @@
                             this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
 
                             this.killsCount++;
-                            this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                            
                             this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 3);
                             soundFX.playHit();
                             break;
@@ -4940,7 +5098,7 @@
                                     g.active = false;
                                     this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
                                     this.killsCount++;
-                                    this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                                    
                                 }
                                 break;
                             }
@@ -4972,7 +5130,7 @@
                                     boss.active = false;
                                     this.entityMgr.bossGroup.position.set(0, -999, 0);
                                     this.killsCount++;
-                                    this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                                    
                                     this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
                                     this.shakeAmount = 0.8;
                                     break;
@@ -5224,7 +5382,7 @@
                         _tempMatrix.makeTranslation(0, -999, 0);
                         this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
                         this.killsCount++;
-                        this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                        
                         this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 6);
                         killedReds = true;
                         if (!hitSoundTriggered) {
@@ -5245,7 +5403,7 @@
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
                             this.killsCount++;
-                            this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                            
                             this.entityMgr.spawnExplosion(g.x, g.y, g.z, 6);
                             killedGargoyles = true;
                             if (!hitSoundTriggered) {
@@ -5266,7 +5424,7 @@
                         boss.active = false;
                         this.entityMgr.bossGroup.position.set(0, -999, 0);
                         this.killsCount++;
-                        this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                        
                         this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
                         this.shakeAmount = 0.9;
                         if (!hitSoundTriggered) {
@@ -5438,7 +5596,7 @@
                                 boss.active = false;
                                 this.entityMgr.bossGroup.position.set(0, -999, 0);
                                 this.killsCount++;
-                                this.coinsEarned += Math.round(50 * gameStorage.getCoinBonusMultiplier());
+                                
                                 this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
                                 this.shakeAmount = 0.9;
                             }
@@ -5450,7 +5608,7 @@
                                 this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
                                 this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
                                 this.killsCount++;
-                                this.coinsEarned += Math.round(5 * gameStorage.getCoinBonusMultiplier());
+                                
                             }
                         } else if (hitType === 'red' && hitRef) {
                             hitRef.active = false;
@@ -5458,7 +5616,7 @@
                             this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
                             this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
                             this.killsCount++;
-                            this.coinsEarned += Math.round(2 * gameStorage.getCoinBonusMultiplier());
+                            
                         }
                     }
                 }
@@ -5468,7 +5626,7 @@
                 const dt = Math.min(this.clock.getDelta(), 0.1);
                 const time = this.clock.getElapsedTime();
                 let isFiring = false;
-                const streamCount = gameStorage.getStreamColumnCount();
+                const streamCount = this.inRunBarrels;
 
                 if (this.state === 'PLAYING') {
                     this.gameTime += dt;
@@ -5482,8 +5640,8 @@
                     this.cannonX += (this.targetCannonX - this.cannonX) * 18.0 * dt;
                     this.threeScene.cannonGroup.position.x = this.cannonX;
 
-                    // 連續多聯裝並排發射藍軍 (Multi-Barrel Parallel Stream: 2, 3 或 4 顆)
-                    const fireInterval = gameStorage.getFireInterval();
+                    // 局內動態超頻射速公式：基礎 0.40s，每階超頻 x0.75
+                    const fireInterval = Math.max(0.08, 0.40 * Math.pow(0.75, this.inRunRateTier));
                     if (time - this.lastShootTime >= fireInterval) {
                         this.lastShootTime = time;
                         isFiring = true;
