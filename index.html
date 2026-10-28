@@ -4630,6 +4630,10 @@
                 this.endlessDifficultyTimer = 0;
                 this.endlessInterval = 1.6;
 
+                // 戰術小隊排波隊列生成系統 (Squad Batches / Phalanx Spawner)
+                this.enemyBatchQueue = [];
+                this.batchSpawnTimer = 0;
+
                 // 多輪戰術強化門系統
                 this.powerUpRound = 1;
                 this.powerUpRespawnTimer = 0;
@@ -4968,6 +4972,10 @@
                     this.endlessDifficultyTimer = 0;
                     this.endlessInterval = 1.6;
                 }
+
+                // 重置戰術小隊出兵隊列
+                this.enemyBatchQueue = [];
+                this.batchSpawnTimer = 0;
 
                 // 重置多輪戰術強化門輪次與計時
                 this.powerUpRound = 1;
@@ -5402,6 +5410,104 @@
             }
 
             /**
+             * 戰術小隊排波隊列生成系統 (Squad Batches / Phalanx Spawner)
+             * Why: 避免瞬間爆發生成人肉牆造成防守崩潰，將大波次敵人拆解為與玩家子彈頻率相互對應的排波部隊
+             */
+            enqueueEnemyWave(wave) {
+                // 獲取玩家當前射擊頻率 (包含局內動態超頻) 與子彈流數
+                const fireInterval = Math.max(0.08, 0.40 * Math.pow(0.75, this.inRunRateTier || 0));
+                const streamCount = this.inRunBarrels || 2;
+
+                if (wave.type === 'boss') {
+                    this.enemyBatchQueue.push({
+                        type: 'boss',
+                        hp: wave.hp || 50,
+                        count: 1,
+                        spawnZ: 50,
+                        delayAfter: 2.2
+                    });
+                    return;
+                }
+
+                if (wave.type === 'gargoyle') {
+                    const count = wave.count || 2;
+                    const span = wave.xSpan || 3.0;
+                    for (let i = 0; i < count; i++) {
+                        const posX = (Math.random() - 0.5) * span;
+                        this.enemyBatchQueue.push({
+                            type: 'gargoyle',
+                            count: 1,
+                            x: posX,
+                            spawnZ: 48,
+                            // 石像鬼有3點生命值且俯衝速度快，給予充裕的瞄準與擊破間隔
+                            delayAfter: Math.max(0.75, fireInterval * 2.5)
+                        });
+                    }
+                    return;
+                }
+
+                // 普通紅兵部隊：拆分為戰術小隊橫向排波
+                let total = wave.count || 10;
+                const span = wave.xSpan || 3.5;
+                // 基礎雙聯裝砲時每排 2 隻；多聯裝砲時動態配合為 2~3 隻
+                const maxInRow = (streamCount >= 3) ? 3 : 2;
+
+                while (total > 0) {
+                    const batchCount = Math.min(total, maxInRow);
+                    total -= batchCount;
+
+                    // 每一排的中心點在 span 範圍內散佈，激勵玩家進行左右滑動微調瞄準
+                    const centerX = (Math.random() - 0.5) * (span * 0.7);
+                    // 排與排的間隔錨定於射速的 1.45 倍，確保全命中時剛好節奏消滅一排接下一排
+                    const delay = Math.max(0.42, fireInterval * 1.45);
+
+                    this.enemyBatchQueue.push({
+                        type: 'red',
+                        count: batchCount,
+                        centerX: centerX,
+                        spawnZ: 47,
+                        delayAfter: delay
+                    });
+                }
+            }
+
+            /**
+             * 逐幀消耗待出兵隊列並實例化敵人
+             * Why: 確保敵人具備良好的視覺縱深與節奏間隙，維持穩定的實體推進流
+             */
+            updateEnemySpawnQueue(dt) {
+                if (this.enemyBatchQueue.length === 0) return;
+
+                this.batchSpawnTimer -= dt;
+                if (this.batchSpawnTimer <= 0) {
+                    const batch = this.enemyBatchQueue.shift();
+                    if (!batch) return;
+
+                    if (batch.type === 'boss') {
+                        this.entityMgr.spawnBoss(batch.spawnZ || 50, batch.hp || 50);
+                        if (this.bossWarning) {
+                            this.bossWarning.classList.add('show');
+                            setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
+                        }
+                    } else if (batch.type === 'gargoyle') {
+                        this.entityMgr.spawnGargoyle(batch.x, batch.spawnZ || 48);
+                    } else if (batch.type === 'red') {
+                        const count = batch.count;
+                        // 2 隻間隔 0.9 剛好與砲台發射軌道間距匹配
+                        const spacing = (count === 2) ? 0.9 : 0.8;
+                        for (let i = 0; i < count; i++) {
+                            const offset = (count > 1) ? (i - (count - 1) / 2) * spacing : 0;
+                            const jitter = (Math.random() - 0.5) * 0.12;
+                            const zJitter = (Math.random() - 0.5) * 0.25;
+                            const finalX = Math.max(-4.6, Math.min(4.6, batch.centerX + offset + jitter));
+                            this.entityMgr.spawnRedTroop(finalX, (batch.spawnZ || 47) + zJitter);
+                        }
+                    }
+                    this.batchSpawnTimer = batch.delayAfter || 0.5;
+                }
+            }
+
+            /**
              * 胸口集束巨砲全跑道貫穿傷害判定 (Unibeam Collisions)
              */
             updateUnibeamCollisions(dt) {
@@ -5797,32 +5903,17 @@
                     // 英雄專屬技能冷卻倒數
                     this.updateHeroSkills(dt);
 
-                    // 波次生成
+                    // 波次生成與戰術小隊隊列排程
                     if (this.mode === 'STAGE') {
                         this.waveTime += dt;
                         if (this.nextWaveIdx < this.stageWaves.length) {
                             const wave = this.stageWaves[this.nextWaveIdx];
                             if (this.waveTime >= wave.time) {
                                 this.nextWaveIdx++;
-                                if (wave.type === 'red') {
-                                    const span = wave.xSpan || 3.5;
-                                    for (let i = 0; i < wave.count; i++) {
-                                        const x = (Math.random() - 0.5) * span;
-                                        this.entityMgr.spawnRedTroop(x, 45 + Math.random() * 6.0);
-                                    }
-                                } else if (wave.type === 'gargoyle') {
-                                    const span = wave.xSpan || 3.0;
-                                    for (let i = 0; i < wave.count; i++) {
-                                        const x = (Math.random() - 0.5) * span;
-                                        this.entityMgr.spawnGargoyle(x, 48 + i * 2.0);
-                                    }
-                                } else if (wave.type === 'boss') {
-                                    this.entityMgr.spawnBoss(50, wave.hp || 50);
-                                    this.bossWarning.classList.add('show');
-                                    setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
-                                }
+                                this.enqueueEnemyWave(wave);
                             }
-                        } else {
+                        } else if (this.enemyBatchQueue.length === 0) {
+                            // 所有波次皆已排入且生成隊列已全數出兵，確認場上實體是否全數殲滅
                             let enemiesRemaining = 0;
                             if (this.entityMgr.boss.active) enemiesRemaining++;
                             for (let i = 0; i < this.entityMgr.MAX_RED; i++) {
@@ -5837,38 +5928,33 @@
                             }
                         }
                     } else {
-                        // 無盡生存模式
+                        // 無盡生存模式 (同樣採用隊列排波，維持良好的推進節奏與通量平衡)
                         this.endlessSpawnTimer += dt;
                         this.endlessDifficultyTimer += dt;
 
                         if (this.endlessDifficultyTimer > 20) {
                             this.endlessDifficultyTimer = 0;
-                            this.endlessInterval = Math.max(0.6, this.endlessInterval * 0.88);
+                            this.endlessInterval = Math.max(1.0, this.endlessInterval * 0.90);
                         }
 
                         if (this.endlessSpawnTimer >= this.endlessInterval) {
                             this.endlessSpawnTimer = 0;
                             const randType = Math.random();
                             if (randType < 0.65) {
-                                const count = 6 + Math.floor(this.gameTime * 0.15);
-                                for (let i = 0; i < count; i++) {
-                                    const x = (Math.random() - 0.5) * 6.0;
-                                    this.entityMgr.spawnRedTroop(x, 45 + Math.random() * 8.0);
-                                }
+                                const count = 6 + Math.floor(this.gameTime * 0.12);
+                                this.enqueueEnemyWave({ type: 'red', count: count, xSpan: 4.5 });
                             } else if (randType < 0.9) {
-                                const count = 2 + Math.floor(this.gameTime * 0.05);
-                                for (let i = 0; i < count; i++) {
-                                    const x = (Math.random() - 0.5) * 5.0;
-                                    this.entityMgr.spawnGargoyle(x, 48 + i * 2.0);
-                                }
+                                const count = 2 + Math.floor(this.gameTime * 0.04);
+                                this.enqueueEnemyWave({ type: 'gargoyle', count: count, xSpan: 3.5 });
                             } else if (!this.entityMgr.boss.active) {
                                 const hp = 30 + Math.floor(this.gameTime * 0.8);
-                                this.entityMgr.spawnBoss(50, hp);
-                                this.bossWarning.classList.add('show');
-                                setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
+                                this.enqueueEnemyWave({ type: 'boss', hp: hp });
                             }
                         }
                     }
+
+                    // 逐幀執行戰術小隊排波隊列推進
+                    this.updateEnemySpawnQueue(dt);
 
                     this.updatePowerUpRounds(dt);
                     this.gateMgr.update(time, dt);
