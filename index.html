@@ -667,15 +667,16 @@
     <div id="ui-layer">
         <div class="hud-header">
             <div class="hud-left">
-                <div class="stat-badge" id="hud-firepower-badge" style="color: #ffd166; font-weight:800; border:1px solid rgba(255,209,102,0.3); background:rgba(255,209,102,0.1);">
-                    <span>🔱</span>
-                    <span id="hud-firepower">2 管</span>
-                    <span style="color:#00f0ff; margin-left:4px;">⚡</span>
-                    <span id="hud-overdrive" style="color:#00f0ff;">Lv.0</span>
+                <div class="stat-badge" id="hud-firepower-badge" style="color: #00f0ff; font-weight:800; border:1px solid rgba(0,240,255,0.45); background:rgba(0,240,255,0.12);">
+                    <span>🔋</span>
+                    <span>子彈配額(HP)：</span>
+                    <span id="hud-shield" style="font-size:15px; color:#ffd166;">16 / 100</span>
                 </div>
-                <div class="stat-badge shield">
-                    <span>🛡️</span>
-                    <span id="hud-shield">3 / 3</span>
+                <div class="stat-badge shield" title="單排固定4顆 | 右路下一倍率預告">
+                    <span>🔱</span>
+                    <span id="hud-firepower">單排 4 顆</span>
+                    <span style="color:#ffd166; margin-left:4px;">| 右路:</span>
+                    <span id="hud-overdrive" style="color:#ffd166;">x5</span>
                 </div>
             </div>
 
@@ -687,9 +688,10 @@
             </div>
 
             <div class="hud-right">
-                <div class="stat-badge" id="hud-units-badge">
-                    <span>👥</span>
-                    <span id="hud-swarm-count">0</span>
+                <div class="stat-badge" id="hud-units-badge" title="畫面中同時存在的子彈數 / 當前配額上限">
+                    <span>🟦</span>
+                    <span>同屏彈幕:</span>
+                    <span id="hud-swarm-count">0 / 16</span>
                 </div>
                 <button class="icon-btn" id="btn-theme-toggle" title="切換配色風格">🎨</button>
                 <button class="icon-btn" id="btn-sound-toggle" title="切換音效">🔊</button>
@@ -729,7 +731,7 @@
     <div class="modal-overlay" id="main-menu-modal">
         <div class="modal-card">
             <h1>軍團防線：增殖衝擊</h1>
-            <p class="subtitle">Mob Defense: Swarm Rush<br>穿過數學倍率門，聚集萬人藍色大軍粉碎紅軍！</p>
+            <p class="subtitle">Mob Defense: Swarm Rush (v3.0)<br>6通道分道戰術：左路回血、中路拆彈、右路破柱直衝 100 顆子彈上限！</p>
 
             <!-- 配色風格選擇器 -->
             <div class="theme-select-section" style="margin-bottom:10px; text-align:left;">
@@ -758,27 +760,27 @@
                 <div style="font-size:12px; color:#cbd5e0;" id="endless-record-text">最高生存時間：0 秒 | 總擊殺：0</div>
             </div>
 
-            <!-- 戰場實體強化門即時養成導引 -->
+            <!-- 6 通道分道與子彈配額即血條即時導引 -->
             <div class="powerup-guide-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; text-align: left;">
                 <div style="font-size: 13px; font-weight: 800; color: #ffd166; margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
-                    <span>⚡</span> 戰場實體強化門（射擊充能當場升級）
+                    <span>⚡</span> 6 通道戰術與「子彈配額即血條」規則 (上限 100 顆)
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                    <div style="background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); padding: 7px 9px; border-radius: 9px;">
+                        <b style="color: #4ade80;">⬅️ 左路(1單位)：+N 強化門</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">持續推進，射擊即補血/增加配額</div>
+                    </div>
                     <div style="background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #ffd166;">🔱 聯裝重砲</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">雙排➜三排➜四管齊射</div>
+                        <b style="color: #ffd166;">➡️ 右路(1單位)：石柱 + xN 門</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">打掉停駐石柱，吃 x5/x10 直衝100！</div>
                     </div>
                     <div style="background: rgba(0,240,255,0.08); border: 1px solid rgba(0,240,255,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #00f0ff;">⚡ 射速超頻</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">射速 +25%（最高3疊加）</div>
-                    </div>
-                    <div style="background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #4ade80;">🛡️ 護盾修復</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">底線耐久 +1 點</div>
+                        <b style="color: #00f0ff;">🔋 子彈配額 = 血條 (HP)</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">單排 4 顆 / 同屏上限 100，歸零失敗</div>
                     </div>
                     <div style="background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #f43f5e;">💥 戰術充能</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">雷射/導彈 CD 立即歸零</div>
+                        <b style="color: #f43f5e;">⚔️ 中路(4單位)：敵軍讀條攻擊</b>
+                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">敵人有血條，貼臉蓄力前優先集火！</div>
                     </div>
                 </div>
             </div>
@@ -1428,153 +1430,136 @@
         const gameStorage = new GameStorage();
 
         // =========================================================================
-        // 2. 關卡與波次配置數據 (Stage Configurations)
-        // 10 關漸進式設計，從基礎乘法到雙動態門、石像鬼與巨型 Boss
+        // 2. 關卡與波次配置數據 (Stage Configurations - v3.0 6通道分道與100配額平衡)
+        // 左1單位：持續推進 +N 強化門 | 中4單位：敵軍進攻 | 右1單位：停駐石柱 + 交錯 xN 強化門
         // =========================================================================
         const STAGE_CONFIGS = [
             {
                 id: 1,
-                name: '第 1 關：初陣啟動',
-                gates: [
-                    { x: -1.9, z: 8.5, type: 'add', value: 10, moving: false },
-                    { x: 1.9, z: 8.5, type: 'mult', value: 2, moving: false },
-                    { x: 0, z: 15.0, type: 'power_rate', charge: 10, moving: false }
-                ],
+                name: '第 1 關：初陣破柱',
+                leftAddPool: [2, 4],
+                pillarBaseHp: 28,
+                rightMultPool: [5, 5, 10],
                 waves: [
-                    { time: 1.0, type: 'red', count: 12, xSpan: 2.5 },
-                    { time: 5.5, type: 'red', count: 18, xSpan: 3.0 },
-                    { time: 10.5, type: 'red', count: 25, xSpan: 3.5 }
+                    { time: 0.8, type: 'red', count: 8 },
+                    { time: 5.5, type: 'red', count: 12 },
+                    { time: 11.0, type: 'elite', count: 1 },
+                    { time: 13.5, type: 'red', count: 16 }
                 ]
             },
             {
                 id: 2,
-                name: '第 2 關：倍增洪流',
-                gates: [
-                    { x: -2.1, z: 9.0, type: 'mult', value: 2, moving: false },
-                    { x: 2.1, z: 9.0, type: 'mult', value: 3, moving: false },
-                    { x: 0, z: 15.5, type: 'power_barrel', charge: 15, moving: false }
-                ],
+                name: '第 2 關：百彈洪流',
+                leftAddPool: [2, 4, 6],
+                pillarBaseHp: 36,
+                rightMultPool: [5, 10],
                 waves: [
-                    { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
-                    { time: 5.0, type: 'red', count: 30, xSpan: 4.0 },
-                    { time: 10.0, type: 'red', count: 45, xSpan: 4.5 }
+                    { time: 0.8, type: 'red', count: 12 },
+                    { time: 5.0, type: 'elite', count: 2 },
+                    { time: 9.5, type: 'red', count: 20 }
                 ]
             },
             {
                 id: 3,
-                name: '第 3 關：巡弋防線',
-                gates: [
-                    { x: -1.9, z: 9.5, type: 'mult', value: 3, moving: true, amplitude: 1.5, speed: 2.0 },
-                    { x: 1.9, z: 9.5, type: 'add', value: 15, moving: true, amplitude: 1.5, speed: 1.6, phase: Math.PI },
-                    { x: 0, z: 16.0, type: 'power_shield', charge: 10, moving: false }
-                ],
+                name: '第 3 關：重盾壓境',
+                leftAddPool: [4, 6],
+                pillarBaseHp: 44,
+                rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 1.0, type: 'red', count: 25, xSpan: 3.5 },
-                    { time: 5.5, type: 'red', count: 40, xSpan: 4.0 },
-                    { time: 11.5, type: 'red', count: 55, xSpan: 4.5 }
+                    { time: 0.8, type: 'red', count: 14 },
+                    { time: 4.5, type: 'elite', count: 2 },
+                    { time: 9.0, type: 'red', count: 18 },
+                    { time: 13.0, type: 'elite', count: 3 }
                 ]
             },
             {
                 id: 4,
                 name: '第 4 關：空降石像鬼',
-                gates: [
-                    { x: -2.1, z: 9.0, type: 'mult', value: 2, moving: false },
-                    { x: 2.1, z: 9.0, type: 'mult', value: 3, moving: false },
-                    { x: -2.0, z: 16.0, type: 'power_skill', charge: 8, moving: false },
-                    { x: 2.0, z: 16.0, type: 'power_barrel', charge: 15, moving: false }
-                ],
+                leftAddPool: [4, 6, 8],
+                pillarBaseHp: 48,
+                rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 1.0, type: 'red', count: 20, xSpan: 3.5 },
-                    { time: 4.5, type: 'gargoyle', count: 3, xSpan: 3.0 },
-                    { time: 7.5, type: 'red', count: 35, xSpan: 4.0 },
-                    { time: 11.0, type: 'gargoyle', count: 5, xSpan: 3.5 }
+                    { time: 0.8, type: 'red', count: 14 },
+                    { time: 4.2, type: 'gargoyle', count: 3 },
+                    { time: 8.0, type: 'elite', count: 2 },
+                    { time: 12.0, type: 'gargoyle', count: 4 }
                 ]
             },
             {
                 id: 5,
-                name: '第 5 關：巨怪衝撞',
-                gates: [
-                    { x: -2.1, z: 8.5, type: 'mult', value: 3, moving: false },
-                    { x: 2.1, z: 8.5, type: 'add', value: 25, moving: false },
-                    { x: 0, z: 15.0, type: 'power_rate', charge: 12, moving: true, amplitude: 1.6, speed: 2.0 }
-                ],
+                name: '第 5 關：巨像降臨',
+                leftAddPool: [4, 8],
+                pillarBaseHp: 52,
+                rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 1.0, type: 'red', count: 30, xSpan: 4.0 },
-                    { time: 5.5, type: 'boss', hp: 40, count: 1 },
-                    { time: 9.5, type: 'red', count: 40, xSpan: 4.0 }
+                    { time: 0.8, type: 'red', count: 16 },
+                    { time: 4.5, type: 'elite', count: 2 },
+                    { time: 8.0, type: 'boss', hp: 220, count: 1 },
+                    { time: 12.5, type: 'red', count: 16 }
                 ]
             },
             {
                 id: 6,
                 name: '第 6 關：險峻突圍',
-                gates: [
-                    { x: -2.1, z: 9.0, type: 'mult', value: 3, moving: false },
-                    { x: 2.1, z: 9.0, type: 'add', value: 30, moving: false },
-                    { x: 0, z: 16.0, type: 'power_barrel', charge: 15, moving: true, amplitude: 1.8, speed: 2.2 }
-                ],
+                leftAddPool: [6, 8, 10],
+                pillarBaseHp: 60,
+                rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 1.0, type: 'red', count: 35, xSpan: 4.0 },
-                    { time: 5.5, type: 'gargoyle', count: 4, xSpan: 3.0 },
-                    { time: 10.0, type: 'red', count: 55, xSpan: 4.5 }
+                    { time: 0.8, type: 'red', count: 18 },
+                    { time: 4.5, type: 'gargoyle', count: 4 },
+                    { time: 8.5, type: 'elite', count: 3 },
+                    { time: 12.5, type: 'red', count: 24 }
                 ]
             },
             {
                 id: 7,
-                name: '第 7 關：雙重交錯',
-                gates: [
-                    { x: -1.8, z: 9.0, type: 'mult', value: 3, moving: true, amplitude: 1.6, speed: 2.2 },
-                    { x: 1.8, z: 9.0, type: 'add', value: 20, moving: true, amplitude: 1.6, speed: 2.2, phase: Math.PI },
-                    { x: 0, z: 16.0, type: 'power_shield', charge: 10, moving: true, amplitude: 1.5, speed: 2.0 }
-                ],
+                name: '第 7 關：雙線拉鋸',
+                leftAddPool: [6, 10],
+                pillarBaseHp: 68,
+                rightMultPool: [10, 15],
                 waves: [
-                    { time: 1.0, type: 'red', count: 40, xSpan: 4.0 },
-                    { time: 5.5, type: 'gargoyle', count: 5, xSpan: 3.5 },
-                    { time: 9.5, type: 'red', count: 60, xSpan: 4.5 }
+                    { time: 0.8, type: 'red', count: 20 },
+                    { time: 4.5, type: 'elite', count: 3 },
+                    { time: 8.5, type: 'gargoyle', count: 5 },
+                    { time: 12.5, type: 'elite', count: 4 }
                 ]
             },
             {
                 id: 8,
                 name: '第 8 關：夜行狂襲',
-                gates: [
-                    { x: -2.2, z: 9.0, type: 'mult', value: 4, moving: false },
-                    { x: 2.2, z: 9.0, type: 'mult', value: 3, moving: false },
-                    { x: 0, z: 16.0, type: 'power_rate', charge: 12, moving: true, amplitude: 1.8, speed: 2.5 }
-                ],
+                leftAddPool: [8, 10, 12],
+                pillarBaseHp: 76,
+                rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 1.0, type: 'red', count: 45, xSpan: 4.5 },
-                    { time: 5.0, type: 'gargoyle', count: 6, xSpan: 3.5 },
-                    { time: 8.5, type: 'red', count: 65, xSpan: 4.5 },
-                    { time: 12.0, type: 'gargoyle', count: 6, xSpan: 4.0 }
+                    { time: 0.8, type: 'gargoyle', count: 4 },
+                    { time: 4.5, type: 'red', count: 24 },
+                    { time: 8.5, type: 'elite', count: 4 },
+                    { time: 12.5, type: 'gargoyle', count: 6 }
                 ]
             },
             {
                 id: 9,
                 name: '第 9 關：雙雄會戰',
-                gates: [
-                    { x: -2.1, z: 8.5, type: 'mult', value: 3, moving: true, amplitude: 1.5, speed: 1.8 },
-                    { x: 2.1, z: 8.5, type: 'mult', value: 4, moving: true, amplitude: 1.5, speed: 1.8, phase: Math.PI },
-                    { x: 0, z: 15.0, type: 'power_skill', charge: 8, moving: false }
-                ],
+                leftAddPool: [8, 12],
+                pillarBaseHp: 84,
+                rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 1.0, type: 'boss', hp: 35, count: 1 },
-                    { time: 5.5, type: 'red', count: 60, xSpan: 4.5 },
-                    { time: 11.0, type: 'boss', hp: 50, count: 1 }
+                    { time: 0.8, type: 'boss', hp: 260, count: 1 },
+                    { time: 6.0, type: 'elite', count: 4 },
+                    { time: 11.0, type: 'boss', hp: 320, count: 1 }
                 ]
             },
             {
                 id: 10,
                 name: '第 10 關：終極決戰',
-                gates: [
-                    { x: -2.2, z: 8.5, type: 'mult', value: 4, moving: true, amplitude: 1.4, speed: 2.5 },
-                    { x: 2.2, z: 8.5, type: 'mult', value: 5, moving: true, amplitude: 1.4, speed: 2.5, phase: Math.PI },
-                    { x: -2.0, z: 16.0, type: 'power_barrel', charge: 15, moving: false },
-                    { x: 2.0, z: 16.0, type: 'power_skill', charge: 8, moving: false }
-                ],
+                leftAddPool: [10, 15],
+                pillarBaseHp: 96,
+                rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 1.0, type: 'red', count: 50, xSpan: 4.5 },
-                    { time: 4.5, type: 'gargoyle', count: 8, xSpan: 4.0 },
-                    { time: 9.0, type: 'boss', hp: 80, count: 1 },
-                    { time: 14.0, type: 'red', count: 80, xSpan: 4.5 }
+                    { time: 0.8, type: 'red', count: 24 },
+                    { time: 4.5, type: 'gargoyle', count: 6 },
+                    { time: 8.5, type: 'elite', count: 5 },
+                    { time: 12.0, type: 'boss', hp: 380, count: 1 }
                 ]
             }
         ];
@@ -3091,39 +3076,89 @@
             }
 
             createTrack() {
-                const trackWidth = 11;
+                const trackWidth = 12.0; // 6 個通道單位，每單位寬 2.0 (左1: [+4,+6], 中4: [-4,+4], 右1: [-6,-4])
                 const trackLength = 85;
+                const centerZ = trackLength / 2 - 8;
 
-                // 跑道地面
+                // 跑道主地面
                 const groundGeo = new THREE.PlaneGeometry(trackWidth, trackLength);
                 groundGeo.rotateX(-Math.PI / 2);
                 this.groundMat = new THREE.MeshLambertMaterial({ color: 0x141d2e });
                 this.trackMesh = new THREE.Mesh(groundGeo, this.groundMat);
-                this.trackMesh.position.set(0, -0.05, trackLength / 2 - 8);
+                this.trackMesh.position.set(0, -0.05, centerZ);
                 this.scene.add(this.trackMesh);
+
+                // 最左 1 單位通道底色帶 (螢幕左側 X = +5.0：+N 強化門專屬通道)
+                const sideLaneGeo = new THREE.PlaneGeometry(2.0, trackLength);
+                sideLaneGeo.rotateX(-Math.PI / 2);
+                const leftLaneMat = new THREE.MeshBasicMaterial({
+                    color: 0x06d6a0,
+                    transparent: true,
+                    opacity: 0.13
+                });
+                const leftLaneMesh = new THREE.Mesh(sideLaneGeo, leftLaneMat);
+                leftLaneMesh.position.set(5.0, -0.02, centerZ);
+                this.scene.add(leftLaneMesh);
+
+                // 最右 1 單位通道底色帶 (螢幕右側 X = -5.0：阻擋石柱 + xN 強化門專屬通道)
+                const rightLaneMat = new THREE.MeshBasicMaterial({
+                    color: 0xffd166,
+                    transparent: true,
+                    opacity: 0.13
+                });
+                const rightLaneMesh = new THREE.Mesh(sideLaneGeo, rightLaneMat);
+                rightLaneMesh.position.set(-5.0, -0.02, centerZ);
+                this.scene.add(rightLaneMesh);
+
+                // 6 單位分道發光分隔線 (X = +4.0 與 X = -4.0 為強光主隔線，X = +2, 0, -2 為中路4通道輔助線)
+                const mainDivGeo = new THREE.BoxGeometry(0.08, 0.08, trackLength);
+                const leftDivMat = new THREE.MeshBasicMaterial({ color: 0x06d6a0 });
+                const leftDiv = new THREE.Mesh(mainDivGeo, leftDivMat);
+                leftDiv.position.set(4.0, 0.02, centerZ);
+                this.scene.add(leftDiv);
+
+                const rightDivMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+                const rightDiv = new THREE.Mesh(mainDivGeo, rightDivMat);
+                rightDiv.position.set(-4.0, 0.02, centerZ);
+                this.scene.add(rightDiv);
+
+                const subDivGeo = new THREE.BoxGeometry(0.03, 0.02, trackLength);
+                const subDivMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.32 });
+                [-2.0, 0.0, 2.0].forEach(xPos => {
+                    const m = new THREE.Mesh(subDivGeo, subDivMat);
+                    m.position.set(xPos, 0.01, centerZ);
+                    this.scene.add(m);
+                });
+
+                // 右路石柱停駐警戒線 (Z = 10.0, X = -5.0)
+                const stopLineGeo = new THREE.BoxGeometry(1.9, 0.06, 0.22);
+                const stopLineMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+                const stopLineMesh = new THREE.Mesh(stopLineGeo, stopLineMat);
+                stopLineMesh.position.set(-5.0, 0.03, 10.0);
+                this.scene.add(stopLineMesh);
 
                 // 兩側霓虹邊界護欄
                 const railGeo = new THREE.BoxGeometry(0.3, 0.5, trackLength);
                 this.railMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
 
                 this.leftRail = new THREE.Mesh(railGeo, this.railMat);
-                this.leftRail.position.set(-trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.leftRail.position.set(-trackWidth / 2, 0.2, centerZ);
                 this.scene.add(this.leftRail);
 
                 this.rightRail = new THREE.Mesh(railGeo, this.railMat);
-                this.rightRail.position.set(trackWidth / 2, 0.2, trackLength / 2 - 8);
+                this.rightRail.position.set(trackWidth / 2, 0.2, centerZ);
                 this.scene.add(this.rightRail);
 
-                // 底線守護能量條 (Defense Shield Line)
-                const shieldBarGeo = new THREE.BoxGeometry(trackWidth, 0.12, 0.5);
+                // 底線守護能量條 (Defense Frontline)
+                const shieldBarGeo = new THREE.BoxGeometry(trackWidth, 0.12, 0.45);
                 this.shieldBarMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
                 const shieldBar = new THREE.Mesh(shieldBarGeo, this.shieldBarMat);
-                shieldBar.position.set(0, 0.05, 0);
+                shieldBar.position.set(0, 0.05, 1.1);
                 this.scene.add(shieldBar);
 
-                // 地面網格格線
-                this.gridHelper = new THREE.GridHelper(trackWidth, 10, 0x263a57, 0x19283d);
-                this.gridHelper.position.set(0, 0, trackLength / 2 - 8);
+                // 地面網格格線 (6 等分橫向格線)
+                this.gridHelper = new THREE.GridHelper(trackWidth, 6, 0x263a57, 0x19283d);
+                this.gridHelper.position.set(0, 0, centerZ);
                 this.gridHelper.scale.z = trackLength / trackWidth;
                 this.scene.add(this.gridHelper);
             }
@@ -3131,14 +3166,13 @@
             createPlayerCannon() {
                 this.cannonGroup = new THREE.Group();
 
-                // 移除早期模擬槍管留下的圓盤底座與發射口，保持地面俐落與英雄純粹站姿
                 this.baseMat = null;
                 this.ringMat = null;
                 this.barrelMat = null;
                 this.barrelsGroup = null;
 
-                // 瞄準指示光束 (Aim Guide Line) - 覆蓋排面彈道寬度
-                const aimGeo = new THREE.PlaneGeometry(1.5, 35);
+                // 瞄準指示光束 (Aim Guide Line) - 寬度 1.85 對應 1 個通道單位 (4顆子彈排面)
+                const aimGeo = new THREE.PlaneGeometry(1.85, 38);
                 aimGeo.rotateX(-Math.PI / 2);
                 this.aimMat = new THREE.MeshBasicMaterial({
                     color: 0x00f0ff,
@@ -3146,14 +3180,29 @@
                     opacity: 0.22
                 });
                 const aimLine = new THREE.Mesh(aimGeo, this.aimMat);
-                aimLine.position.set(0, 0.04, 18.5);
+                aimLine.position.set(0, 0.04, 19.5);
                 this.cannonGroup.add(aimLine);
 
                 // 建立鋼鐵人 3D 英雄模型並掛載至操作節點 (雙腳穩穩踩在地面)
                 this.ironManMaterials = createIronManMaterials();
                 this.ironMan = createIronManHero(this.ironManMaterials);
-                this.ironMan.root.position.set(0, 0, 0); // 鋼鐵人雙腳穩立於地面 (原 0.20 底座圓盤已移除)
+                this.ironMan.root.position.set(0, 0, 0);
                 this.cannonGroup.add(this.ironMan.root);
+
+                // 英雄頭頂 3D 即時「子彈配額(血條)」懸浮面板 (256x64 Power-of-two CanvasTexture)
+                const qCanvas = document.createElement('canvas');
+                qCanvas.width = 256;
+                qCanvas.height = 64;
+                this.quotaCanvas = qCanvas;
+                this.quotaCtx = qCanvas.getContext('2d');
+                this.quotaTexture = new THREE.CanvasTexture(qCanvas);
+                const qMat = new THREE.SpriteMaterial({ map: this.quotaTexture, transparent: true, depthTest: false });
+                this.quotaSprite = new THREE.Sprite(qMat);
+                this.quotaSprite.position.set(0, 3.25, 0);
+                this.quotaSprite.scale.set(2.4, 0.6, 1);
+                this.cannonGroup.add(this.quotaSprite);
+                this.lastRenderedQuota = -1;
+                this.updateQuotaBadge(16, 100);
 
                 // 鋼鐵人運動學與姿態快取狀態 (零 GC 記憶體配置，遵守 three-best-practices)
                 this.recoilTimer = 0;
@@ -3178,7 +3227,43 @@
                 this.updateCannonBarrels(2);
             }
 
-            updateCannonBarrels(streamCount = 2) {
+            updateQuotaBadge(quota = 16, maxQuota = 100) {
+                if (this.lastRenderedQuota === quota) return;
+                this.lastRenderedQuota = quota;
+                if (!this.quotaCtx) return;
+
+                const ctx = this.quotaCtx;
+                ctx.clearRect(0, 0, 256, 64);
+
+                const ratio = Math.max(0, Math.min(1, quota / maxQuota));
+                const barColor = (quota <= 12) ? '#ff385c' : (quota >= 80 ? '#ffd166' : '#00f0ff');
+
+                // 外框底板
+                ctx.fillStyle = 'rgba(10, 18, 32, 0.88)';
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(6, 6, 244, 52, 12) : ctx.rect(6, 6, 244, 52);
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = barColor;
+                ctx.stroke();
+
+                // 血條進度底襯
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+                ctx.fillRect(14, 42, 228, 8);
+                ctx.fillStyle = barColor;
+                ctx.fillRect(14, 42, 228 * ratio, 8);
+
+                // 配額數字
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 22px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`🔋 ${quota} / ${maxQuota}`, 128, 24);
+
+                this.quotaTexture.needsUpdate = true;
+            }
+
+            updateCannonBarrels(streamCount = 4) {
                 if (this.currentBarrelCount === streamCount) return;
                 this.currentBarrelCount = streamCount;
 
@@ -3377,9 +3462,9 @@
                     this.scene.remove(this.gridHelper);
                     if (this.gridHelper.geometry) this.gridHelper.geometry.dispose();
                     if (this.gridHelper.material) this.gridHelper.material.dispose();
-                    const trackWidth = 11;
+                    const trackWidth = 12.0;
                     const trackLength = 85;
-                    this.gridHelper = new THREE.GridHelper(trackWidth, 10, theme.gridColor1, theme.gridColor2);
+                    this.gridHelper = new THREE.GridHelper(trackWidth, 6, theme.gridColor1, theme.gridColor2);
                     this.gridHelper.position.set(0, 0, trackLength / 2 - 8);
                     this.gridHelper.scale.z = trackLength / trackWidth;
                     this.scene.add(this.gridHelper);
@@ -3610,16 +3695,18 @@
             constructor(scene) {
                 this.scene = scene;
 
-                this.MAX_BLUE = 1500;
-                this.MAX_RED = 1500;
-                this.MAX_GARGOYLES = 120;
+                this.MAX_BLUE = 120; // 同屏子彈最高上限 100 顆 (預留 120 物件池，0 GC)
+                this.MAX_RED = 400;
+                this.MAX_GARGOYLES = 100;
                 this.MAX_PARTICLES = 300;
+                this.MAX_STATUS_BARS = 500;
 
                 this.initBlueTroops();
                 this.initRedTroops();
                 this.initGargoyles();
                 this.initBoss();
                 this.initParticles();
+                this.initEnemyStatusMeshes();
             }
 
             initBlueTroops() {
@@ -3702,9 +3789,13 @@
                 for (let i = 0; i < this.MAX_RED; i++) {
                     this.redList.push({
                         active: false,
+                        isElite: false,
                         x: 0, y: -999, z: 0,
-                        vx: 0, vz: -5.5,
-                        hp: 1,
+                        vx: 0, vz: -4.8,
+                        hp: 8, maxHp: 8,
+                        attackTimer: 0,
+                        attackInterval: 1.0,
+                        attackDmg: 2,
                         bounceTime: Math.random() * Math.PI
                     });
                     _tempMatrix.makeTranslation(0, -999, 0);
@@ -3714,7 +3805,7 @@
             }
 
             initGargoyles() {
-                // 石像鬼：亮紫幾何低空飛行單位 (三角錐本體 + 雙翼)
+                // 石像鬼：亮紫幾何低空飛行單位 (Lv.2: HP 16, 1.5s 攻擊間隔, -5 子彈配額)
                 const geo = new THREE.ConeGeometry(0.45, 0.9, 5);
                 geo.rotateX(Math.PI / 2);
                 const mat = new THREE.MeshLambertMaterial({
@@ -3732,8 +3823,11 @@
                     this.gargoyleList.push({
                         active: false,
                         x: 0, y: -999, z: 0,
-                        vx: 0, vz: -8.0,
-                        hp: 3,
+                        vx: 0, vz: -7.5,
+                        hp: 16, maxHp: 16,
+                        attackTimer: 0,
+                        attackInterval: 1.5,
+                        attackDmg: 5,
                         wingTime: 0
                     });
                     _tempMatrix.makeTranslation(0, -999, 0);
@@ -3743,7 +3837,7 @@
             }
 
             initBoss() {
-                // 巨型 Boss：階層式 3D 綠巨人角色模型 (高度 3.8 單位，面朝玩家 -Z)
+                // 巨型 Boss：階層式 3D 綠巨人角色模型 (Lv.4: HP 240~400, 4.0s 攻擊間隔, -35 子彈配額)
                 const bossGroup = new THREE.Group();
 
                 this.giantMaterials = createGiantMaterials();
@@ -3774,9 +3868,12 @@
                 this.boss = {
                     active: false,
                     x: 0, y: 0, z: 0,
-                    vz: -2.2,
-                    hp: 50,
-                    maxHp: 50,
+                    vz: -2.0,
+                    hp: 240,
+                    maxHp: 240,
+                    attackTimer: 0,
+                    attackInterval: 4.0,
+                    attackDmg: 35,
                     enraged: false,
                     isRoaring: false,
                     roarTimer: 0,
@@ -3813,6 +3910,51 @@
                 this.particleMesh.instanceMatrix.needsUpdate = true;
             }
 
+            /**
+             * 遵循 three-best-practices (geometry-instanced-mesh):
+             * 使用單一 InstancedMesh 批次渲染全場敵人的「頭頂血條」與「底線攻擊讀條紅圈」，零額外 Draw Call 負擔
+             */
+            initEnemyStatusMeshes() {
+                // 1. 敵軍頭頂即時血條 (寬 0.9, 高 0.13)
+                const hpGeo = new THREE.PlaneGeometry(0.9, 0.13);
+                hpGeo.rotateY(Math.PI);
+                hpGeo.rotateX(0.55);
+                const hpMat = new THREE.MeshBasicMaterial({
+                    color: 0xff385c,
+                    side: THREE.DoubleSide
+                });
+                this.enemyHpMesh = new THREE.InstancedMesh(hpGeo, hpMat, this.MAX_STATUS_BARS);
+                this.enemyHpMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.enemyHpMesh.frustumCulled = false;
+                this.scene.add(this.enemyHpMesh);
+
+                // 2. 敵軍走到防線後的「週期性攻擊讀條蓄力紅圈」
+                const ringGeo = new THREE.RingGeometry(0.45, 0.68, 20);
+                ringGeo.rotateX(-Math.PI / 2);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0xff2a4d,
+                    transparent: true,
+                    opacity: 0.85,
+                    side: THREE.DoubleSide
+                });
+                this.attackRingMesh = new THREE.InstancedMesh(ringGeo, ringMat, 120);
+                this.attackRingMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.attackRingMesh.frustumCulled = false;
+                this.scene.add(this.attackRingMesh);
+
+                for (let i = 0; i < this.MAX_STATUS_BARS; i++) {
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.enemyHpMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.enemyHpMesh.instanceMatrix.needsUpdate = true;
+
+                for (let i = 0; i < 120; i++) {
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.attackRingMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.attackRingMesh.instanceMatrix.needsUpdate = true;
+            }
+
             applyTheme(theme) {
                 if (!theme) return;
                 if (this.blueMesh && this.blueMesh.material) {
@@ -3822,7 +3964,6 @@
                 }
                 if (this.redMesh && this.redMesh.material) {
                     if (this.redMesh.material.map) {
-                        // 科技步兵貼圖自帶色彩與緋紅塗裝，保持 0xffffff 原色呈現
                         this.redMesh.material.color.set(0xffffff);
                         if (this.redMesh.material.emissive) {
                             this.redMesh.material.emissive.set(0x220508);
@@ -3873,17 +4014,17 @@
                 }
             }
 
-            // 發射藍軍 (嚴格直線推進，零橫向偏角，不轉彎)
-            spawnBlueTroop(x, z, spreadX = 0, spreadVx = 0, baseVz = 9.2) {
+            // 發射藍軍子彈 (嚴格直線推進，零橫向偏角，不轉彎)
+            spawnBlueTroop(x, z, spreadX = 0, spreadVx = 0, baseVz = 14.5) {
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (!u.active) {
                         u.active = true;
-                        u.x = x + (spreadX > 0 ? (Math.random() - 0.5) * spreadX : 0);
+                        u.x = Math.max(-5.8, Math.min(5.8, x));
                         u.y = 0.4;
                         u.z = z;
-                        u.vx = 0; // 絕對直線前進，不轉彎
-                        u.vz = baseVz; // 速度一致，形成一排排平推浪潮
+                        u.vx = 0;
+                        u.vz = baseVz;
                         u.passedGateMask = 0;
                         return u;
                     }
@@ -3891,55 +4032,92 @@
                 return null;
             }
 
-            // 生成紅軍步兵 (嚴格直線向下推進，不轉彎)
-            spawnRedTroop(x, z) {
+            // 當我方子彈配額(血條)被敵人攻擊扣減時，若同屏子彈超過新配額，立即裁剪多餘子彈
+            trimActiveBluesToQuota(quotaCap) {
+                let activeCount = 0;
+                let trimmed = false;
+                for (let i = 0; i < this.MAX_BLUE; i++) {
+                    const u = this.blueList[i];
+                    if (u.active) {
+                        activeCount++;
+                        if (activeCount > quotaCap) {
+                            u.active = false;
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.blueMesh.setMatrixAt(i, _tempMatrix);
+                            trimmed = true;
+                        }
+                    }
+                }
+                if (trimmed) {
+                    this.blueMesh.instanceMatrix.needsUpdate = true;
+                }
+            }
+
+            // 生成紅軍步兵 (僅從中間4個單位通道 [-3.6, +3.6] 直線向下推進)
+            // isElite = false: Lv.1 斥候 (HP 8, 每 1.0s 攻擊扣 2 顆子彈)
+            // isElite = true : Lv.3 重裝巨盾兵 (HP 48, 每 2.5s 攻擊扣 15 顆子彈)
+            spawnRedTroop(x, z, isElite = false) {
+                const clampedX = Math.max(-3.5, Math.min(3.5, x));
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
                     if (!u.active) {
                         u.active = true;
-                        u.x = x;
+                        u.isElite = isElite;
+                        u.x = clampedX;
                         u.y = 0.4;
                         u.z = z;
-                        u.vx = 0; // 絕對直線下壓，不轉彎
-                        u.vz = -4.5 - Math.random() * 0.6; // 穩健向下壓境
-                        u.hp = 1;
+                        u.vx = 0;
+                        u.vz = isElite ? -3.1 : (-4.6 - Math.random() * 0.5);
+                        u.hp = isElite ? 48 : 8;
+                        u.maxHp = u.hp;
+                        u.attackTimer = 0;
+                        u.attackInterval = isElite ? 2.5 : 1.0;
+                        u.attackDmg = isElite ? 15 : 2;
                         return u;
                     }
                 }
                 return null;
             }
 
-            // 生成石像鬼 (嚴格直線突襲，不轉彎)
+            // 生成石像鬼 (Lv.2: HP 16, 每 1.5s 攻擊扣 5 顆子彈，僅從中間4單位推進)
             spawnGargoyle(x, z) {
+                const clampedX = Math.max(-3.5, Math.min(3.5, x));
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
                     if (!u.active) {
                         u.active = true;
-                        u.x = x;
+                        u.x = clampedX;
                         u.y = 1.5;
                         u.z = z;
-                        u.vx = 0; // 絕對直線直突，不轉彎
-                        u.vz = -8.2;
-                        u.hp = 3;
+                        u.vx = 0;
+                        u.vz = -7.6;
+                        u.hp = 16;
+                        u.maxHp = 16;
+                        u.attackTimer = 0;
+                        u.attackInterval = 1.5;
+                        u.attackDmg = 5;
                         return u;
                     }
                 }
                 return null;
             }
 
-            // 生成 Boss
-            spawnBoss(z, hp = 50) {
+            // 生成 Boss (Lv.4: HP 240~400, 每 4.0s 攻擊扣 35 顆子彈)
+            spawnBoss(z, hp = 240) {
                 this.boss.active = true;
                 this.boss.x = 0;
-                this.boss.vx = 0; // 零轉彎直線推進
+                this.boss.vx = 0;
                 this.boss.y = 0;
                 this.boss.z = z;
                 this.boss.hp = hp;
                 this.boss.maxHp = hp;
+                this.boss.attackTimer = 0;
+                this.boss.attackInterval = 4.0;
+                this.boss.attackDmg = 35;
                 this.boss.enraged = false;
                 this.boss.isRoaring = false;
                 this.boss.roarTimer = 0;
-                this.boss.vz = -2.2;
+                this.boss.vz = -2.0;
                 this.boss.walkPhase = 0;
                 this.boss.lastRightStomp = false;
                 this.boss.lastLeftStomp = false;
@@ -3953,29 +4131,26 @@
                 const ctx = this.bossHpCtx;
                 ctx.clearRect(0, 0, 320, 64);
 
-                // 外框底色
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
                 ctx.beginPath();
-                ctx.roundRect(4, 4, 312, 56, 12);
+                ctx.roundRect ? ctx.roundRect(4, 4, 312, 56, 12) : ctx.rect(4, 4, 312, 56);
                 ctx.fill();
                 ctx.lineWidth = 3;
                 ctx.strokeStyle = this.boss.enraged ? '#ef4444' : '#a3e635';
                 ctx.stroke();
 
-                // 內部血條槽
                 const ratio = Math.max(0, this.boss.hp / this.boss.maxHp);
                 ctx.fillStyle = this.boss.enraged ? '#dc2626' : '#65a30d';
                 ctx.beginPath();
-                ctx.roundRect(10, 10, (320 - 20) * ratio, 44, 8);
+                ctx.roundRect ? ctx.roundRect(10, 10, (320 - 20) * ratio, 44, 8) : ctx.rect(10, 10, (320 - 20) * ratio, 44);
                 ctx.fill();
 
-                // 文字標籤
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px "Segoe UI", sans-serif';
+                ctx.font = 'bold 19px "Segoe UI", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const label = this.boss.enraged ? '狂暴巨人 (ENRAGED)' : 'GIANT BOSS';
-                ctx.fillText(`${label}  ${Math.ceil(this.boss.hp)} / ${this.boss.maxHp}`, 160, 32);
+                const label = this.boss.enraged ? '狂暴巨像 (-35/4s)' : 'BOSS 巨像 (-35/4s)';
+                ctx.fillText(`${label} ${Math.ceil(this.boss.hp)}/${this.boss.maxHp}`, 160, 32);
 
                 this.bossHpTexture.needsUpdate = true;
             }
@@ -4002,9 +4177,26 @@
                 }
                 this.gargoyleMesh.instanceMatrix.needsUpdate = true;
 
+                if (this.enemyHpMesh) {
+                    for (let i = 0; i < this.MAX_STATUS_BARS; i++) {
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.enemyHpMesh.setMatrixAt(i, _tempMatrix);
+                    }
+                    this.enemyHpMesh.instanceMatrix.needsUpdate = true;
+                }
+
+                if (this.attackRingMesh) {
+                    for (let i = 0; i < 120; i++) {
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.attackRingMesh.setMatrixAt(i, _tempMatrix);
+                    }
+                    this.attackRingMesh.instanceMatrix.needsUpdate = true;
+                }
+
                 this.boss.active = false;
                 this.boss.enraged = false;
                 this.boss.isRoaring = false;
+                this.boss.attackTimer = 0;
                 this.bossGroup.position.set(0, -999, 0);
                 if (this.stompRingsPool) {
                     this.stompRingsPool.reset();
@@ -4026,17 +4218,28 @@
                 return c;
             }
 
-            update(dt) {
-                const trackHalfWidth = 5.0;
+            getActiveEnemyCount() {
+                let c = 0;
+                if (this.boss.active) c += 5;
+                for (let i = 0; i < this.MAX_RED; i++) {
+                    if (this.redList[i].active) c += (this.redList[i].isElite ? 3 : 1);
+                }
+                for (let i = 0; i < this.MAX_GARGOYLES; i++) {
+                    if (this.gargoyleList[i].active) c += 2;
+                }
+                return c;
+            }
 
-                // 1. 更新藍軍 (嚴格直直向前推進，零轉彎)
-                let activeBlues = 0;
+            update(dt) {
+                const trackHalfWidth = 5.85;
+                const frontlineZ = 1.45;
+                let hpBarIdx = 0;
+                let ringIdx = 0;
+
+                // 1. 更新藍軍子彈 (嚴格直直向前推進，超出戰場 Z > 42 釋放同屏配額以便後排補射)
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (u.active) {
-                        activeBlues++;
-                        
-                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 +Z 推進
                         u.vx = 0;
                         u.z += u.vz * dt;
 
@@ -4044,9 +4247,9 @@
                         if (u.x > trackHalfWidth) u.x = trackHalfWidth;
 
                         u.bounceTime += dt * 14.0;
-                        u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.18;
+                        u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.14;
 
-                        if (u.z > 80) {
+                        if (u.z > 42) {
                             u.active = false;
                             _dummy.position.set(0, -999, 0);
                         } else {
@@ -4058,51 +4261,86 @@
                         this.blueMesh.setMatrixAt(i, _dummy.matrix);
                     }
                 }
-                if (activeBlues > 0) {
-                    this.blueMesh.instanceMatrix.needsUpdate = true;
-                }
+                this.blueMesh.instanceMatrix.needsUpdate = true;
 
-                // 2. 更新紅軍步兵 (嚴格直直向下推進，零轉彎)
-                let activeReds = 0;
+                // 2. 更新紅軍步兵與重裝精英 (中路 4 單位直線推進，抵達底線停下並按間隔攻擊)
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
                     if (u.active) {
-                        activeReds++;
-                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 -Z 推進
                         u.vx = 0;
-                        u.z += u.vz * dt;
+                        if (u.z > frontlineZ) {
+                            u.z = Math.max(frontlineZ, u.z + u.vz * dt);
+                        } else {
+                            u.z = frontlineZ;
+                            // 抵達防線：累加攻擊等待時間並顯示腳下蓄力紅圈
+                            if (this.game && this.game.state === 'PLAYING') {
+                                u.attackTimer += dt;
+                                if (ringIdx < 120) {
+                                    const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
+                                    const rScale = (u.isElite ? 1.35 : 0.85) * (0.35 + progress * 0.85);
+                                    _dummy.position.set(u.x, 0.04, u.z);
+                                    _dummy.rotation.set(0, 0, 0);
+                                    _dummy.scale.set(rScale, 1, rScale);
+                                    _dummy.updateMatrix();
+                                    this.attackRingMesh.setMatrixAt(ringIdx++, _dummy.matrix);
+                                }
+                                if (u.attackTimer >= u.attackInterval) {
+                                    u.attackTimer -= u.attackInterval;
+                                    this.game.takeBulletQuotaDamage(u.attackDmg, u.x, u.z);
+                                }
+                            }
+                        }
 
-                        if (u.x < -trackHalfWidth) u.x = -trackHalfWidth;
-                        if (u.x > trackHalfWidth) u.x = trackHalfWidth;
-
-                        u.bounceTime += dt * 11.0;
-                        // 步伐跳躍起伏與奔跑左右律動傾斜
+                        u.bounceTime += dt * (u.isElite ? 7.5 : 11.0);
                         const bounceY = Math.abs(Math.sin(u.bounceTime)) * 0.12;
                         const runTiltZ = Math.sin(u.bounceTime) * 0.08;
+                        const s = u.isElite ? 1.48 : 1.0;
 
                         _dummy.position.set(u.x, bounceY, u.z);
                         _dummy.rotation.set(0, 0, runTiltZ);
-                        _dummy.scale.set(1, 1, 1);
+                        _dummy.scale.set(s, s, s);
                         _dummy.updateMatrix();
                         this.redMesh.setMatrixAt(i, _dummy.matrix);
+
+                        // 繪製頭頂即時血條
+                        if (hpBarIdx < this.MAX_STATUS_BARS) {
+                            const hpRatio = Math.max(0.05, u.hp / u.maxHp);
+                            _dummy.position.set(u.x, (u.isElite ? 3.25 : 2.25) + bounceY, u.z);
+                            _dummy.rotation.set(0, 0, 0);
+                            _dummy.scale.set(hpRatio * (u.isElite ? 1.45 : 0.95), u.isElite ? 1.35 : 1.0, 1);
+                            _dummy.updateMatrix();
+                            this.enemyHpMesh.setMatrixAt(hpBarIdx++, _dummy.matrix);
+                        }
                     }
                 }
-                if (activeReds > 0) {
-                    this.redMesh.instanceMatrix.needsUpdate = true;
-                }
+                this.redMesh.instanceMatrix.needsUpdate = true;
 
-                // 3. 更新石像鬼 (嚴格直直向下推進，零轉彎)
-                let activeGargoyles = 0;
+                // 3. 更新石像鬼 (中路直線推進，抵達底線停下並每 1.5s 攻擊)
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
                     if (u.active) {
-                        activeGargoyles++;
-                        // 零轉彎約束：vx 恆為 0，x 座標保持不變，直線沿 -Z 推進
                         u.vx = 0;
-                        u.z += u.vz * dt;
-
-                        if (u.x < -trackHalfWidth) u.x = -trackHalfWidth;
-                        if (u.x > trackHalfWidth) u.x = trackHalfWidth;
+                        if (u.z > frontlineZ + 0.1) {
+                            u.z = Math.max(frontlineZ + 0.1, u.z + u.vz * dt);
+                        } else {
+                            u.z = frontlineZ + 0.1;
+                            if (this.game && this.game.state === 'PLAYING') {
+                                u.attackTimer += dt;
+                                if (ringIdx < 120) {
+                                    const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
+                                    const rScale = 0.95 * (0.35 + progress * 0.85);
+                                    _dummy.position.set(u.x, 0.04, u.z);
+                                    _dummy.rotation.set(0, 0, 0);
+                                    _dummy.scale.set(rScale, 1, rScale);
+                                    _dummy.updateMatrix();
+                                    this.attackRingMesh.setMatrixAt(ringIdx++, _dummy.matrix);
+                                }
+                                if (u.attackTimer >= u.attackInterval) {
+                                    u.attackTimer -= u.attackInterval;
+                                    this.game.takeBulletQuotaDamage(u.attackDmg, u.x, u.z);
+                                }
+                            }
+                        }
 
                         u.wingTime = (u.wingTime || 0) + dt * 18.0;
                         u.y = 1.5 + Math.sin(u.wingTime) * 0.3;
@@ -4112,15 +4350,28 @@
                         _dummy.scale.set(1, 1, 1);
                         _dummy.updateMatrix();
                         this.gargoyleMesh.setMatrixAt(i, _dummy.matrix);
+
+                        if (hpBarIdx < this.MAX_STATUS_BARS) {
+                            const hpRatio = Math.max(0.05, u.hp / u.maxHp);
+                            _dummy.position.set(u.x, u.y + 0.85, u.z);
+                            _dummy.rotation.set(0, 0, 0);
+                            _dummy.scale.set(hpRatio * 1.1, 1.1, 1);
+                            _dummy.updateMatrix();
+                            this.enemyHpMesh.setMatrixAt(hpBarIdx++, _dummy.matrix);
+                        }
                     }
                 }
-                if (activeGargoyles > 0) {
-                    this.gargoyleMesh.instanceMatrix.needsUpdate = true;
-                }
+                this.gargoyleMesh.instanceMatrix.needsUpdate = true;
 
-                // 4. 更新 Boss (綠巨人步態動力學、踏步震波與狂暴狀態機)
+                // 隱藏未使用的血條與蓄力紅圈實例
+                for (let i = hpBarIdx; i < this.MAX_STATUS_BARS; i++) {
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.enemyHpMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.enemyHpMesh.instanceMatrix.needsUpdate = true;
+
+                // 4. 更新 Boss (綠巨人步態動力學、抵達防線每 4.0s 重擊扣 35 子彈配額)
                 if (this.boss.active) {
-                    // 狂暴觸發判定：初次低於 30% 生命值
                     if (!this.boss.enraged && this.boss.hp <= this.boss.maxHp * 0.3 && this.boss.hp > 0) {
                         this.boss.enraged = true;
                         this.boss.isRoaring = true;
@@ -4131,18 +4382,35 @@
                     }
 
                     if (this.boss.isRoaring) {
-                        // 咆哮持續 2.0 秒 (roarTimer 隨 dt 累加，閾值對應 2.0 * 3.5 = 7.0)
                         if (this.boss.roarTimer > 7.0) {
                             this.boss.isRoaring = false;
-                            this.boss.vz = -2.86; // 咆哮結束後速度提升 30%
+                            this.boss.vz = -2.4;
                         }
+                    } else if (this.boss.z > 2.2) {
+                        this.boss.z = Math.max(2.2, this.boss.z + this.boss.vz * dt);
                     } else {
-                        this.boss.z += this.boss.vz * dt;
+                        this.boss.z = 2.2;
+                        if (this.game && this.game.state === 'PLAYING') {
+                            this.boss.attackTimer += dt;
+                            if (ringIdx < 120) {
+                                const progress = Math.min(1.0, this.boss.attackTimer / this.boss.attackInterval);
+                                const rScale = 2.4 * (0.35 + progress * 0.90);
+                                _dummy.position.set(this.boss.x, 0.05, this.boss.z);
+                                _dummy.rotation.set(0, 0, 0);
+                                _dummy.scale.set(rScale, 1, rScale);
+                                _dummy.updateMatrix();
+                                this.attackRingMesh.setMatrixAt(ringIdx++, _dummy.matrix);
+                            }
+                            if (this.boss.attackTimer >= this.boss.attackInterval) {
+                                this.boss.attackTimer -= this.boss.attackInterval;
+                                soundFX.playGiantRoar();
+                                this.game.takeBulletQuotaDamage(this.boss.attackDmg, this.boss.x, this.boss.z);
+                            }
+                        }
                     }
 
                     this.bossGroup.position.set(this.boss.x, 0, this.boss.z);
 
-                    // 解算綠巨人關節動力學與步態
                     this.elapsedTime = (this.elapsedTime || 0) + dt;
                     updateGiantKinematics(
                         this.giantBoss,
@@ -4158,6 +4426,12 @@
                         }
                     );
                 }
+
+                for (let i = ringIdx; i < 120; i++) {
+                    _tempMatrix.makeTranslation(0, -999, 0);
+                    this.attackRingMesh.setMatrixAt(i, _tempMatrix);
+                }
+                this.attackRingMesh.instanceMatrix.needsUpdate = true;
 
                 // 5. 更新踏步震波環物件池
                 if (this.stompRingsPool) {
@@ -4197,16 +4471,31 @@
         }
 
         // =========================================================================
-        // 6. 數學倍率門管理器 (GateManager)
-        // 解決相機面向角度問題：使用面向相機且 DoubleSide 之文字面板，加裝頂部旋轉幾何體
+        // 6. 雙側強化門與阻擋柱管理器 (GateManager - v3.0 6單位通道體系)
+        // 左側 1 單位 (X = +5.0): 連續推進之 +N 強化門
+        // 右側 1 單位 (X = -5.0): [高血量阻擋柱] -> [xN 倍率強化門] 交錯停駐佇列
         // =========================================================================
         class GateManager {
             constructor(scene) {
                 this.scene = scene;
                 this.gateObjects = [];
                 this.activeTheme = THEME_PRESETS.arcade;
-                this.onPowerUpComplete = null;
                 this.game = null;
+
+                // 左側 (+N) 與右側 (柱子 -> xN) 通道排程參數
+                this.LEFT_LANE_X = 5.0;
+                this.RIGHT_LANE_X = -5.0;
+                this.PILLAR_STOP_Z = 10.0;
+                this.GATE_STOP_GAP = 4.2;
+
+                this.leftSpawnTimer = 0;
+                this.leftSpawnInterval = 4.0;
+                this.leftAddPool = [2, 4, 6, 8, 10, 15];
+
+                this.rightMultPool = [5, 10, 15, 20];
+                this.pillarBaseHp = 28;
+                this.rightPairIndex = 0;
+                this.nextGateId = 1;
             }
 
             clear() {
@@ -4215,171 +4504,198 @@
                     if (g.texture) g.texture.dispose();
                     if (g.curtainMat) g.curtainMat.dispose();
                     if (g.pillarMat) g.pillarMat.dispose();
+                    if (g.coreMat) g.coreMat.dispose();
+                    if (g.labelMat) g.labelMat.dispose();
                 }
                 this.gateObjects = [];
             }
 
-            drawGateCanvas(ctx, config, bgCss, gateObj = null) {
-                // 畫布解析度升級為 512 x 256 超清規格 (three-best-practices: Power of Two)
+            drawGateCanvas(ctx, gateObj) {
+                // 畫布解析度 512 x 256 (three-best-practices: Power of Two)
                 ctx.clearRect(0, 0, 512, 256);
 
-                const isPowerUp = config.type && config.type.startsWith('power_');
-
-                if (isPowerUp) {
-                    // 強化門科技質感厚底漸層
+                if (gateObj.type === 'left_add') {
                     const grad = ctx.createLinearGradient(0, 0, 512, 256);
-                    grad.addColorStop(0, bgCss);
-                    grad.addColorStop(1, '#050a14');
+                    grad.addColorStop(0, 'rgba(16, 185, 129, 0.96)');
+                    grad.addColorStop(1, 'rgba(6, 78, 59, 0.96)');
                     ctx.fillStyle = grad;
                     ctx.roundRect ? ctx.roundRect(14, 14, 484, 228, 36) : ctx.rect(14, 14, 484, 228);
                     ctx.fill();
 
-                    // 霸氣金色外框
-                    ctx.strokeStyle = '#ffd166';
+                    ctx.strokeStyle = '#6ee7b7';
                     ctx.lineWidth = 10;
                     ctx.stroke();
 
-                    // 門頂圖標與名稱 (超大 56px 粗體)
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '900 54px sans-serif';
+                    ctx.fillStyle = '#d1fae5';
+                    ctx.font = '900 42px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+                    ctx.fillText('🟢 配額補強門', 256, 56);
 
-                    let title = '';
-                    if (config.type === 'power_barrel') title = '🔱 聯裝重砲';
-                    else if (config.type === 'power_rate') title = '⚡ 射速超頻';
-                    else if (config.type === 'power_shield') title = '🛡️ 護盾修復';
-                    else if (config.type === 'power_skill') title = '💥 戰術充能';
-                    ctx.fillText(title, 256, 68);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 104px sans-serif';
+                    ctx.fillText(`+${gateObj.value}`, 256, 140);
 
-                    // 充能剩餘彈數 (76px 醒目金黃色大字)
-                    const currentCharge = (gateObj && gateObj.chargeRemaining !== undefined) ? gateObj.chargeRemaining : (config.charge || 10);
-                    const maxCharge = (gateObj && gateObj.maxCharge) ? gateObj.maxCharge : (config.charge || 10);
+                    const prog = Math.max(0, Math.min(1, 1 - gateObj.hp / gateObj.maxHp));
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(56, 206, 400, 16);
+                    ctx.fillStyle = '#34d399';
+                    ctx.fillRect(56, 206, 400 * prog, 16);
+                } else if (gateObj.type === 'right_pillar') {
+                    const grad = ctx.createLinearGradient(0, 0, 512, 256);
+                    grad.addColorStop(0, 'rgba(180, 83, 9, 0.96)');
+                    grad.addColorStop(1, 'rgba(69, 26, 3, 0.98)');
+                    ctx.fillStyle = grad;
+                    ctx.roundRect ? ctx.roundRect(14, 14, 484, 228, 32) : ctx.rect(14, 14, 484, 228);
+                    ctx.fill();
 
-                    ctx.fillStyle = '#ffd166';
-                    ctx.font = '900 70px monospace';
-                    ctx.fillText(`⚡ 充能 [ ${currentCharge} ]`, 256, 148);
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.lineWidth = 10;
+                    ctx.stroke();
 
-                    // 底部加粗能量進度條 (高度 16px)
-                    const progress = Math.max(0, Math.min(1, 1 - (currentCharge / maxCharge)));
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-                    ctx.fillRect(44, 202, 424, 18);
-                    ctx.fillStyle = '#ffd166';
-                    ctx.fillRect(44, 202, 424 * progress, 18);
-                } else {
-                    // 普通正向倍率門：超大醒目加乘字體 (125px)
-                    ctx.fillStyle = bgCss;
+                    ctx.fillStyle = '#fde68a';
+                    ctx.font = '900 44px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🛡️ 裝甲阻擋柱', 256, 58);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 72px monospace';
+                    ctx.fillText(`HP: ${Math.max(0, gateObj.hp)}`, 256, 138);
+
+                    const ratio = Math.max(0, Math.min(1, gateObj.hp / gateObj.maxHp));
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                    ctx.fillRect(46, 196, 420, 24);
+                    ctx.fillStyle = ratio > 0.35 ? '#fbbf24' : '#f43f5e';
+                    ctx.fillRect(46, 196, 420 * ratio, 24);
+                } else if (gateObj.type === 'right_mult') {
+                    const grad = ctx.createLinearGradient(0, 0, 512, 256);
+                    grad.addColorStop(0, 'rgba(245, 158, 11, 0.96)');
+                    grad.addColorStop(1, 'rgba(124, 45, 18, 0.96)');
+                    ctx.fillStyle = grad;
                     ctx.roundRect ? ctx.roundRect(14, 14, 484, 228, 36) : ctx.rect(14, 14, 484, 228);
                     ctx.fill();
 
-                    ctx.strokeStyle = '#ffffff';
+                    ctx.strokeStyle = '#fef08a';
                     ctx.lineWidth = 12;
                     ctx.stroke();
 
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '900 125px sans-serif';
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = '900 42px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
+                    ctx.fillText(gateObj.blocked ? '🔒 擊碎前柱解鎖' : '🔥 狂暴倍增門', 256, 56);
 
-                    let labelText = '';
-                    if (config.type === 'add') labelText = `+${config.value}`;
-                    else if (config.type === 'mult') labelText = `×${config.value}`;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 108px sans-serif';
+                    ctx.fillText(`×${gateObj.value}`, 256, 142);
 
-                    ctx.fillText(labelText, 256, 128);
+                    const prog = Math.max(0, Math.min(1, 1 - gateObj.hp / gateObj.maxHp));
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(56, 206, 400, 16);
+                    ctx.fillStyle = '#fde047';
+                    ctx.fillRect(56, 206, 400 * prog, 16);
                 }
             }
 
-            createGate(config, gateId) {
-                const isPowerUp = config.type && config.type.startsWith('power_');
-
-                // 選項 A 激進放大：強化門寬 3.6、高 3.2；普通門寬 3.0、高 2.6
-                const gateWidth = isPowerUp ? 3.6 : 3.0;
-                const gateHeight = isPowerUp ? 3.2 : 2.6;
-                const pillarThick = isPowerUp ? 0.28 : 0.22;
-
+            createLaneObject(config) {
+                const id = this.nextGateId++;
                 const group = new THREE.Group();
+                const isPillar = config.type === 'right_pillar';
+                const isLeftAdd = config.type === 'left_add';
 
-                let themeColor = 0x00f0ff;
-                let bgCss = 'rgba(0, 240, 255, 0.95)';
+                // 每個通道單位寬度為 2.0，因此強化門/柱子寬度設為 1.82 完美契合左右邊道
+                const objWidth = 1.82;
+                const objHeight = isPillar ? 2.8 : 2.6;
+                const pillarThick = 0.20;
 
-                if (isPowerUp) {
-                    if (config.type === 'power_barrel') {
-                        themeColor = 0xffd166;
-                        bgCss = 'rgba(255, 183, 3, 0.95)';
-                    } else if (config.type === 'power_rate') {
-                        themeColor = 0x00f0ff;
-                        bgCss = 'rgba(0, 240, 255, 0.95)';
-                    } else if (config.type === 'power_shield') {
-                        themeColor = 0x4ade80;
-                        bgCss = 'rgba(34, 197, 94, 0.95)';
-                    } else if (config.type === 'power_skill') {
-                        themeColor = 0xf43f5e;
-                        bgCss = 'rgba(244, 63, 94, 0.95)';
-                    }
+                let themeColor = isLeftAdd ? 0x10b981 : (isPillar ? 0xd97706 : 0xffd166);
+                let curtainMat = null;
+                let pillarMat = new THREE.MeshLambertMaterial({ color: themeColor });
+                let coreMat = null;
+
+                if (isPillar) {
+                    // 高血量八角裝甲阻擋柱 3D 實體
+                    const cylGeo = new THREE.CylinderGeometry(0.76, 0.84, objHeight, 8);
+                    coreMat = new THREE.MeshStandardMaterial({
+                        color: 0x78350f,
+                        roughness: 0.35,
+                        metalness: 0.7,
+                        emissive: 0x451a03
+                    });
+                    const cylMesh = new THREE.Mesh(cylGeo, coreMat);
+                    cylMesh.position.y = objHeight / 2;
+                    group.add(cylMesh);
+
+                    // 裝甲能量環
+                    const ringGeo = new THREE.BoxGeometry(objWidth, 0.25, 1.65);
+                    const bottomRing = new THREE.Mesh(ringGeo, pillarMat);
+                    bottomRing.position.y = 0.25;
+                    group.add(bottomRing);
+
+                    const topRing = new THREE.Mesh(ringGeo, pillarMat);
+                    topRing.position.y = objHeight - 0.2;
+                    group.add(topRing);
                 } else {
-                    themeColor = this.activeTheme ? this.activeTheme.gateBlue : 0x00f0ff;
-                    bgCss = this.activeTheme ? this.activeTheme.gateBlueCss : 'rgba(0, 240, 255, 0.95)';
+                    // 半透明強化門能量光幕
+                    const curtainGeo = new THREE.PlaneGeometry(objWidth, objHeight);
+                    curtainMat = new THREE.MeshBasicMaterial({
+                        color: themeColor,
+                        transparent: true,
+                        opacity: isLeftAdd ? 0.34 : 0.44,
+                        side: THREE.DoubleSide
+                    });
+                    const curtain = new THREE.Mesh(curtainGeo, curtainMat);
+                    curtain.position.y = objHeight / 2;
+                    group.add(curtain);
+
+                    const pillarGeo = new THREE.BoxGeometry(pillarThick, objHeight, pillarThick);
+                    const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                    leftPillar.position.set(-objWidth / 2, objHeight / 2, 0);
+                    group.add(leftPillar);
+
+                    const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
+                    rightPillar.position.set(objWidth / 2, objHeight / 2, 0);
+                    group.add(rightPillar);
+
+                    const topBarGeo = new THREE.BoxGeometry(objWidth, pillarThick, pillarThick);
+                    const topBar = new THREE.Mesh(topBarGeo, pillarMat);
+                    topBar.position.set(0, objHeight, 0);
+                    group.add(topBar);
                 }
 
-                // 1. 半透明能量光幕
-                const curtainGeo = new THREE.PlaneGeometry(gateWidth, gateHeight);
-                const curtainMat = new THREE.MeshBasicMaterial({
-                    color: themeColor,
-                    transparent: true,
-                    opacity: isPowerUp ? 0.42 : 0.28,
-                    side: THREE.DoubleSide
-                });
-                const curtain = new THREE.Mesh(curtainGeo, curtainMat);
-                curtain.position.y = gateHeight / 2;
-                group.add(curtain);
-
-                // 2. 邊框立體加粗光柱
-                const pillarGeo = new THREE.BoxGeometry(pillarThick, gateHeight, pillarThick);
-                const pillarMat = new THREE.MeshLambertMaterial({ color: themeColor });
-
-                const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
-                leftPillar.position.set(-gateWidth / 2, gateHeight / 2, 0);
-                group.add(leftPillar);
-
-                const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
-                rightPillar.position.set(gateWidth / 2, gateHeight / 2, 0);
-                group.add(rightPillar);
-
-                const topBarGeo = new THREE.BoxGeometry(gateWidth, pillarThick, pillarThick);
-                const topBar = new THREE.Mesh(topBarGeo, pillarMat);
-                topBar.position.set(0, gateHeight, 0);
-                group.add(topBar);
-
-                // 3. 超清 512x256 Canvas 紋理貼圖
+                // 512x256 超清看板
                 const canvas = document.createElement('canvas');
                 canvas.width = 512;
                 canvas.height = 256;
                 const ctx = canvas.getContext('2d');
 
-                const maxCharge = config.charge || (config.type === 'power_barrel' ? 15 : (config.type === 'power_rate' ? 12 : (config.type === 'power_shield' ? 10 : 8)));
+                const maxHp = config.hp || (isPillar ? 30 : 3);
                 const gateObj = {
-                    id: gateId,
-                    bitmask: (1 << (gateId % 30)),
-                    config: config,
+                    id: id,
+                    type: config.type,
+                    value: config.value || 2,
+                    hp: maxHp,
+                    maxHp: maxHp,
                     mesh: group,
                     curtainMat: curtainMat,
                     pillarMat: pillarMat,
+                    coreMat: coreMat,
                     canvas: canvas,
                     ctx: ctx,
-                    bgCss: bgCss,
-                    isPowerUp: isPowerUp,
-                    maxCharge: maxCharge,
-                    chargeRemaining: maxCharge,
-                    width: gateWidth,
-                    height: gateHeight,
+                    width: objWidth,
+                    height: objHeight,
                     baseX: config.x,
                     z: config.z,
-                    timeOffset: config.phase || 0,
+                    vz: config.vz || -4.2,
+                    stopZ: config.stopZ !== undefined ? config.stopZ : null,
+                    linkedPillarId: config.linkedPillarId || null,
+                    blocked: Boolean(config.linkedPillarId),
                     scaleAnim: 1.0,
                     completed: false
                 };
 
-                this.drawGateCanvas(ctx, config, bgCss, gateObj);
+                this.drawGateCanvas(ctx, gateObj);
 
                 const texture = new THREE.CanvasTexture(canvas);
                 gateObj.texture = texture;
@@ -4389,18 +4705,16 @@
                     transparent: true,
                     side: THREE.DoubleSide
                 });
-                // 放大標籤牌尺寸
-                const labelW = isPowerUp ? 3.4 : 2.8;
-                const labelH = isPowerUp ? 1.7 : 1.4;
-                const labelGeo = new THREE.PlaneGeometry(labelW, labelH);
+                gateObj.labelMat = labelMat;
+
+                const labelGeo = new THREE.PlaneGeometry(1.85, 0.96);
                 const labelMesh = new THREE.Mesh(labelGeo, labelMat);
                 labelMesh.rotation.y = Math.PI;
-                labelMesh.position.set(0, gateHeight / 2, -0.06);
+                labelMesh.position.set(0, isPillar ? objHeight + 0.55 : objHeight / 2, isPillar ? -0.45 : -0.08);
                 group.add(labelMesh);
 
                 group.position.set(config.x, 0, config.z);
                 this.scene.add(group);
-
                 this.gateObjects.push(gateObj);
                 return gateObj;
             }
@@ -4408,48 +4722,127 @@
             applyTheme(theme) {
                 if (!theme) return;
                 this.activeTheme = theme;
-                for (const g of this.gateObjects) {
-                    if (g.isPowerUp) continue;
-                    const themeColor = theme.gateBlue;
-                    const bgCss = theme.gateBlueCss;
-
-                    if (g.curtainMat) {
-                        g.curtainMat.color.set(themeColor);
-                        g.curtainMat.needsUpdate = true;
-                    }
-                    if (g.pillarMat) {
-                        g.pillarMat.color.set(themeColor);
-                        g.pillarMat.needsUpdate = true;
-                    }
-                    if (g.ctx && g.canvas && g.texture) {
-                        this.drawGateCanvas(g.ctx, g.config, bgCss, g);
-                        g.texture.needsUpdate = true;
-                    }
-                }
             }
 
-            setupLevelGates(gatesConfig) {
+            setupLaneSystem(stageCfg, isEndless = false) {
                 this.clear();
-                this.nextGateId = 0;
-                if (!gatesConfig) return;
-                gatesConfig.forEach((cfg, idx) => {
-                    this.createGate(cfg, idx);
-                    this.nextGateId = Math.max(this.nextGateId, idx + 1);
+                this.leftSpawnTimer = 0;
+                this.rightPairIndex = 0;
+
+                if (stageCfg) {
+                    this.leftAddPool = stageCfg.leftAddPool || [2, 4, 6, 8];
+                    this.rightMultPool = stageCfg.rightMultPool || [5, 10, 15];
+                    this.pillarBaseHp = stageCfg.pillarBaseHp || 26;
+                } else {
+                    this.leftAddPool = [3, 5, 8, 12, 15];
+                    this.rightMultPool = [5, 10, 15, 20];
+                    this.pillarBaseHp = 30;
+                }
+
+                // 開局預先在左側通道 (X = +5.0) 佈署 3 道連續前進的 +N 強化門
+                this.spawnLeftAddGate(13.0);
+                this.spawnLeftAddGate(25.0);
+                this.spawnLeftAddGate(37.0);
+
+                // 開局在右側通道 (X = -5.0) 佈署 2 組 [高血量阻擋柱 -> xN 倍率強化門] 交錯佇列
+                this.spawnRightPillarAndGatePair(16.0);
+                this.spawnRightPillarAndGatePair(31.0);
+            }
+
+            spawnLeftAddGate(zPos = 40.0) {
+                const pool = this.leftAddPool;
+                const val = pool[Math.floor(Math.random() * pool.length)];
+                return this.createLaneObject({
+                    type: 'left_add',
+                    x: this.LEFT_LANE_X,
+                    z: zPos,
+                    vz: -4.2,
+                    value: val,
+                    hp: 3 // 只需 3 顆子彈命中或接觸底線即可領取 +N 配額
                 });
             }
 
-            hasActivePowerUpGate() {
-                return this.gateObjects.some(g => g.isPowerUp && !g.completed);
+            pickDynamicMultiplier() {
+                const pool = this.rightMultPool || [5, 10, 15];
+                let enemyCount = 0;
+                if (this.game && this.game.entityMgr) {
+                    enemyCount = this.game.entityMgr.getActiveEnemyCount();
+                }
+                // 隨著場上同時出現的敵軍數量越高，動態提高出現 x10 / x15 / x20 的機率
+                if (enemyCount >= 14 && pool.length >= 3) {
+                    return pool[pool.length - 1];
+                } else if (enemyCount >= 7 && pool.length >= 2) {
+                    const idx = Math.min(pool.length - 1, 1 + Math.floor(Math.random() * (pool.length - 1)));
+                    return pool[idx];
+                }
+                return pool[Math.floor(Math.random() * pool.length)];
             }
 
-            spawnPowerUpGate(config) {
-                this.nextGateId = (this.nextGateId || 20) + 1;
-                const gate = this.createGate(config, this.nextGateId);
-                gate.scaleAnim = 1.35;
-                return gate;
+            spawnRightPillarAndGatePair(pillarZ = 38.0) {
+                this.rightPairIndex++;
+                const hpScale = 1 + (this.rightPairIndex - 1) * 0.22;
+                const pillarHp = Math.round(this.pillarBaseHp * hpScale);
+                const multVal = this.pickDynamicMultiplier();
+
+                const pillar = this.createLaneObject({
+                    type: 'right_pillar',
+                    x: this.RIGHT_LANE_X,
+                    z: pillarZ,
+                    vz: -4.3,
+                    stopZ: this.PILLAR_STOP_Z,
+                    hp: pillarHp,
+                    value: 0
+                });
+
+                const multGate = this.createLaneObject({
+                    type: 'right_mult',
+                    x: this.RIGHT_LANE_X,
+                    z: pillarZ + this.GATE_STOP_GAP,
+                    vz: -4.3,
+                    linkedPillarId: pillar.id,
+                    hp: 3, // 柱子打掉後，只需 3 顆子彈或直衝底線即可觸發 xN
+                    value: multVal
+                });
+
+                return { pillar, multGate };
+            }
+
+            getFrontRightGateInfo() {
+                let nearestMult = null;
+                let nearestPillar = null;
+                for (const g of this.gateObjects) {
+                    if (g.completed) continue;
+                    if (g.type === 'right_mult') {
+                        if (!nearestMult || g.z < nearestMult.z) nearestMult = g;
+                    } else if (g.type === 'right_pillar') {
+                        if (!nearestPillar || g.z < nearestPillar.z) nearestPillar = g;
+                    }
+                }
+                return { nearestPillar, nearestMult };
             }
 
             update(time, dt) {
+                // 1. 左側 +N 強化門持續生成計時
+                this.leftSpawnTimer += dt;
+                if (this.leftSpawnTimer >= this.leftSpawnInterval) {
+                    this.leftSpawnTimer = 0;
+                    this.spawnLeftAddGate(41.0);
+                }
+
+                // 2. 確保右側始終維持至少 2 組 [阻擋柱 -> xN 門] 交錯佇列
+                let activeRightPairs = 0;
+                let maxRightZ = 20.0;
+                for (const g of this.gateObjects) {
+                    if (!g.completed && (g.type === 'right_pillar' || g.type === 'right_mult')) {
+                        if (g.type === 'right_mult') activeRightPairs++;
+                        if (g.z > maxRightZ) maxRightZ = g.z;
+                    }
+                }
+                if (activeRightPairs < 2) {
+                    this.spawnRightPillarAndGatePair(Math.max(36.0, maxRightZ + 11.0));
+                }
+
+                // 3. 按 Z 座標由近到遠排序右側物件，以處理排隊停駐邏輯 (不配置新陣列)
                 for (let i = this.gateObjects.length - 1; i >= 0; i--) {
                     const g = this.gateObjects[i];
                     if (g.completed) {
@@ -4457,135 +4850,149 @@
                         if (g.texture) g.texture.dispose();
                         if (g.curtainMat) g.curtainMat.dispose();
                         if (g.pillarMat) g.pillarMat.dispose();
+                        if (g.coreMat) g.coreMat.dispose();
+                        if (g.labelMat) g.labelMat.dispose();
                         this.gateObjects.splice(i, 1);
                         continue;
                     }
 
-                    if (g.config.moving) {
-                        const amp = g.config.amplitude || 1.8;
-                        const spd = g.config.speed || 2.0;
-                        g.mesh.position.x = g.baseX + Math.sin(time * spd + g.timeOffset) * amp;
+                    if (g.type === 'left_add') {
+                        g.z += g.vz * dt;
+                        // 若左側 +N 門移動到我方底線 (Z <= 1.15)，若玩家就在左路附近直接觸發，否則自然消散
+                        if (g.z <= 1.15) {
+                            if (this.game && Math.abs(this.game.cannonX - this.LEFT_LANE_X) < 1.55) {
+                                this.triggerGateReward(g);
+                            } else {
+                                g.completed = true;
+                            }
+                        }
+                    } else if (g.type === 'right_pillar') {
+                        // 查詢前方是否有更靠近底線的右側物件阻擋
+                        let minAllowedZ = g.stopZ !== null ? g.stopZ : this.PILLAR_STOP_Z;
+                        for (const other of this.gateObjects) {
+                            if (other !== g && !other.completed && (other.type === 'right_pillar' || other.type === 'right_mult')) {
+                                if (other.z < g.z) {
+                                    minAllowedZ = Math.max(minAllowedZ, other.z + this.GATE_STOP_GAP);
+                                }
+                            }
+                        }
+                        if (g.z > minAllowedZ) {
+                            g.z = Math.max(minAllowedZ, g.z + g.vz * dt);
+                        }
+                    } else if (g.type === 'right_mult') {
+                        // 檢查綁定的前方阻擋柱是否還存活
+                        let linkedPillar = null;
+                        if (g.linkedPillarId) {
+                            for (const other of this.gateObjects) {
+                                if (other.id === g.linkedPillarId && !other.completed) {
+                                    linkedPillar = other;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (linkedPillar) {
+                            // 柱子尚在：跟隨在柱子後方固定間距停駐
+                            g.blocked = true;
+                            const targetStopZ = linkedPillar.z + this.GATE_STOP_GAP;
+                            if (g.z > targetStopZ) {
+                                g.z = Math.max(targetStopZ, g.z + g.vz * dt);
+                            }
+                        } else {
+                            // 柱子已被擊碎！解鎖封印並加速往我軍方向推進
+                            if (g.blocked) {
+                                g.blocked = false;
+                                this.drawGateCanvas(g.ctx, g);
+                                g.texture.needsUpdate = true;
+                            }
+                            g.z += (g.vz * 1.35) * dt;
+                            if (g.z <= 1.25) {
+                                // 柱子已破，xN 強化門推進抵達我軍前線時直接觸發倍增獎勵！
+                                this.triggerGateReward(g);
+                            }
+                        }
                     }
+
+                    g.mesh.position.z = g.z;
+
                     if (g.scaleAnim > 1.0) {
-                        g.scaleAnim = Math.max(1.0, g.scaleAnim - dt * 3.5);
+                        g.scaleAnim = Math.max(1.0, g.scaleAnim - dt * 4.0);
                         g.mesh.scale.set(g.scaleAnim, g.scaleAnim, g.scaleAnim);
                     }
                 }
             }
 
-            checkTroopPass(troop, spawnCallback) {
+            triggerGateReward(g) {
+                if (g.completed) return;
+                g.completed = true;
+                soundFX.playPowerUpComplete();
+
+                if (this.game && this.game.entityMgr) {
+                    this.game.entityMgr.spawnExplosion(g.baseX, 1.3, g.z, 22);
+                }
+
+                if (this.game) {
+                    if (g.type === 'left_add') {
+                        this.game.addBulletQuota(g.value);
+                    } else if (g.type === 'right_mult') {
+                        this.game.multiplyBulletQuota(g.value);
+                    }
+                }
+            }
+
+            checkTroopPass(troop) {
                 for (const g of this.gateObjects) {
                     if (g.completed) continue;
-                    if (!g.isPowerUp && (troop.passedGateMask & g.bitmask) !== 0) continue;
 
-                    const gateX = g.mesh.position.x;
-                    const halfW = g.width / 2;
+                    const gateX = g.baseX;
+                    const halfW = g.width / 2 + 0.15;
                     if (troop.x >= gateX - halfW && troop.x <= gateX + halfW) {
-                        // 門變大後放寬 Z 軸穿透檢測判定至 0.85，保證絕不漏彈
-                        if (Math.abs(troop.z - g.z) < 0.85) {
-                            if (g.isPowerUp) {
-                                // 模式 A：吸收子彈作為戰術充能
-                                troop.active = false;
-                                g.chargeRemaining--;
-                                g.scaleAnim = 1.18;
+                        if (Math.abs(troop.z - g.z) < 0.95) {
+                            // 若此 xN 門前方仍有未擊破的阻擋柱且子彈擦過，優先由柱子攔截
+                            if (g.type === 'right_mult' && g.blocked) {
+                                continue;
+                            }
 
-                                soundFX.playPowerUpCharge(1.0 + (g.maxCharge - g.chargeRemaining) * 0.05);
+                            troop.active = false;
+                            g.hp--;
+                            g.scaleAnim = 1.16;
 
-                                if (this.game && this.game.entityMgr) {
-                                    this.game.entityMgr.spawnExplosion(troop.x, 0.4, troop.z, 2);
-                                }
+                            if (this.game && this.game.entityMgr) {
+                                this.game.entityMgr.spawnExplosion(troop.x, 0.6, troop.z, 3);
+                            }
 
-                                this.drawGateCanvas(g.ctx, g.config, g.bgCss, g);
-                                g.texture.needsUpdate = true;
+                            this.drawGateCanvas(g.ctx, g);
+                            g.texture.needsUpdate = true;
 
-                                if (g.chargeRemaining <= 0) {
+                            if (g.hp <= 0) {
+                                if (g.type === 'right_pillar') {
                                     g.completed = true;
                                     soundFX.playPowerUpComplete();
                                     if (this.game && this.game.entityMgr) {
-                                        this.game.entityMgr.spawnExplosion(gateX, 1.2, g.z, 25);
+                                        this.game.entityMgr.spawnExplosion(gateX, 1.4, g.z, 28);
                                     }
-                                    if (this.onPowerUpComplete) {
-                                        this.onPowerUpComplete(g.config.type);
+                                    if (this.game && this.game.onPillarDestroyed) {
+                                        this.game.onPillarDestroyed(g);
                                     }
+                                } else {
+                                    this.triggerGateReward(g);
                                 }
-                                break;
                             } else {
-                                // 普通正向倍率門
-                                troop.passedGateMask |= g.bitmask;
-                                g.scaleAnim = 1.3;
-                                soundFX.playGateChime();
-
-                                const cfg = g.config;
-                                if (cfg.type === 'add') {
-                                    for (let i = 0; i < cfg.value; i++) {
-                                        const sign = (i % 2 === 0 ? 1 : -1);
-                                        const layer = Math.floor(i / 2) + 1;
-                                        const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
-                                        const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
-                                        if (newTroop) newTroop.passedGateMask |= g.bitmask;
-                                    }
-                                } else if (cfg.type === 'mult') {
-                                    const count = cfg.value - 1;
-                                    for (let i = 0; i < count; i++) {
-                                        const sign = (i % 2 === 0 ? 1 : -1);
-                                        const layer = Math.floor(i / 2) + 1;
-                                        const spawnX = Math.max(-4.8, Math.min(4.8, troop.x + sign * layer * 0.35));
-                                        const newTroop = spawnCallback(spawnX, troop.z, 0, 0);
-                                        if (newTroop) newTroop.passedGateMask |= g.bitmask;
-                                    }
-                                }
-                                break;
+                                soundFX.playPowerUpCharge(1.0 + (g.maxHp - g.hp) * 0.03);
                             }
+                            return true;
                         }
                     }
                 }
+                return false;
             }
         }
 
         // =========================================================================
-        // 7. 遊戲主控制器 (GameController)
+        // 7. 遊戲主控制器 (GameController - v3.0 子彈配額生命制 & 6單位通道)
         // 整合鍵盤+觸控雙操作、2.5D 高效碰撞檢測、波次排程與 LocalStorage 存檔
         // =========================================================================
         class GameController {
-            /**
-             * 處理戰場實體強化門充能完成回調 (模式 A 戰術升級)
-             */
-            handlePowerUp(type) {
-                if (type === 'power_barrel') {
-                    if (this.inRunBarrels < 4) {
-                        this.inRunBarrels++;
-                        this.threeScene.updateCannonBarrels(this.inRunBarrels);
-                        this.showPowerUpToast(`🔱 聯裝重砲升級！當前為 ${this.inRunBarrels} 管齊射！`, '#ffd166');
-                    } else {
-                        this.shieldHp = Math.min(this.maxShieldHp, this.shieldHp + 1);
-                        this.heroSkills.unibeam.timer = Math.min(this.heroSkills.unibeam.cooldown, this.heroSkills.unibeam.timer + 6);
-                        this.heroSkills.missiles.timer = Math.min(this.heroSkills.missiles.cooldown, this.heroSkills.missiles.timer + 5);
-                        this.updateHeroSkillsHUD();
-                        this.showPowerUpToast(`🔱 聯裝重砲滿階！轉化為底線護盾與超載充能！`, '#ffd166');
-                    }
-                } else if (type === 'power_rate') {
-                    if (this.inRunRateTier < 3) {
-                        this.inRunRateTier++;
-                        this.showPowerUpToast(`⚡ 射速超頻 +25%！當前為 Lv.${this.inRunRateTier} 極速！`, '#00f0ff');
-                    } else {
-                        this.heroSkills.unibeam.timer = Math.min(this.heroSkills.unibeam.cooldown, this.heroSkills.unibeam.timer + 6);
-                        this.heroSkills.missiles.timer = Math.min(this.heroSkills.missiles.cooldown, this.heroSkills.missiles.timer + 5);
-                        this.updateHeroSkillsHUD();
-                        this.showPowerUpToast(`⚡ 射速超頻已達頂點！狂暴能量超載大招！`, '#00f0ff');
-                    }
-                } else if (type === 'power_shield') {
-                    this.shieldHp = Math.min(5, this.shieldHp + 1);
-                    this.maxShieldHp = Math.max(this.maxShieldHp, this.shieldHp);
-                    this.showPowerUpToast(`🛡️ 底線護盾修復 +1！當前護盾：${this.shieldHp}/${this.maxShieldHp}`, '#4ade80');
-                } else if (type === 'power_skill') {
-                    this.heroSkills.unibeam.timer = 999;
-                    this.heroSkills.missiles.timer = 999;
-                    this.updateHeroSkillsHUD();
-                    this.showPowerUpToast(`💥 戰術終極大招就緒！雷射與導彈已充飽！`, '#f43f5e');
-                }
-                this.updateHUD();
-            }
-
             showPowerUpToast(text, color = '#ffd166') {
                 if (this.themeToast) {
                     this.themeToast.innerText = text;
@@ -4597,6 +5004,87 @@
                     }, 2200);
                 }
             }
+
+            /**
+             * 左側 +N 強化門觸發：增加同屏子彈配額 (上限 100)
+             */
+            addBulletQuota(amount) {
+                const prev = this.bulletQuota;
+                this.bulletQuota = Math.min(this.maxBulletQuota, this.bulletQuota + amount);
+                const reachedCap = (this.bulletQuota >= this.maxBulletQuota);
+                if (reachedCap && prev === this.maxBulletQuota) {
+                    // 滿額溢出時額外加速英雄技能冷卻
+                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.0);
+                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 1.5);
+                    this.updateHeroSkillsHUD();
+                    this.showPowerUpToast(`🟢 +${amount} 配額已達上限 100！溢出能量加速技能冷卻！`, '#10b981');
+                } else {
+                    this.showPowerUpToast(`🟢 強化門 +${amount}！子彈配額(HP): ${prev} ➔ ${this.bulletQuota} / ${this.maxBulletQuota}`, '#10b981');
+                }
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+                this.updateHUD();
+            }
+
+            /**
+             * 右側 xN 強化門觸發：倍增同屏子彈配額 (上限 100)
+             */
+            multiplyBulletQuota(mult) {
+                const prev = this.bulletQuota;
+                this.bulletQuota = Math.min(this.maxBulletQuota, Math.max(4, this.bulletQuota) * mult);
+                // 觸發 xN 時額外給予微幅技能冷卻回饋
+                this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.5);
+                this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.0);
+                this.updateHeroSkillsHUD();
+                this.showPowerUpToast(`🔥 狂暴倍增 ×${mult}！子彈配額直衝 ${this.bulletQuota} / ${this.maxBulletQuota}！`, '#ffd166');
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+                this.updateHUD();
+            }
+
+            /**
+             * 右側高血量阻擋柱被擊破時：釋放震退波推開中路敵軍並解鎖後方 xN 強化門
+             */
+            onPillarDestroyed(pillarObj) {
+                this.shakeAmount = Math.max(this.shakeAmount, 0.55);
+                // 震退中路靠近底線的敵軍並重置其攻擊蓄力計時
+                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
+                    const r = this.entityMgr.redList[j];
+                    if (r.active && r.z < 12.0) {
+                        r.z += 1.6;
+                        r.attackTimer = 0;
+                    }
+                }
+                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
+                    const g = this.entityMgr.gargoyleList[k];
+                    if (g.active && g.z < 12.0) {
+                        g.z += 1.6;
+                        g.attackTimer = 0;
+                    }
+                }
+                if (this.entityMgr.boss.active && this.entityMgr.boss.z < 12.0) {
+                    this.entityMgr.boss.z += 1.2;
+                    this.entityMgr.boss.attackTimer = 0;
+                }
+                this.showPowerUpToast(`💥 裝甲阻擋柱擊碎！震退前線敵軍，後方 ×N 強化門解鎖推進！`, '#fbbf24');
+            }
+
+            /**
+             * 敵軍於底線完成蓄力後發動定時攻擊，扣除我方子彈配額(HP)
+             */
+            takeBulletQuotaDamage(dmg, enemyX = 0, enemyZ = 1.5) {
+                if (this.state !== 'PLAYING') return;
+                this.bulletQuota = Math.max(0, this.bulletQuota - dmg);
+                this.entityMgr.trimActiveBluesToQuota(this.bulletQuota);
+                this.shakeAmount = Math.min(0.9, 0.25 + dmg * 0.02);
+                soundFX.playHit();
+                this.entityMgr.spawnExplosion(enemyX, 0.9, enemyZ, 10);
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+                this.updateHUD();
+
+                if (this.bulletQuota <= 0) {
+                    this.endGame(false);
+                }
+            }
+
             constructor() {
                 this.container = document.getElementById('canvas-container');
                 this.threeScene = new ThreeGameScene(this.container);
@@ -4604,19 +5092,21 @@
                 this.entityMgr.game = this;
                 this.gateMgr = new GateManager(this.threeScene.scene);
                 this.gateMgr.game = this;
-                this.gateMgr.onPowerUpComplete = (type) => this.handlePowerUp(type);
 
                 this.state = 'MENU';
                 this.mode = 'STAGE';
                 this.currentStageId = 1;
                 this.gameTime = 0;
                 this.killsCount = 0;
-                this.shieldHp = 3;
-                this.maxShieldHp = 3;
 
-                // 局內即時養成戰力
-                this.inRunBarrels = 2;   // 預設雙管齊射
-                this.inRunRateTier = 0;  // 預設 0 階超頻
+                // v3.0 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 100 顆)
+                this.rowBulletWidth = 4;
+                this.maxBulletQuota = 100;
+                this.bulletQuota = 16;
+
+                // 局內固定 4 管齊射 (對應單排 4 顆寬度)
+                this.inRunBarrels = 4;
+                this.inRunRateTier = 1;
 
                 this.cannonX = 0;
                 this.targetCannonX = 0;
@@ -4628,22 +5118,17 @@
 
                 this.endlessSpawnTimer = 0;
                 this.endlessDifficultyTimer = 0;
-                this.endlessInterval = 1.6;
+                this.endlessInterval = 1.8;
 
-                // 戰術小隊排波隊列生成系統 (Squad Batches / Phalanx Spawner)
+                // 戰術小隊排波隊列生成系統 (僅在中間 4 個單位通道 X ∈ [-3.4, +3.4] 生成)
                 this.enemyBatchQueue = [];
                 this.batchSpawnTimer = 0;
-
-                // 多輪戰術強化門系統
-                this.powerUpRound = 1;
-                this.powerUpRespawnTimer = 0;
-                this.powerUpCooldown = 9.0;
 
                 this.shakeAmount = 0;
                 this.keyMoveLeft = false;
                 this.keyMoveRight = false;
 
-                // 英雄主動專屬技能資料結構 (遵守 Task 3 規格)
+                // 英雄主動專屬技能資料結構
                 this.heroSkills = {
                     unibeam: {
                         cooldown: 12.0,
@@ -4756,8 +5241,6 @@
                     this.renderMenu();
                 });
 
-                // 局外金幣三維按鈕已移除，全面轉為局內戰場強化門養成
-
                 // 鋼鐵人英雄專屬技能 HUD 按鈕與遮罩 DOM 快取
                 this.btnSkillUnibeam = document.getElementById('btn-skill-unibeam');
                 this.cdMaskUnibeam = document.getElementById('cd-mask-unibeam');
@@ -4831,8 +5314,7 @@
             }
 
             renderMenu() {
-                // 在大廳重置預覽砲台外觀為雙管
-                this.threeScene.updateCannonBarrels(2);
+                this.threeScene.updateCannonBarrels(4);
 
                 const grid = document.getElementById('stage-grid');
                 grid.innerHTML = '';
@@ -4855,7 +5337,8 @@
 
             bindInputs() {
                 let isDragging = false;
-                const halfW = 4.8;
+                // 6 單位通道總寬 12.0 (X ∈ [-6.0, +6.0])，主角移動範圍 [-5.1, +5.1] 可完整涵蓋左路 (+5.0) 與右路 (-5.0)
+                const halfW = 5.1;
 
                 const updateCannonPos = (clientX) => {
                     const normX = (clientX / window.innerWidth) * 2 - 1;
@@ -4913,13 +5396,17 @@
                 this.state = 'PLAYING';
                 this.gameTime = 0;
                 this.killsCount = 0;
-                this.shieldHp = 3;
-                this.maxShieldHp = 3;
-                this.inRunBarrels = 2;   // 開局雙管齊射
-                this.inRunRateTier = 0;  // 開局 0 階超頻
+
+                // v3.0 開局初始子彈配額(HP) = 16，同屏上限 = 100，單排寬度 = 4
+                this.rowBulletWidth = 4;
+                this.maxBulletQuota = 100;
+                this.bulletQuota = 16;
+                this.inRunBarrels = 4;
+                this.inRunRateTier = 1;
+
                 this.cannonX = 0;
                 this.targetCannonX = 0;
-                this.lastShootTime = -999; // 立即觸發首波並排齊射
+                this.lastShootTime = -999;
                 this.shakeAmount = 0;
                 this.entityMgr.resetAll();
 
@@ -4939,48 +5426,31 @@
                 }
                 this.updateHeroSkillsHUD();
 
-                // 開局同步雙管外觀
                 this.threeScene.updateCannonBarrels(this.inRunBarrels);
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
 
                 this.mainMenuModal.classList.add('hidden');
                 this.gameOverModal.classList.add('hidden');
                 this.bossWarning.classList.remove('show');
 
-                // 開局預備前鋒（若有微量守護小兵）
-                const initTroops = 0;
-                for (let i = 0; i < initTroops; i++) {
-                    const spreadX = (i - (initTroops - 1) / 2) * 0.45;
-                    this.entityMgr.spawnBlueTroop(spreadX, 2.5);
-                }
-
                 if (this.mode === 'STAGE') {
                     const cfg = STAGE_CONFIGS[this.currentStageId - 1];
                     this.stageCfg = cfg;
                     this.hudModeTitle.innerText = cfg.name;
-                    this.gateMgr.setupLevelGates(cfg.gates);
+                    this.gateMgr.setupLaneSystem(cfg, false);
                     this.stageWaves = cfg.waves.slice();
                     this.nextWaveIdx = 0;
                     this.waveTime = 0;
                 } else {
                     this.hudModeTitle.innerText = '無盡生存模式';
-                    this.gateMgr.setupLevelGates([
-                        { x: -2.0, z: 9.0, type: 'mult', value: 2, moving: true, amplitude: 1.5, speed: 2.0 },
-                        { x: 2.0, z: 9.0, type: 'add', value: 20, moving: true, amplitude: 1.5, speed: 2.0, phase: Math.PI },
-                        { x: 0, z: 16.0, type: 'power_rate', charge: 10, moving: true, amplitude: 1.8, speed: 2.0 }
-                    ]);
+                    this.gateMgr.setupLaneSystem(null, true);
                     this.endlessSpawnTimer = 0;
                     this.endlessDifficultyTimer = 0;
-                    this.endlessInterval = 1.6;
+                    this.endlessInterval = 1.8;
                 }
 
-                // 重置戰術小隊出兵隊列
                 this.enemyBatchQueue = [];
                 this.batchSpawnTimer = 0;
-
-                // 重置多輪戰術強化門輪次與計時
-                this.powerUpRound = 1;
-                this.powerUpRespawnTimer = 0;
-                this.powerUpCooldown = (this.mode === 'STAGE') ? 9.0 : 11.0;
 
                 this.updateHUD();
             }
@@ -5028,12 +5498,12 @@
                     if (isVictory) {
                         resTitle.innerText = '🎉 戰鬥勝利！';
                         resTitle.style.color = '#00b4d8';
-                        resSubtitle.innerText = `恭喜順利通關 ${this.stageCfg.name}！`;
+                        resSubtitle.innerText = `恭喜順利通關 ${this.stageCfg.name}！剩餘子彈配額(HP): ${this.bulletQuota}`;
                         resBtn.innerText = (this.currentStageId < 10) ? '繼續下一關' : '重新挑戰';
                     } else {
-                        resTitle.innerText = '💥 防線崩潰！';
+                        resTitle.innerText = '💥 子彈配額歸零！';
                         resTitle.style.color = '#ff3366';
-                        resSubtitle.innerText = '敵軍衝破了最後能量盾，再試一次吧！';
+                        resSubtitle.innerText = '敵軍摧毀了所有發射配額，善用左路 +N 與右路破柱 ×N 再試一次！';
                         resBtn.innerText = '重新挑戰';
                     }
                 } else {
@@ -5045,33 +5515,37 @@
 
                 document.getElementById('res-kills').innerText = this.killsCount;
                 document.getElementById('res-time').innerText = (this.mode === 'STAGE') ? '100%' : `${Math.floor(this.gameTime)} 秒`;
-                // res-coins 已移除
 
                 this.gameOverModal.classList.remove('hidden');
                 this.bossWarning.classList.remove('show');
             }
 
-            takeShieldDamage(dmg = 1) {
-                this.shieldHp = Math.max(0, this.shieldHp - dmg);
-                this.shakeAmount = 0.5;
-                soundFX.playHit();
-                this.updateHUD();
-
-                if (this.shieldHp <= 0) {
-                    this.endGame(false);
-                }
-            }
-
             updateHUD() {
+                const activeBlues = this.entityMgr.getActiveBlueCount();
                 const fpEl = document.getElementById('hud-firepower');
-                if (fpEl) fpEl.innerText = `${this.inRunBarrels} 管`;
+                if (fpEl) fpEl.innerText = `${this.rowBulletWidth} 顆`;
+
                 const odEl = document.getElementById('hud-overdrive');
-                if (odEl) odEl.innerText = `Lv.${this.inRunRateTier}`;
+                if (odEl && this.gateMgr) {
+                    const info = this.gateMgr.getFrontRightGateInfo();
+                    if (info.nearestPillar && info.nearestMult) {
+                        odEl.innerText = `柱HP:${info.nearestPillar.hp} ➔ ×${info.nearestMult.value}`;
+                    } else if (info.nearestMult) {
+                        odEl.innerText = `解鎖 ×${info.nearestMult.value}!`;
+                    } else {
+                        odEl.innerText = `×5`;
+                    }
+                }
 
-                this.hudShield.innerText = `${this.shieldHp} / ${this.maxShieldHp}`;
-                this.hudSwarmCount.innerText = this.entityMgr.getActiveBlueCount();
+                if (this.hudShield) {
+                    this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota}`;
+                    this.hudShield.style.color = this.bulletQuota <= 8 ? '#ff4d6d' : (this.bulletQuota >= 80 ? '#4ade80' : '#ffffff');
+                }
+                if (this.hudSwarmCount) {
+                    this.hudSwarmCount.innerText = `${activeBlues} / ${this.bulletQuota}`;
+                }
 
-                if (this.mode === 'STAGE') {
+                if (this.mode === 'STAGE' && this.stageCfg) {
                     const totalWaves = this.stageCfg.waves.length;
                     const progress = Math.min(100, (this.nextWaveIdx / totalWaves) * 100);
                     this.levelProgressBar.style.width = `${progress}%`;
@@ -5085,18 +5559,23 @@
                 const redList = this.entityMgr.redList;
                 const gargoyleList = this.entityMgr.gargoyleList;
                 const boss = this.entityMgr.boss;
+                let blueChanged = false;
+                let redChanged = false;
+                let gargoyleChanged = false;
 
-                // 1. 藍軍 vs 倍率門
+                // 1. 藍軍子彈 vs 左右通道強化門 & 阻擋柱
                 for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
                     const b = blueList[i];
                     if (b.active) {
-                        this.gateMgr.checkTroopPass(b, (x, z, sX, sVx) => {
-                            return this.entityMgr.spawnBlueTroop(x, z, sX, sVx);
-                        });
+                        if (this.gateMgr.checkTroopPass(b)) {
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+                            blueChanged = true;
+                        }
                     }
                 }
 
-                // 2. 藍軍 vs 紅軍步兵 (1:1 對撞消滅，使用歐氏距離平方判定)
+                // 2. 藍軍子彈 vs 紅軍步兵 / 重裝盾衛 (具備獨立血條，每顆子彈扣 1 點 HP)
                 for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
                     const b = blueList[i];
                     if (!b.active) continue;
@@ -5107,23 +5586,30 @@
 
                         const dx = b.x - r.x;
                         const dz = b.z - r.z;
-                        if (dx * dx + dz * dz < 0.56) { // 約 0.75 接觸半徑
+                        const hitRadiusSq = r.isElite ? 0.85 : 0.58;
+                        if (dx * dx + dz * dz < hitRadiusSq) {
                             b.active = false;
-                            r.active = false;
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
-                            this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+                            blueChanged = true;
 
-                            this.killsCount++;
-                            
-                            this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 3);
+                            r.hp--;
+                            this.entityMgr.spawnExplosion(b.x, 0.5, b.z, 2);
                             soundFX.playHit();
+
+                            if (r.hp <= 0) {
+                                r.active = false;
+                                this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+                                redChanged = true;
+                                this.killsCount++;
+                                this.entityMgr.spawnExplosion(r.x, 0.5, r.z, r.isElite ? 10 : 4);
+                            }
                             break;
                         }
                     }
                 }
 
-                // 3. 藍軍 vs 石像鬼 (空對地攔截)
+                // 3. 藍軍子彈 vs 石像鬼 (空對地攔截，具備獨立血條)
                 for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
                     const b = blueList[i];
                     if (!b.active) continue;
@@ -5133,21 +5619,23 @@
                         if (!g.active) continue;
 
                         const dz = Math.abs(b.z - g.z);
-                        if (dz < 0.85) {
+                        if (dz < 0.88) {
                             const dx = Math.abs(b.x - g.x);
-                            if (dx < 0.65) {
+                            if (dx < 0.72) {
                                 b.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+                                blueChanged = true;
 
                                 g.hp--;
-                                this.entityMgr.spawnExplosion(g.x, g.y, g.z, 4);
+                                this.entityMgr.spawnExplosion(g.x, g.y, g.z, 3);
                                 soundFX.playHit();
                                 if (g.hp <= 0) {
                                     g.active = false;
                                     this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
+                                    gargoyleChanged = true;
                                     this.killsCount++;
-                                    
+                                    this.entityMgr.spawnExplosion(g.x, g.y, g.z, 8);
                                 }
                                 break;
                             }
@@ -5155,23 +5643,23 @@
                     }
                 }
 
-                // 4. 藍軍 vs 巨型 Boss
+                // 4. 藍軍子彈 vs 巨型 Boss
                 if (boss.active) {
                     for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
                         const b = blueList[i];
                         if (!b.active) continue;
 
                         const dz = Math.abs(b.z - boss.z);
-                        if (dz < 1.4) {
+                        if (dz < 1.5) {
                             const dx = Math.abs(b.x - boss.x);
-                            if (dx < 1.25) {
+                            if (dx < 1.35) {
                                 b.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
+                                blueChanged = true;
 
                                 boss.hp--;
-                                boss.z += 0.05; // 微擊退
-                                this.entityMgr.spawnExplosion(b.x, 0.8, b.z, 2);
+                                this.entityMgr.spawnExplosion(b.x, 0.9, b.z, 2);
                                 this.entityMgr.updateBossHpBar();
                                 soundFX.playHit();
 
@@ -5179,8 +5667,7 @@
                                     boss.active = false;
                                     this.entityMgr.bossGroup.position.set(0, -999, 0);
                                     this.killsCount++;
-                                    
-                                    this.entityMgr.spawnExplosion(boss.x, 1.0, boss.z, 25);
+                                    this.entityMgr.spawnExplosion(boss.x, 1.2, boss.z, 28);
                                     this.shakeAmount = 0.8;
                                     break;
                                 }
@@ -5189,32 +5676,9 @@
                     }
                 }
 
-                // 5. 敵軍突破底線判定
-                for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
-                    const r = redList[j];
-                    if (r.active && r.z <= 0.2) {
-                        r.active = false;
-                        _tempMatrix.makeTranslation(0, -999, 0);
-                        this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
-                        this.takeShieldDamage(1);
-                    }
-                }
-
-                for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
-                    const g = gargoyleList[k];
-                    if (g.active && g.z <= 0.2) {
-                        g.active = false;
-                        _tempMatrix.makeTranslation(0, -999, 0);
-                        this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
-                        this.takeShieldDamage(1);
-                    }
-                }
-
-                if (boss.active && boss.z <= 0.5) {
-                    boss.active = false;
-                    this.entityMgr.bossGroup.position.set(0, -999, 0);
-                    this.takeShieldDamage(3);
-                }
+                if (blueChanged) this.entityMgr.blueMesh.instanceMatrix.needsUpdate = true;
+                if (redChanged) this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
+                if (gargoyleChanged) this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
             }
 
             /**
@@ -5284,13 +5748,11 @@
 
             /**
              * 微型導彈自動導航搜尋前方活動敵軍（優先鎖定 Boss，其次石像鬼，其次紅軍步兵）
-             * 單次線性迴圈遍歷 (Single-pass scan)，100% 零 GC 記憶體配置，避免任何臨時陣列或物件配置
-             * @param {number} missileIndex 導彈索引，用於群體分散鎖定目標
+             * 單次線性迴圈遍歷 (Single-pass scan)，100% 零 GC 記憶體配置
              */
             findMissileTarget(missileIndex = 0) {
                 const slot = this._targetSlots[missileIndex % this._targetSlots.length];
 
-                // 1. 優先鎖定活躍且在射程內的 Boss
                 const boss = this.entityMgr.boss;
                 if (boss.active && boss.z > 0.5) {
                     slot.type = 'boss';
@@ -5299,7 +5761,6 @@
                     return slot;
                 }
 
-                // 2. 其次單次線性遍歷石像鬼，尋找距離最近者 (最小 z)
                 let bestGargoyle = null;
                 let bestGargoyleIdx = -1;
                 let minGargoyleScore = Infinity;
@@ -5322,7 +5783,6 @@
                     return slot;
                 }
 
-                // 3. 其次單次線性遍歷紅軍步兵，尋找距離最近者 (最小 z)
                 let bestRed = null;
                 let bestRedIdx = -1;
                 let minRedScore = Infinity;
@@ -5348,11 +5808,7 @@
                 return null;
             }
 
-            /**
-             * 每幀更新英雄技能倒數與 HUD 遮罩
-             */
             updateHeroSkills(dt) {
-                // 胸口集束巨砲倒數
                 if (this.heroSkills.unibeam.timer > 0) {
                     this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - dt);
                 }
@@ -5366,7 +5822,6 @@
                     }
                 }
 
-                // 肩部微型導彈倒數
                 if (this.heroSkills.missiles.timer > 0) {
                     this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - dt);
                 }
@@ -5374,11 +5829,7 @@
                 this.updateHeroSkillsHUD();
             }
 
-            /**
-             * 同步更新 HUD 上英雄技能冷卻遮罩與倒數數字
-             */
             updateHeroSkillsHUD() {
-                // Unibeam HUD
                 if (this.btnSkillUnibeam && this.cdMaskUnibeam && this.cdTextUnibeam) {
                     const u = this.heroSkills.unibeam;
                     if (u.timer > 0) {
@@ -5393,7 +5844,6 @@
                     }
                 }
 
-                // Missiles HUD
                 if (this.btnSkillMissiles && this.cdMaskMissiles && this.cdTextMissiles) {
                     const m = this.heroSkills.missiles;
                     if (m.timer > 0) {
@@ -5410,70 +5860,70 @@
             }
 
             /**
-             * 戰術小隊排波隊列生成系統 (Squad Batches / Phalanx Spawner)
-             * Why: 避免瞬間爆發生成人肉牆造成防守崩潰，將大波次敵人拆解為與玩家子彈頻率相互對應的排波部隊
+             * 戰術小隊排波隊列生成系統 (v3.0: 敵人嚴格限制於中間 4 個單位通道 X ∈ [-3.3, +3.3])
              */
             enqueueEnemyWave(wave) {
-                // 獲取玩家當前射擊頻率 (包含局內動態超頻) 與子彈流數
-                const fireInterval = Math.max(0.08, 0.40 * Math.pow(0.75, this.inRunRateTier || 0));
-                const streamCount = this.inRunBarrels || 2;
+                const MID_LANES = [-3.0, -1.0, 1.0, 3.0];
 
                 if (wave.type === 'boss') {
                     this.enemyBatchQueue.push({
                         type: 'boss',
-                        hp: wave.hp || 50,
+                        hp: wave.hp || 240,
                         count: 1,
-                        spawnZ: 50,
-                        delayAfter: 2.2
+                        spawnZ: 46,
+                        delayAfter: 2.0
                     });
                     return;
                 }
 
                 if (wave.type === 'gargoyle') {
                     const count = wave.count || 2;
-                    const span = wave.xSpan || 3.0;
                     for (let i = 0; i < count; i++) {
-                        const posX = (Math.random() - 0.5) * span;
+                        const laneX = MID_LANES[Math.floor(Math.random() * MID_LANES.length)];
                         this.enemyBatchQueue.push({
                             type: 'gargoyle',
                             count: 1,
-                            x: posX,
-                            spawnZ: 48,
-                            // 石像鬼有3點生命值且俯衝速度快，給予充裕的瞄準與擊破間隔
-                            delayAfter: Math.max(0.75, fireInterval * 2.5)
+                            x: laneX + (Math.random() - 0.5) * 0.5,
+                            spawnZ: 45,
+                            delayAfter: 0.85
                         });
                     }
                     return;
                 }
 
-                // 普通紅兵部隊：拆分為戰術小隊橫向排波
-                let total = wave.count || 10;
-                const span = wave.xSpan || 3.5;
-                // 基礎雙聯裝砲時每排 2 隻；多聯裝砲時動態配合為 2~3 隻
-                const maxInRow = (streamCount >= 3) ? 3 : 2;
+                if (wave.type === 'elite') {
+                    const count = wave.count || 2;
+                    for (let i = 0; i < count; i++) {
+                        const laneX = MID_LANES[Math.floor(Math.random() * MID_LANES.length)];
+                        this.enemyBatchQueue.push({
+                            type: 'elite',
+                            count: 1,
+                            centerX: laneX,
+                            spawnZ: 45,
+                            delayAfter: 1.15
+                        });
+                    }
+                    return;
+                }
 
+                // Lv.1 普通赤紅斥候：拆分為中間 4 通道的橫向小隊
+                let total = wave.count || 6;
                 while (total > 0) {
-                    const batchCount = Math.min(total, maxInRow);
+                    const batchCount = Math.min(total, 2);
                     total -= batchCount;
-
-                    // 每一排的中心點在 span 範圍內散佈，激勵玩家進行左右滑動微調瞄準
-                    const centerX = (Math.random() - 0.5) * (span * 0.7);
-                    // 排與排的間隔錨定於射速的 1.45 倍，確保全命中時剛好節奏消滅一排接下一排
-                    const delay = Math.max(0.42, fireInterval * 1.45);
-
+                    const laneX = MID_LANES[Math.floor(Math.random() * MID_LANES.length)];
                     this.enemyBatchQueue.push({
                         type: 'red',
                         count: batchCount,
-                        centerX: centerX,
-                        spawnZ: 47,
-                        delayAfter: delay
+                        centerX: laneX,
+                        spawnZ: 44,
+                        delayAfter: 0.65
                     });
                 }
             }
 
             /**
-             * 逐幀消耗待出兵隊列並實例化敵人
-             * Why: 確保敵人具備良好的視覺縱深與節奏間隙，維持穩定的實體推進流
+             * 逐幀消耗待出兵隊列並於中間 4 單位通道 (X ∈ [-3.4, +3.4]) 實例化敵人
              */
             updateEnemySpawnQueue(dt) {
                 if (this.enemyBatchQueue.length === 0) return;
@@ -5484,26 +5934,29 @@
                     if (!batch) return;
 
                     if (batch.type === 'boss') {
-                        this.entityMgr.spawnBoss(batch.spawnZ || 50, batch.hp || 50);
+                        this.entityMgr.spawnBoss(batch.spawnZ || 46, batch.hp || 240);
                         if (this.bossWarning) {
                             this.bossWarning.classList.add('show');
                             setTimeout(() => this.bossWarning.classList.remove('show'), 2500);
                         }
                     } else if (batch.type === 'gargoyle') {
-                        this.entityMgr.spawnGargoyle(batch.x, batch.spawnZ || 48);
+                        const clampedX = Math.max(-3.3, Math.min(3.3, batch.x));
+                        this.entityMgr.spawnGargoyle(clampedX, batch.spawnZ || 45);
+                    } else if (batch.type === 'elite') {
+                        const clampedX = Math.max(-3.2, Math.min(3.2, batch.centerX));
+                        this.entityMgr.spawnRedTroop(clampedX, batch.spawnZ || 45, true);
                     } else if (batch.type === 'red') {
                         const count = batch.count;
-                        // 2 隻間隔 0.9 剛好與砲台發射軌道間距匹配
-                        const spacing = (count === 2) ? 0.9 : 0.8;
+                        const spacing = 0.85;
                         for (let i = 0; i < count; i++) {
                             const offset = (count > 1) ? (i - (count - 1) / 2) * spacing : 0;
                             const jitter = (Math.random() - 0.5) * 0.12;
                             const zJitter = (Math.random() - 0.5) * 0.25;
-                            const finalX = Math.max(-4.6, Math.min(4.6, batch.centerX + offset + jitter));
-                            this.entityMgr.spawnRedTroop(finalX, (batch.spawnZ || 47) + zJitter);
+                            const finalX = Math.max(-3.4, Math.min(3.4, batch.centerX + offset + jitter));
+                            this.entityMgr.spawnRedTroop(finalX, (batch.spawnZ || 44) + zJitter, false);
                         }
                     }
-                    this.batchSpawnTimer = batch.delayAfter || 0.5;
+                    this.batchSpawnTimer = batch.delayAfter || 0.6;
                 }
             }
 
@@ -5521,20 +5974,23 @@
                 let killedReds = false;
                 let killedGargoyles = false;
 
-                // 1. 貫穿消滅射線路徑上的所有紅軍步兵
+                // 1. 射線路徑上的紅軍步兵與重裝盾衛承受高頻雷射傷害
                 for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
                     const r = redList[j];
-                    if (r.active && r.z > 0 && Math.abs(r.x - beamX) < 1.3) {
-                        r.active = false;
-                        _tempMatrix.makeTranslation(0, -999, 0);
-                        this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
-                        this.killsCount++;
-                        
-                        this.entityMgr.spawnExplosion(r.x, 0.4, r.z, 6);
-                        killedReds = true;
-                        if (!hitSoundTriggered) {
-                            soundFX.playHit();
-                            hitSoundTriggered = true;
+                    if (r.active && r.z > 0 && Math.abs(r.x - beamX) < 1.35) {
+                        r.hp -= 45.0 * dt;
+                        this.entityMgr.spawnExplosion(r.x, 0.5, r.z, 2);
+                        if (r.hp <= 0) {
+                            r.active = false;
+                            _tempMatrix.makeTranslation(0, -999, 0);
+                            this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
+                            this.killsCount++;
+                            this.entityMgr.spawnExplosion(r.x, 0.5, r.z, 6);
+                            killedReds = true;
+                            if (!hitSoundTriggered) {
+                                soundFX.playHit();
+                                hitSoundTriggered = true;
+                            }
                         }
                     }
                 }
@@ -5543,14 +5999,13 @@
                 for (let k = 0; k < this.entityMgr.MAX_GARGOYLES; k++) {
                     const g = gargoyleList[k];
                     if (g.active && g.z > 0 && Math.abs(g.x - beamX) < 1.4) {
-                        g.hp -= 25.0 * dt;
+                        g.hp -= 45.0 * dt;
                         this.entityMgr.spawnExplosion(g.x, g.y, g.z, 2);
                         if (g.hp <= 0) {
                             g.active = false;
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
                             this.killsCount++;
-                            
                             this.entityMgr.spawnExplosion(g.x, g.y, g.z, 6);
                             killedGargoyles = true;
                             if (!hitSoundTriggered) {
@@ -5561,17 +6016,16 @@
                     }
                 }
 
-                // 3. 巨型 Boss 處於集束射線中每秒承受 50 點重創並被擊退
+                // 3. 巨型 Boss 處於集束射線中每秒承受 80 點重創並被擊退
                 if (boss.active && boss.z > 0 && Math.abs(boss.x - beamX) < 1.6) {
-                    boss.hp -= 50 * dt;
-                    boss.z += 1.5 * dt; // 持續向後推擠擊退
+                    boss.hp -= 80 * dt;
+                    boss.z += 1.5 * dt;
                     this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 2.0, boss.z, 2);
                     this.entityMgr.updateBossHpBar();
                     if (boss.hp <= 0) {
                         boss.active = false;
                         this.entityMgr.bossGroup.position.set(0, -999, 0);
                         this.killsCount++;
-                        
                         this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
                         this.shakeAmount = 0.9;
                         if (!hitSoundTriggered) {
@@ -5581,7 +6035,6 @@
                     }
                 }
 
-                // 確保 GPU InstancedBuffer 同步（即使全屏清空亦能及時更新）
                 if (killedReds) this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
                 if (killedGargoyles) this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
             }
@@ -5605,31 +6058,20 @@
                         continue;
                     }
 
-                    // 1. 獲取目標即時座標或重新鎖定
                     let tx = m.x, ty = 1.0, tz = m.z + 20.0;
                     let targetValid = false;
 
                     if (m.targetEnemy) {
                         const t = m.targetEnemy;
                         if (t.type === 'boss' && this.entityMgr.boss.active && this.entityMgr.boss.z > 0) {
-                            tx = this.entityMgr.boss.x;
-                            ty = 2.0;
-                            tz = this.entityMgr.boss.z;
-                            targetValid = true;
+                            tx = this.entityMgr.boss.x; ty = 2.0; tz = this.entityMgr.boss.z; targetValid = true;
                         } else if (t.type === 'gargoyle' && t.ref.active && t.ref.z > 0) {
-                            tx = t.ref.x;
-                            ty = t.ref.y;
-                            tz = t.ref.z;
-                            targetValid = true;
+                            tx = t.ref.x; ty = t.ref.y; tz = t.ref.z; targetValid = true;
                         } else if (t.type === 'red' && t.ref.active && t.ref.z > 0) {
-                            tx = t.ref.x;
-                            ty = 0.4;
-                            tz = t.ref.z;
-                            targetValid = true;
+                            tx = t.ref.x; ty = 0.4; tz = t.ref.z; targetValid = true;
                         }
                     }
 
-                    // 若原目標失效，嘗試動態重新捕獲新目標
                     if (!targetValid) {
                         m.targetEnemy = this.findMissileTarget(i);
                         if (m.targetEnemy) {
@@ -5644,7 +6086,6 @@
                         }
                     }
 
-                    // 2. 平滑轉向目標推進 (Homing Steering with Lerp)
                     if (targetValid) {
                         const dx = tx - m.x;
                         const dy = ty - m.y;
@@ -5662,7 +6103,6 @@
                         }
                     }
 
-                    // 3. 更新位置與網格姿態 (朝向速度向量，0 GC)
                     m.x += m.vx * dt;
                     m.y += m.vy * dt;
                     m.z += m.vz * dt;
@@ -5673,13 +6113,11 @@
                         m.flameMesh.scale.set(1, 1, 0.8 + Math.random() * 0.5);
                     }
 
-                    // 4. 碰撞命中檢測 (歐式距離平方判定)
                     let hit = false;
                     let hitType = null;
                     let hitRef = null;
                     let hitIndex = -1;
 
-                    // 優先判定鎖定目標
                     if (m.targetEnemy) {
                         const t = m.targetEnemy;
                         if (t.type === 'boss' && this.entityMgr.boss.active) {
@@ -5694,7 +6132,6 @@
                         }
                     }
 
-                    // 範圍擦碰檢測 (若未命中指定目標)
                     if (!hit) {
                         if (this.entityMgr.boss.active) {
                             const dsq = (m.x - this.entityMgr.boss.x)**2 + (m.y - 1.5)**2 + (m.z - this.entityMgr.boss.z)**2;
@@ -5720,12 +6157,10 @@
                         }
                     }
 
-                    // 接觸地面或超出場景邊界自爆
                     if (!hit && (m.y <= 0.1 || m.z >= 75)) {
                         hit = true;
                     }
 
-                    // 5. 命中解算與爆破傷害 (30 點傷害)
                     if (hit) {
                         m.active = false;
                         m.targetEnemy = null;
@@ -5737,135 +6172,35 @@
                         if (hitType === 'boss') {
                             const boss = this.entityMgr.boss;
                             boss.hp -= 30;
-                            boss.z += 0.4; // 爆破推力擊退
+                            boss.z += 0.4;
                             this.entityMgr.updateBossHpBar();
                             if (boss.hp <= 0) {
                                 boss.active = false;
                                 this.entityMgr.bossGroup.position.set(0, -999, 0);
                                 this.killsCount++;
-                                
                                 this.entityMgr.spawnExplosion(boss.x, 2.0, boss.z, 30);
                                 this.shakeAmount = 0.9;
                             }
                         } else if (hitType === 'gargoyle' && hitRef) {
-                            hitRef.hp -= 30;
+                            hitRef.hp -= 20;
                             if (hitRef.hp <= 0) {
                                 hitRef.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
                                 this.entityMgr.gargoyleMesh.instanceMatrix.needsUpdate = true;
                                 this.killsCount++;
-                                
                             }
                         } else if (hitType === 'red' && hitRef) {
-                            hitRef.active = false;
-                            _tempMatrix.makeTranslation(0, -999, 0);
-                            this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
-                            this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
-                            this.killsCount++;
-                            
+                            hitRef.hp -= 20;
+                            if (hitRef.hp <= 0) {
+                                hitRef.active = false;
+                                _tempMatrix.makeTranslation(0, -999, 0);
+                                this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
+                                this.entityMgr.redMesh.instanceMatrix.needsUpdate = true;
+                                this.killsCount++;
+                            }
                         }
                     }
-                }
-            }
-
-            updatePowerUpRounds(dt) {
-                if (this.state !== 'PLAYING') return;
-
-                // 若場上仍有活躍中的強化門，重置生成冷卻倒數
-                if (this.gateMgr && this.gateMgr.hasActivePowerUpGate()) {
-                    this.powerUpRespawnTimer = 0;
-                    return;
-                }
-
-                // 關卡模式若所有波次已出完且無任何殘存敵軍，等待通關結算不額外生成新門
-                if (this.mode === 'STAGE' && this.nextWaveIdx >= this.stageWaves.length) {
-                    let enemiesRemaining = 0;
-                    if (this.entityMgr.boss.active) enemiesRemaining++;
-                    for (let i = 0; i < this.entityMgr.MAX_RED; i++) {
-                        if (this.entityMgr.redList[i].active) enemiesRemaining++;
-                    }
-                    for (let i = 0; i < this.entityMgr.MAX_GARGOYLES; i++) {
-                        if (this.entityMgr.gargoyleList[i].active) enemiesRemaining++;
-                    }
-                    if (enemiesRemaining === 0) return;
-                }
-
-                this.powerUpRespawnTimer += dt;
-                if (this.powerUpRespawnTimer >= this.powerUpCooldown) {
-                    this.powerUpRespawnTimer = 0;
-                    this.spawnNextPowerUpRound();
-                }
-            }
-
-            spawnNextPowerUpRound() {
-                this.powerUpRound++;
-
-                // 智慧加權候選清單：優先投送未達到上限的屬性
-                const candidates = [];
-                if (this.inRunBarrels < 4) {
-                    candidates.push({ type: 'power_barrel', weight: 45 });
-                }
-                if (this.inRunRateTier < 3) {
-                    candidates.push({ type: 'power_rate', weight: 35 });
-                }
-                if (this.shieldHp < this.maxShieldHp) {
-                    candidates.push({ type: 'power_shield', weight: 30 });
-                }
-                // 戰術大招充能永遠保持高吸引力
-                candidates.push({ type: 'power_skill', weight: 25 });
-
-                let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
-                let rand = Math.random() * totalWeight;
-                let selectedType = candidates[0].type;
-                for (const c of candidates) {
-                    if (rand < c.weight) {
-                        selectedType = c.type;
-                        break;
-                    }
-                    rand -= c.weight;
-                }
-
-                // 充能彈數計算：適配火力成長
-                let baseCharge = 10;
-                if (selectedType === 'power_barrel') baseCharge = 14;
-                else if (selectedType === 'power_rate') baseCharge = 12;
-                else if (selectedType === 'power_shield') baseCharge = 10;
-                else if (selectedType === 'power_skill') baseCharge = 8;
-
-                if (this.mode === 'ENDLESS') {
-                    baseCharge = Math.min(25, baseCharge + Math.floor(this.gameTime * 0.05) + (this.inRunBarrels - 2) * 2);
-                }
-
-                // 隨機動態巡弋設定
-                const moveSpeed = 1.8 + Math.random() * 0.6;
-                const moveAmp = 1.6 + Math.random() * 0.4;
-                const spawnZ = 15.5 + (Math.random() - 0.5) * 1.5;
-
-                const gateCfg = {
-                    x: (Math.random() - 0.5) * 0.8,
-                    z: spawnZ,
-                    type: selectedType,
-                    charge: baseCharge,
-                    moving: true,
-                    amplitude: moveAmp,
-                    speed: moveSpeed
-                };
-
-                const gate = this.gateMgr.spawnPowerUpGate(gateCfg);
-
-                const typeNames = {
-                    'power_barrel': '🔱 聯裝重砲',
-                    'power_rate': '⚡ 射速超頻',
-                    'power_shield': '🛡️ 護盾修復',
-                    'power_skill': '💥 戰術充能'
-                };
-                const gateName = typeNames[selectedType] || '戰術強化門';
-                this.showPowerUpToast(`⭐ 第 ${this.powerUpRound} 輪【${gateName}】空投降臨！`, '#ffd166');
-                soundFX.playGateChime();
-
-                if (this.entityMgr && gate && gate.mesh) {
-                    this.entityMgr.spawnExplosion(gate.mesh.position.x, 1.2, gate.z, 20);
                 }
             }
 
@@ -5873,31 +6208,38 @@
                 const dt = Math.min(this.clock.getDelta(), 0.1);
                 const time = this.clock.getElapsedTime();
                 let isFiring = false;
-                const streamCount = this.inRunBarrels;
+                const streamCount = this.rowBulletWidth;
 
                 if (this.state === 'PLAYING') {
                     this.gameTime += dt;
 
-                    // 鍵盤操控補償 (相機朝 +Z 望去時，螢幕向左為 +X，向右為 -X)
-                    const keySpeed = 12.0 * dt;
-                    if (this.keyMoveLeft) this.targetCannonX = Math.min(4.8, this.targetCannonX + keySpeed);
-                    if (this.keyMoveRight) this.targetCannonX = Math.max(-4.8, this.targetCannonX - keySpeed);
+                    // 鍵盤操控補償 (相機朝 +Z 望去時，螢幕向左為 +X，向右為 -X；總範圍 [-5.1, +5.1] 覆蓋 6 單位通道)
+                    const keySpeed = 13.5 * dt;
+                    if (this.keyMoveLeft) this.targetCannonX = Math.min(5.1, this.targetCannonX + keySpeed);
+                    if (this.keyMoveRight) this.targetCannonX = Math.max(-5.1, this.targetCannonX - keySpeed);
 
                     // 砲台水平平滑位移
                     this.cannonX += (this.targetCannonX - this.cannonX) * 18.0 * dt;
                     this.threeScene.cannonGroup.position.x = this.cannonX;
 
-                    // 局內動態超頻射速公式：基礎 0.40s，每階超頻 x0.75
-                    const fireInterval = Math.max(0.08, 0.40 * Math.pow(0.75, this.inRunRateTier));
-                    if (time - this.lastShootTime >= fireInterval) {
+                    // v3.0 單排 4 顆寬度 + 同屏總子彈配額上限控制
+                    // 瀕死狂暴機制：當子彈配額 <= 8 時，發射排距縮短、推進微幅加速
+                    const isLowQuota = (this.bulletQuota <= 8);
+                    const fireInterval = isLowQuota ? 0.065 : 0.095;
+                    const activeBlues = this.entityMgr.getActiveBlueCount();
+
+                    if (this.bulletQuota > 0 && activeBlues < this.bulletQuota && (time - this.lastShootTime >= fireInterval)) {
                         this.lastShootTime = time;
-                        isFiring = true;
-                        const spacing = 0.4;
-                        for (let s = 0; s < streamCount; s++) {
-                            const offset = (s - (streamCount - 1) / 2) * spacing;
-                            this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.8, 0, 0);
+                        const canSpawn = Math.min(this.rowBulletWidth, this.bulletQuota - activeBlues);
+                        if (canSpawn > 0) {
+                            isFiring = true;
+                            const spacing = 0.38; // 4 顆寬度約 1.14，精準塞入單一通道單位 (2.0) 內
+                            for (let s = 0; s < canSpawn; s++) {
+                                const offset = (s - (canSpawn - 1) / 2) * spacing;
+                                this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.85, 0, 0);
+                            }
+                            soundFX.playShoot();
                         }
-                        soundFX.playShoot();
                     }
 
                     // 英雄專屬技能冷卻倒數
@@ -5913,41 +6255,35 @@
                                 this.enqueueEnemyWave(wave);
                             }
                         } else if (this.enemyBatchQueue.length === 0) {
-                            // 所有波次皆已排入且生成隊列已全數出兵，確認場上實體是否全數殲滅
-                            let enemiesRemaining = 0;
-                            if (this.entityMgr.boss.active) enemiesRemaining++;
-                            for (let i = 0; i < this.entityMgr.MAX_RED; i++) {
-                                if (this.entityMgr.redList[i].active) enemiesRemaining++;
-                            }
-                            for (let i = 0; i < this.entityMgr.MAX_GARGOYLES; i++) {
-                                if (this.entityMgr.gargoyleList[i].active) enemiesRemaining++;
-                            }
-
+                            const enemiesRemaining = this.entityMgr.getActiveEnemyCount();
                             if (enemiesRemaining === 0) {
                                 this.endGame(true);
                             }
                         }
                     } else {
-                        // 無盡生存模式 (同樣採用隊列排波，維持良好的推進節奏與通量平衡)
+                        // 無盡生存模式
                         this.endlessSpawnTimer += dt;
                         this.endlessDifficultyTimer += dt;
 
                         if (this.endlessDifficultyTimer > 20) {
                             this.endlessDifficultyTimer = 0;
-                            this.endlessInterval = Math.max(1.0, this.endlessInterval * 0.90);
+                            this.endlessInterval = Math.max(1.05, this.endlessInterval * 0.92);
                         }
 
                         if (this.endlessSpawnTimer >= this.endlessInterval) {
                             this.endlessSpawnTimer = 0;
                             const randType = Math.random();
-                            if (randType < 0.65) {
-                                const count = 6 + Math.floor(this.gameTime * 0.12);
-                                this.enqueueEnemyWave({ type: 'red', count: count, xSpan: 4.5 });
-                            } else if (randType < 0.9) {
-                                const count = 2 + Math.floor(this.gameTime * 0.04);
-                                this.enqueueEnemyWave({ type: 'gargoyle', count: count, xSpan: 3.5 });
+                            if (randType < 0.52) {
+                                const count = 3 + Math.floor(this.gameTime * 0.06);
+                                this.enqueueEnemyWave({ type: 'red', count: count });
+                            } else if (randType < 0.76) {
+                                const count = 1 + Math.floor(this.gameTime * 0.03);
+                                this.enqueueEnemyWave({ type: 'gargoyle', count: count });
+                            } else if (randType < 0.92) {
+                                const count = 1 + Math.floor(this.gameTime * 0.02);
+                                this.enqueueEnemyWave({ type: 'elite', count: count });
                             } else if (!this.entityMgr.boss.active) {
-                                const hp = 30 + Math.floor(this.gameTime * 0.8);
+                                const hp = 200 + Math.floor(this.gameTime * 2.5);
                                 this.enqueueEnemyWave({ type: 'boss', hp: hp });
                             }
                         }
@@ -5956,7 +6292,6 @@
                     // 逐幀執行戰術小隊排波隊列推進
                     this.updateEnemySpawnQueue(dt);
 
-                    this.updatePowerUpRounds(dt);
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
                     this.handleCollisions();
@@ -5992,7 +6327,7 @@
                 this.threeScene.renderer.render(this.threeScene.scene, this.threeScene.camera);
 
                 const totalEntities = this.entityMgr.getActiveBlueCount();
-                this.debugStats.innerText = `Calls: ${this.threeScene.renderer.info.render.calls} | Blues: ${totalEntities} | State: ${this.state}`;
+                this.debugStats.innerText = `Calls: ${this.threeScene.renderer.info.render.calls} | Quota(HP): ${this.bulletQuota}/100 | Blues: ${totalEntities}`;
             }
         }
 
