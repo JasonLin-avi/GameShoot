@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>軍團防線：增殖衝擊 (Mob Defense: Swarm Rush)</title>
+    <title>軍團防線：增殖衝擊 (Mob Defense: Swarm Rush v3.1)</title>
     <style>
         :root {
             --primary-blue: #00f0ff;
@@ -67,6 +67,7 @@
             background-color: var(--dark-bg);
             color: var(--text-color);
             touch-action: none;
+            overscroll-behavior: none;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -77,6 +78,8 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+            touch-action: none;
+            overscroll-behavior: none;
         }
 
         canvas {
@@ -657,6 +660,65 @@
             pointer-events: none;
             z-index: 11;
         }
+
+        /* 瀕死狂暴保護 (Last Stand Buff) 狀態標籤 */
+        #hud-last-stand {
+            display: none;
+            margin-left: 6px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255, 56, 92, 0.35), rgba(255, 140, 0, 0.35));
+            border: 1px solid #ff4d6d;
+            color: #ffe3e8;
+            font-size: 11.5px;
+            font-weight: 900;
+            box-shadow: 0 0 12px rgba(255, 56, 92, 0.65);
+            animation: last-stand-pulse 0.45s infinite alternate;
+        }
+
+        @keyframes last-stand-pulse {
+            from { transform: scale(0.96); opacity: 0.85; }
+            to { transform: scale(1.05); opacity: 1.0; }
+        }
+
+        /* 戰鬥飄字反饋池 (Floating Combat Text Pool - 零迴圈內 DOM 配置) */
+        #floating-text-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 16;
+        }
+
+        .floating-combat-text {
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-weight: 900;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85), 0 0 10px currentColor;
+            will-change: transform, opacity;
+            opacity: 0;
+        }
+
+        /* 指揮官段位徽章卡片 */
+        .commander-rank-card {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(255, 209, 102, 0.14));
+            border: 1px solid rgba(255, 209, 102, 0.45);
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
     </style>
 </head>
 <body>
@@ -671,6 +733,7 @@
                     <span>🔋</span>
                     <span>子彈配額(HP)：</span>
                     <span id="hud-shield" style="font-size:15px; color:#ffd166;">16 / 100</span>
+                    <span id="hud-last-stand">🔥 瀕死狂暴 +35%</span>
                 </div>
                 <div class="stat-badge shield" title="單排固定4顆 | 右路下一倍率預告">
                     <span>🔱</span>
@@ -699,6 +762,9 @@
         </div>
 
         <div class="theme-toast" id="theme-toast">🎨 已切換配色風格</div>
+
+        <!-- 戰鬥飄字反饋物件池容器 -->
+        <div id="floating-text-layer"></div>
 
         <div id="boss-warning">⚠️ BOSS APPROACHING ⚠️</div>
 
@@ -731,7 +797,7 @@
     <div class="modal-overlay" id="main-menu-modal">
         <div class="modal-card">
             <h1>軍團防線：增殖衝擊</h1>
-            <p class="subtitle">Mob Defense: Swarm Rush (v3.0)<br>6通道分道戰術：左路回血、中路拆彈、右路破柱直衝 100 顆子彈上限！</p>
+            <p class="subtitle">Mob Defense: Swarm Rush (v3.1)<br>6通道分道戰術：左路回血、中路拆彈、右路破柱直衝 100 顆子彈上限！</p>
 
             <!-- 配色風格選擇器 -->
             <div class="theme-select-section" style="margin-bottom:10px; text-align:left;">
@@ -798,6 +864,11 @@
             <h2 id="result-title">戰鬥勝利！</h2>
             <p class="subtitle" id="result-subtitle">你成功守住了防線，全殲敵軍！</p>
 
+            <div class="commander-rank-card">
+                <span style="font-size:12px; color:#cbd5e0; font-weight:700;">🎖️ 防線指揮官段位</span>
+                <span style="font-size:14px; font-weight:900; color:#ffd166;" id="res-rank-badge">🥇 黃金統帥</span>
+            </div>
+
             <div style="background: rgba(255, 255, 255, 0.05); border-radius: 14px; padding: 14px; margin-bottom: 16px; border:1px solid var(--glass-border);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
                     <span style="color:#8fa0b5;">擊殺敵軍數</span>
@@ -807,7 +878,14 @@
                     <span style="color:#8fa0b5;">存活時間 / 進度</span>
                     <span style="font-weight:700;" id="res-time">100%</span>
                 </div>
-
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
+                    <span style="color:#8fa0b5;">擊破石柱 / 滿編 100 次數</span>
+                    <span style="font-weight:700; color:#ffd166;" id="res-pillars">0 柱 / 0 次</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;">
+                    <span style="color:#8fa0b5;">底線極限拆彈 / 區域切換</span>
+                    <span style="font-weight:700; color:#4ade80;" id="res-defuses">0 次 / 0 切</span>
+                </div>
             </div>
 
             <button class="btn-primary" id="btn-res-action">繼續下一關</button>
@@ -1339,6 +1417,28 @@
                     osc.stop(t + 0.28);
                 });
             }
+
+            // 底線極限拆彈清脆戰術護盾音效 (GDD 4.3 / 5.4)
+            playDefuse() {
+                if (!this.ctx || this.muted) return;
+                const freqs = [880, 1318.51];
+                freqs.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const t = this.ctx.currentTime + idx * 0.045;
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.20, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(t);
+                    osc.stop(t + 0.16);
+                });
+            }
         }
 
         const soundFX = new SoundFX();
@@ -1355,6 +1455,9 @@
                     unlockedStage: 1,
                     highSurvivalTime: 0,
                     highKills: 0,
+                    highPillars: 0,
+                    bestRankTier: 0,
+                    bestRankTitle: '🥉 青銅守衛',
                     selectedTheme: 'arcade',
                     upgrades: {
                         fireRate: 1,      // BaseCost: 100
@@ -1430,7 +1533,7 @@
         const gameStorage = new GameStorage();
 
         // =========================================================================
-        // 2. 關卡與波次配置數據 (Stage Configurations - v3.0 6通道分道與100配額平衡)
+        // 2. 關卡與波次配置數據 (Stage Configurations - v3.1 6通道分道與100配額平衡)
         // 左1單位：持續推進 +N 強化門 | 中4單位：敵軍進攻 | 右1單位：停駐石柱 + 交錯 xN 強化門
         // =========================================================================
         const STAGE_CONFIGS = [
@@ -1438,7 +1541,7 @@
                 id: 1,
                 name: '第 1 關：初陣破柱',
                 leftAddPool: [2, 4],
-                pillarBaseHp: 28,
+                pillarBaseHp: 32,
                 rightMultPool: [5, 5, 10],
                 waves: [
                     { time: 0.8, type: 'red', count: 8 },
@@ -4054,10 +4157,14 @@
             }
 
             // 生成紅軍步兵 (僅從中間4個單位通道 [-3.6, +3.6] 直線向下推進)
-            // isElite = false: Lv.1 斥候 (HP 8, 每 1.0s 攻擊扣 2 顆子彈)
-            // isElite = true : Lv.3 重裝巨盾兵 (HP 48, 每 2.5s 攻擊扣 15 顆子彈)
+            // GDD 3.3 & 4.2: M_HP(S) = 1.0 + 0.18 * (S - 1)
+            // isElite = false: Lv.1 紅軍斥候 (基礎 HP 6, 每 1.0s 攻擊扣 2 顆子彈)
+            // isElite = true : Lv.3 重裝巨盾兵 (基礎 HP 48, 每 2.5s 攻擊扣 15 顆子彈)
             spawnRedTroop(x, z, isElite = false) {
                 const clampedX = Math.max(-3.5, Math.min(3.5, x));
+                const hpMult = (this.game && this.game.getEnemyHpMultiplier) ? this.game.getEnemyHpMultiplier() : 1.0;
+                const baseHp = isElite ? 48 : 6;
+                const scaledHp = Math.round(baseHp * hpMult);
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
                     if (!u.active) {
@@ -4068,8 +4175,8 @@
                         u.z = z;
                         u.vx = 0;
                         u.vz = isElite ? -3.1 : (-4.6 - Math.random() * 0.5);
-                        u.hp = isElite ? 48 : 8;
-                        u.maxHp = u.hp;
+                        u.hp = scaledHp;
+                        u.maxHp = scaledHp;
                         u.attackTimer = 0;
                         u.attackInterval = isElite ? 2.5 : 1.0;
                         u.attackDmg = isElite ? 15 : 2;
@@ -4079,9 +4186,11 @@
                 return null;
             }
 
-            // 生成石像鬼 (Lv.2: HP 16, 每 1.5s 攻擊扣 5 顆子彈，僅從中間4單位推進)
+            // 生成石像鬼 (GDD 3.3 & 4.2 Lv.2: 基礎 HP 16 * M_HP(S), 每 1.5s 攻擊扣 5 顆子彈，僅從中間4單位推進)
             spawnGargoyle(x, z) {
                 const clampedX = Math.max(-3.5, Math.min(3.5, x));
+                const hpMult = (this.game && this.game.getEnemyHpMultiplier) ? this.game.getEnemyHpMultiplier() : 1.0;
+                const scaledHp = Math.round(16 * hpMult);
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
                     if (!u.active) {
@@ -4091,8 +4200,8 @@
                         u.z = z;
                         u.vx = 0;
                         u.vz = -7.6;
-                        u.hp = 16;
-                        u.maxHp = 16;
+                        u.hp = scaledHp;
+                        u.maxHp = scaledHp;
                         u.attackTimer = 0;
                         u.attackInterval = 1.5;
                         u.attackDmg = 5;
@@ -4750,8 +4859,13 @@
             }
 
             spawnLeftAddGate(zPos = 40.0) {
-                const pool = this.leftAddPool;
-                const val = pool[Math.floor(Math.random() * pool.length)];
+                // GDD 4.2 左路強化門 (+N) 動態補償公式：N_add(S, t) = clamp(2 + 2 * floor(S / 2) + 2 * floor(t / 30), 2, 20)
+                const s = (this.game && this.game.getEffectiveStage) ? this.game.getEffectiveStage() : 1;
+                const t = (this.game) ? this.game.gameTime : 0;
+                const dynamicAdd = Math.max(2, Math.min(20, 2 + 2 * Math.floor(s / 2) + 2 * Math.floor(t / 30)));
+                const pool = this.leftAddPool || [2, 4];
+                const poolVal = pool[Math.floor(Math.random() * pool.length)];
+                const val = Math.min(20, Math.max(poolVal, dynamicAdd));
                 return this.createLaneObject({
                     type: 'left_add',
                     x: this.LEFT_LANE_X,
@@ -4763,25 +4877,29 @@
             }
 
             pickDynamicMultiplier() {
-                const pool = this.rightMultPool || [5, 10, 15];
+                // GDD 4.2 右路倍率門 (xN) 動態補償公式：k=1 固定為 5，k=2 為 {5, 10}，k>=3 為 {10, 15} 或關卡高倍率
+                const k = this.rightPairIndex;
+                if (k <= 1) {
+                    return 5;
+                }
                 let enemyCount = 0;
                 if (this.game && this.game.entityMgr) {
                     enemyCount = this.game.entityMgr.getActiveEnemyCount();
                 }
-                // 隨著場上同時出現的敵軍數量越高，動態提高出現 x10 / x15 / x20 的機率
-                if (enemyCount >= 14 && pool.length >= 3) {
-                    return pool[pool.length - 1];
-                } else if (enemyCount >= 7 && pool.length >= 2) {
-                    const idx = Math.min(pool.length - 1, 1 + Math.floor(Math.random() * (pool.length - 1)));
-                    return pool[idx];
+                if (k === 2) {
+                    return (enemyCount >= 8 || Math.random() < 0.5) ? 10 : 5;
                 }
-                return pool[Math.floor(Math.random() * pool.length)];
+                const pool = this.rightMultPool || [10, 15];
+                const highOptions = (pool[pool.length - 1] >= 20 && enemyCount >= 14) ? [10, 15, 20] : [10, 15];
+                return highOptions[Math.floor(Math.random() * highOptions.length)];
             }
 
             spawnRightPillarAndGatePair(pillarZ = 38.0) {
                 this.rightPairIndex++;
-                const hpScale = 1 + (this.rightPairIndex - 1) * 0.22;
-                const pillarHp = Math.round(this.pillarBaseHp * hpScale);
+                // GDD 4.2 右路第 k 根阻擋石柱血量公式：HP_pillar(S, k) = round(32 * (1 + 0.15 * (S - 1)) * 1.35^(min(k, 6) - 1))
+                const s = (this.game && this.game.getEffectiveStage) ? this.game.getEffectiveStage() : 1;
+                const kClamped = Math.min(this.rightPairIndex, 6);
+                const pillarHp = Math.round(32 * (1 + 0.15 * (s - 1)) * Math.pow(1.35, kClamped - 1));
                 const multVal = this.pickDynamicMultiplier();
 
                 const pillar = this.createLaneObject({
@@ -4989,10 +5107,153 @@
         }
 
         // =========================================================================
-        // 7. 遊戲主控制器 (GameController - v3.0 子彈配額生命制 & 6單位通道)
+        // 7. 遊戲主控制器 (GameController - v3.1 子彈配額生命制 & 6單位通道)
         // 整合鍵盤+觸控雙操作、2.5D 高效碰撞檢測、波次排程與 LocalStorage 存檔
         // =========================================================================
         class GameController {
+            /**
+             * 取得當前關卡數 S (無盡模式下每 45 秒遞增 1 階，遵循 GDD 4.2)
+             */
+            getEffectiveStage() {
+                if (this.mode === 'ENDLESS') {
+                    return 1 + Math.floor(this.gameTime / 45);
+                }
+                return this.currentStageId || 1;
+            }
+
+            /**
+             * 敵軍基礎血量縮放係數 M_HP(S) = 1.0 + 0.18 * (S - 1) (遵循 GDD 4.2)
+             */
+            getEnemyHpMultiplier() {
+                const s = this.getEffectiveStage();
+                return 1.0 + 0.18 * (s - 1);
+            }
+
+            /**
+             * 預分配輕量級 DOM 戰鬥飄字池 (100% 零迴圈內 DOM 配置與零 GC)
+             */
+            initFloatingTextPool() {
+                this.floatingTextLayer = document.getElementById('floating-text-layer');
+                this.floatingTextPool = [];
+                if (!this.floatingTextLayer) return;
+                this.floatingTextLayer.innerHTML = '';
+                for (let i = 0; i < 12; i++) {
+                    const el = document.createElement('div');
+                    el.className = 'floating-combat-text';
+                    this.floatingTextLayer.appendChild(el);
+                    this.floatingTextPool.push({
+                        el: el,
+                        active: false,
+                        screenX: 0,
+                        screenY: 0,
+                        vy: -55,
+                        life: 0,
+                        maxLife: 0.85
+                    });
+                }
+            }
+
+            /**
+             * 觸發 3D 座標投影之動態戰鬥飄字 (極限拆彈 / MAX 100! / 底線受擊扣額)
+             */
+            spawnFloatingText(text, color = '#ffd166', worldX = 0, worldY = 1.5, worldZ = 1.5) {
+                if (!this.floatingTextPool || this.floatingTextPool.length === 0) return;
+                let slot = null;
+                for (let i = 0; i < this.floatingTextPool.length; i++) {
+                    if (!this.floatingTextPool[i].active) {
+                        slot = this.floatingTextPool[i];
+                        break;
+                    }
+                }
+                if (!slot) slot = this.floatingTextPool[0];
+
+                _tempVec3.set(worldX, worldY, worldZ);
+                _tempVec3.project(this.threeScene.camera);
+                const halfW = window.innerWidth * 0.5;
+                const halfH = window.innerHeight * 0.5;
+                const sx = Math.max(60, Math.min(window.innerWidth - 60, (_tempVec3.x * halfW) + halfW));
+                const sy = Math.max(70, Math.min(window.innerHeight - 80, -(_tempVec3.y * halfH) + halfH));
+
+                slot.active = true;
+                slot.screenX = sx;
+                slot.screenY = sy;
+                slot.life = 0;
+                slot.maxLife = 0.85;
+                slot.el.innerText = text;
+                slot.el.style.color = color;
+                slot.el.style.opacity = '1';
+                slot.el.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -50%) scale(1.08)`;
+            }
+
+            /**
+             * 逐幀更新戰鬥飄字動畫 (零 GC)
+             */
+            updateFloatingTexts(dt) {
+                if (!this.floatingTextPool) return;
+                for (let i = 0; i < this.floatingTextPool.length; i++) {
+                    const item = this.floatingTextPool[i];
+                    if (!item.active) continue;
+                    item.life += dt;
+                    if (item.life >= item.maxLife) {
+                        item.active = false;
+                        item.el.style.opacity = '0';
+                        continue;
+                    }
+                    item.screenY += item.vy * dt;
+                    const progress = item.life / item.maxLife;
+                    const alpha = progress < 0.65 ? 1.0 : (1.0 - (progress - 0.65) / 0.35);
+                    const scale = progress < 0.2 ? (1.0 + progress * 0.9) : (1.18 - (progress - 0.2) * 0.2);
+                    item.el.style.opacity = alpha.toFixed(2);
+                    item.el.style.transform = `translate3d(${item.screenX.toFixed(1)}px, ${item.screenY.toFixed(1)}px, 0) translate(-50%, -50%) scale(${scale.toFixed(2)})`;
+                }
+            }
+
+            /**
+             * 記錄底線極限拆彈 (GDD 3.3 & 4.3: 敵軍已抵達底線啟動 attackTimer > 0 蓄力紅圈，但在攻擊前被擊殺)
+             */
+            recordDefuse(enemyX, enemyZ) {
+                this.defuseCount++;
+                soundFX.playDefuse();
+                this.spawnFloatingText('🛡️ 極限拆彈!', '#38bdf8', enemyX, 1.8, enemyZ);
+            }
+
+            /**
+             * 追蹤玩家在左路(Lane 1)、中路(Lanes 2~5)、右路(Lane 6)之間的戰術切換次數 (GDD 7.3 假設 2)
+             */
+            updateLaneZoneTracking() {
+                let nextZone = this.currentLaneZone;
+                if (this.cannonX >= 3.8) {
+                    nextZone = 'LEFT';
+                } else if (this.cannonX <= -3.8) {
+                    nextZone = 'RIGHT';
+                } else if (Math.abs(this.cannonX) <= 3.3) {
+                    nextZone = 'MID';
+                }
+                if (nextZone !== this.currentLaneZone) {
+                    this.currentLaneZone = nextZone;
+                    this.laneSwitches++;
+                }
+            }
+
+            /**
+             * 根據單局戰術指標評定「防線指揮官段位徽章」 (GDD 9.2)
+             */
+            evaluateCommanderRank(isVictory) {
+                const score =
+                    (isVictory ? 35 : 0) +
+                    this.pillarsDestroyed * 16 +
+                    this.maxCapTriggers * 14 +
+                    this.defuseCount * 8 +
+                    Math.min(25, Math.floor(this.killsCount * 0.5)) +
+                    Math.min(15, Math.floor(this.laneSwitches * 0.5));
+
+                if (score >= 115) return { tier: 4, title: '👑 王者防線指揮官' };
+                if (score >= 85)  return { tier: 3, title: '💎 鑽石戰神' };
+                if (score >= 55)  return { tier: 2, title: '🥇 黃金統帥' };
+                if (score >= 30)  return { tier: 1, title: '🥈 白銀先鋒' };
+                return { tier: 0, title: '🥉 青銅守衛' };
+            }
+
             showPowerUpToast(text, color = '#ffd166') {
                 if (this.themeToast) {
                     this.themeToast.innerText = text;
@@ -5012,6 +5273,12 @@
                 const prev = this.bulletQuota;
                 this.bulletQuota = Math.min(this.maxBulletQuota, this.bulletQuota + amount);
                 const reachedCap = (this.bulletQuota >= this.maxBulletQuota);
+                if (reachedCap && prev < this.maxBulletQuota) {
+                    this.maxCapTriggers++;
+                    this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.5, 1.5);
+                } else {
+                    this.spawnFloatingText(`+${amount} 配額`, '#4ade80', 5.0, 2.0, 2.0);
+                }
                 if (reachedCap && prev === this.maxBulletQuota) {
                     // 滿額溢出時額外加速英雄技能冷卻
                     this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.0);
@@ -5031,6 +5298,12 @@
             multiplyBulletQuota(mult) {
                 const prev = this.bulletQuota;
                 this.bulletQuota = Math.min(this.maxBulletQuota, Math.max(4, this.bulletQuota) * mult);
+                if (this.bulletQuota >= this.maxBulletQuota && prev < this.maxBulletQuota) {
+                    this.maxCapTriggers++;
+                    this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.6, 1.5);
+                } else {
+                    this.spawnFloatingText(`🔥 ×${mult}!`, '#ffd166', -5.0, 2.2, 2.0);
+                }
                 // 觸發 xN 時額外給予微幅技能冷卻回饋
                 this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.5);
                 this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.0);
@@ -5044,7 +5317,9 @@
              * 右側高血量阻擋柱被擊破時：釋放震退波推開中路敵軍並解鎖後方 xN 強化門
              */
             onPillarDestroyed(pillarObj) {
+                this.pillarsDestroyed++;
                 this.shakeAmount = Math.max(this.shakeAmount, 0.55);
+                this.spawnFloatingText('💥 破柱震波!', '#fbbf24', -5.0, 2.2, pillarObj ? pillarObj.z : 10.0);
                 // 震退中路靠近底線的敵軍並重置其攻擊蓄力計時
                 for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
                     const r = this.entityMgr.redList[j];
@@ -5076,6 +5351,7 @@
                 this.entityMgr.trimActiveBluesToQuota(this.bulletQuota);
                 this.shakeAmount = Math.min(0.9, 0.25 + dmg * 0.02);
                 soundFX.playHit();
+                this.spawnFloatingText(`-${dmg}`, '#ff385c', enemyX, 1.5, enemyZ);
                 this.entityMgr.spawnExplosion(enemyX, 0.9, enemyZ, 10);
                 this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
                 this.updateHUD();
@@ -5099,7 +5375,14 @@
                 this.gameTime = 0;
                 this.killsCount = 0;
 
-                // v3.0 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 100 顆)
+                // GDD 4.3 & 7.3 單局戰術指標追蹤
+                this.pillarsDestroyed = 0;
+                this.maxCapTriggers = 0;
+                this.defuseCount = 0;
+                this.laneSwitches = 0;
+                this.currentLaneZone = 'MID';
+
+                // v3.1 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 100 顆)
                 this.rowBulletWidth = 4;
                 this.maxBulletQuota = 100;
                 this.bulletQuota = 16;
@@ -5151,6 +5434,7 @@
                 }));
 
                 this.bindUI();
+                this.initFloatingTextPool();
                 this.bindInputs();
                 this.initTheme();
                 this.renderMenu();
@@ -5162,6 +5446,7 @@
             bindUI() {
                 this.hudCoins = document.getElementById('hud-coins');
                 this.hudShield = document.getElementById('hud-shield');
+                this.hudLastStand = document.getElementById('hud-last-stand');
                 this.hudModeTitle = document.getElementById('hud-mode-title');
                 this.hudSwarmCount = document.getElementById('hud-swarm-count');
                 this.levelProgressBar = document.getElementById('level-progress-bar');
@@ -5332,7 +5617,7 @@
                 }
 
                 document.getElementById('endless-record-text').innerText =
-                    `最高生存時間：${Math.floor(gameStorage.data.highSurvivalTime)} 秒 | 總擊殺：${gameStorage.data.highKills}`;
+                    `最高生存：${Math.floor(gameStorage.data.highSurvivalTime)} 秒 | 總擊殺：${gameStorage.data.highKills} | 破柱：${gameStorage.data.highPillars || 0} | 最高段位：${gameStorage.data.bestRankTitle || '🥉 青銅守衛'}`;
             }
 
             bindInputs() {
@@ -5343,7 +5628,14 @@
                 const updateCannonPos = (clientX) => {
                     const normX = (clientX / window.innerWidth) * 2 - 1;
                     // 相機從 -Z 望向 +Z 時，螢幕向右對應世界座標 -X，因此取反保證操作直覺一致
-                    this.targetCannonX = -normX * halfW;
+                    // GDD 9.1: 導入 1.15 倍橫向映射增益與邊緣通道磁吸輔助 (Edge Lane Magnetic Snap)
+                    let rawX = Math.max(-halfW, Math.min(halfW, -normX * halfW * 1.15));
+                    if (rawX >= 4.45) {
+                        rawX = 5.0;
+                    } else if (rawX <= -4.45) {
+                        rawX = -5.0;
+                    }
+                    this.targetCannonX = rawX;
                     const guide = document.getElementById('drag-guide');
                     if (guide) guide.style.opacity = '0';
                 };
@@ -5396,8 +5688,20 @@
                 this.state = 'PLAYING';
                 this.gameTime = 0;
                 this.killsCount = 0;
+                this.pillarsDestroyed = 0;
+                this.maxCapTriggers = 0;
+                this.defuseCount = 0;
+                this.laneSwitches = 0;
+                this.currentLaneZone = 'MID';
 
-                // v3.0 開局初始子彈配額(HP) = 16，同屏上限 = 100，單排寬度 = 4
+                if (this.floatingTextPool) {
+                    for (let i = 0; i < this.floatingTextPool.length; i++) {
+                        this.floatingTextPool[i].active = false;
+                        this.floatingTextPool[i].el.style.opacity = '0';
+                    }
+                }
+
+                // v3.1 開局初始子彈配額(HP) = 16，同屏上限 = 100，單排寬度 = 4
                 this.rowBulletWidth = 4;
                 this.maxBulletQuota = 100;
                 this.bulletQuota = 16;
@@ -5479,6 +5783,15 @@
                     soundFX.playDefeat();
                 }
 
+                const rankInfo = this.evaluateCommanderRank(isVictory);
+                if (this.pillarsDestroyed > (gameStorage.data.highPillars || 0)) {
+                    gameStorage.data.highPillars = this.pillarsDestroyed;
+                }
+                if (rankInfo.tier >= (gameStorage.data.bestRankTier || 0)) {
+                    gameStorage.data.bestRankTier = rankInfo.tier;
+                    gameStorage.data.bestRankTitle = rankInfo.title;
+                }
+
                 if (this.mode === 'ENDLESS') {
                     if (this.gameTime > gameStorage.data.highSurvivalTime) {
                         gameStorage.data.highSurvivalTime = this.gameTime;
@@ -5515,6 +5828,12 @@
 
                 document.getElementById('res-kills').innerText = this.killsCount;
                 document.getElementById('res-time').innerText = (this.mode === 'STAGE') ? '100%' : `${Math.floor(this.gameTime)} 秒`;
+                const elPillars = document.getElementById('res-pillars');
+                if (elPillars) elPillars.innerText = `${this.pillarsDestroyed} 柱 / ${this.maxCapTriggers} 次`;
+                const elDefuses = document.getElementById('res-defuses');
+                if (elDefuses) elDefuses.innerText = `${this.defuseCount} 次 / ${this.laneSwitches} 切`;
+                const elRank = document.getElementById('res-rank-badge');
+                if (elRank) elRank.innerText = rankInfo.title;
 
                 this.gameOverModal.classList.remove('hidden');
                 this.bossWarning.classList.remove('show');
@@ -5540,6 +5859,9 @@
                 if (this.hudShield) {
                     this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota}`;
                     this.hudShield.style.color = this.bulletQuota <= 8 ? '#ff4d6d' : (this.bulletQuota >= 80 ? '#4ade80' : '#ffffff');
+                }
+                if (this.hudLastStand) {
+                    this.hudLastStand.style.display = (this.bulletQuota > 0 && this.bulletQuota <= 8) ? 'inline-block' : 'none';
                 }
                 if (this.hudSwarmCount) {
                     this.hudSwarmCount.innerText = `${activeBlues} / ${this.bulletQuota}`;
@@ -5598,6 +5920,9 @@
                             soundFX.playHit();
 
                             if (r.hp <= 0) {
+                                if (r.attackTimer > 0) {
+                                    this.recordDefuse(r.x, r.z);
+                                }
                                 r.active = false;
                                 this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
                                 redChanged = true;
@@ -5631,6 +5956,9 @@
                                 this.entityMgr.spawnExplosion(g.x, g.y, g.z, 3);
                                 soundFX.playHit();
                                 if (g.hp <= 0) {
+                                    if (g.attackTimer > 0) {
+                                        this.recordDefuse(g.x, g.z);
+                                    }
                                     g.active = false;
                                     this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
                                     gargoyleChanged = true;
@@ -5664,6 +5992,9 @@
                                 soundFX.playHit();
 
                                 if (boss.hp <= 0) {
+                                    if (boss.attackTimer > 0) {
+                                        this.recordDefuse(boss.x, boss.z);
+                                    }
                                     boss.active = false;
                                     this.entityMgr.bossGroup.position.set(0, -999, 0);
                                     this.killsCount++;
@@ -5981,6 +6312,9 @@
                         r.hp -= 45.0 * dt;
                         this.entityMgr.spawnExplosion(r.x, 0.5, r.z, 2);
                         if (r.hp <= 0) {
+                            if (r.attackTimer > 0) {
+                                this.recordDefuse(r.x, r.z);
+                            }
                             r.active = false;
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.redMesh.setMatrixAt(j, _tempMatrix);
@@ -6002,6 +6336,9 @@
                         g.hp -= 45.0 * dt;
                         this.entityMgr.spawnExplosion(g.x, g.y, g.z, 2);
                         if (g.hp <= 0) {
+                            if (g.attackTimer > 0) {
+                                this.recordDefuse(g.x, g.z);
+                            }
                             g.active = false;
                             _tempMatrix.makeTranslation(0, -999, 0);
                             this.entityMgr.gargoyleMesh.setMatrixAt(k, _tempMatrix);
@@ -6023,6 +6360,9 @@
                     this.entityMgr.spawnExplosion(boss.x + (Math.random() - 0.5) * 1.2, 2.0, boss.z, 2);
                     this.entityMgr.updateBossHpBar();
                     if (boss.hp <= 0) {
+                        if (boss.attackTimer > 0) {
+                            this.recordDefuse(boss.x, boss.z);
+                        }
                         boss.active = false;
                         this.entityMgr.bossGroup.position.set(0, -999, 0);
                         this.killsCount++;
@@ -6175,6 +6515,9 @@
                             boss.z += 0.4;
                             this.entityMgr.updateBossHpBar();
                             if (boss.hp <= 0) {
+                                if (boss.attackTimer > 0) {
+                                    this.recordDefuse(boss.x, boss.z);
+                                }
                                 boss.active = false;
                                 this.entityMgr.bossGroup.position.set(0, -999, 0);
                                 this.killsCount++;
@@ -6184,6 +6527,9 @@
                         } else if (hitType === 'gargoyle' && hitRef) {
                             hitRef.hp -= 20;
                             if (hitRef.hp <= 0) {
+                                if (hitRef.attackTimer > 0) {
+                                    this.recordDefuse(hitRef.x, hitRef.z);
+                                }
                                 hitRef.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.gargoyleMesh.setMatrixAt(hitIndex, _tempMatrix);
@@ -6193,6 +6539,9 @@
                         } else if (hitType === 'red' && hitRef) {
                             hitRef.hp -= 20;
                             if (hitRef.hp <= 0) {
+                                if (hitRef.attackTimer > 0) {
+                                    this.recordDefuse(hitRef.x, hitRef.z);
+                                }
                                 hitRef.active = false;
                                 _tempMatrix.makeTranslation(0, -999, 0);
                                 this.entityMgr.redMesh.setMatrixAt(hitIndex, _tempMatrix);
@@ -6218,14 +6567,16 @@
                     if (this.keyMoveLeft) this.targetCannonX = Math.min(5.1, this.targetCannonX + keySpeed);
                     if (this.keyMoveRight) this.targetCannonX = Math.max(-5.1, this.targetCannonX - keySpeed);
 
-                    // 砲台水平平滑位移
+                    // 砲台水平平滑位移與戰術分區切換計數 (GDD 7.3)
                     this.cannonX += (this.targetCannonX - this.cannonX) * 18.0 * dt;
                     this.threeScene.cannonGroup.position.x = this.cannonX;
+                    this.updateLaneZoneTracking();
 
-                    // v3.0 單排 4 顆寬度 + 同屏總子彈配額上限控制
-                    // 瀕死狂暴機制：當子彈配額 <= 8 時，發射排距縮短、推進微幅加速
+                    // GDD 4.1 單排 4 顆寬度 + 同屏總子彈配額上限控制 (正常排間發射間隔 0.08s)
+                    // 瀕死狂暴保護 (Last Stand Buff)：當子彈配額 Q <= 8 時，出膛頻率與子彈飛行速度同步提升 +35%
                     const isLowQuota = (this.bulletQuota <= 8);
-                    const fireInterval = isLowQuota ? 0.065 : 0.095;
+                    const fireInterval = isLowQuota ? (0.08 / 1.35) : 0.08;
+                    const bulletVz = isLowQuota ? (14.5 * 1.35) : 14.5;
                     const activeBlues = this.entityMgr.getActiveBlueCount();
 
                     if (this.bulletQuota > 0 && activeBlues < this.bulletQuota && (time - this.lastShootTime >= fireInterval)) {
@@ -6236,7 +6587,7 @@
                             const spacing = 0.38; // 4 顆寬度約 1.14，精準塞入單一通道單位 (2.0) 內
                             for (let s = 0; s < canSpawn; s++) {
                                 const offset = (s - (canSpawn - 1) / 2) * spacing;
-                                this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.85, 0, 0);
+                                this.entityMgr.spawnBlueTroop(this.cannonX + offset, 0.85, 0, 0, bulletVz);
                             }
                             soundFX.playShoot();
                         }
@@ -6297,11 +6648,13 @@
                     this.handleCollisions();
                     this.updateUnibeamCollisions(dt);
                     this.updateMicroMissiles(dt);
+                    this.updateFloatingTexts(dt);
 
                     this.updateHUD();
                 } else {
                     this.updateHeroSkills(dt);
                     this.updateMicroMissiles(dt);
+                    this.updateFloatingTexts(dt);
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
                 }
