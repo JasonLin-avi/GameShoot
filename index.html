@@ -758,7 +758,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
         }
 
-        /* 滿編 100 顆達成：全螢幕邊緣藍金光暈層 (GDD 5.4 MAX 100! Golden Aura & Vignette) */
+        /* 滿編 150 顆達成：全螢幕邊緣藍金光暈層 (GDD 5.4 MAX 150! Golden Aura & Vignette) */
         #max-cap-vignette {
             position: absolute;
             top: 0;
@@ -1109,7 +1109,7 @@
 
     <!-- 戰鬥 HUD 層 -->
     <div id="ui-layer">
-        <!-- 滿編 100 顆達成：全螢幕邊緣藍金光暈層 -->
+        <!-- 滿編 150 顆達成：全螢幕邊緣藍金光暈層 -->
         <div id="max-cap-vignette"></div>
 
         <div class="hud-header">
@@ -1131,7 +1131,7 @@
                     <span class="badge-icon">🔋</span>
                     <span class="badge-txt hud-lbl-full">子彈配額(HP)：</span>
                     <span class="badge-txt hud-lbl-short">配額:</span>
-                    <span id="hud-shield" style="font-size:15px; color:#ffd166;">16 / 100</span>
+                    <span id="hud-shield" style="font-size:15px; color:#ffd166;">16 / 150</span>
                     <span id="hud-last-stand">
                         <span class="hud-lbl-full">🔥 瀕死狂暴 +35%</span>
                         <span class="hud-lbl-short">🔥 +35%</span>
@@ -1190,7 +1190,7 @@
     <div class="modal-overlay" id="main-menu-modal">
         <div class="modal-card">
             <h1>軍團防線：增殖衝擊</h1>
-            <p class="subtitle">Mob Defense: Swarm Rush (v3.1)<br>6通道分道戰術：左路回血、中路拆彈、右路破柱直衝 100 顆子彈上限！</p>
+            <p class="subtitle">Mob Defense: Swarm Rush (v3.1)<br>6通道分道戰術：左路回血、中路拆彈、右路破柱直衝 150 顆子彈上限！</p>
 
             <!-- 配色風格選擇器 -->
             <div class="theme-select-section" style="margin-bottom:10px; text-align:left;">
@@ -1222,7 +1222,7 @@
             <!-- 6 通道分道與子彈配額即血條即時導引 -->
             <div class="powerup-guide-card">
                 <div class="powerup-guide-title">
-                    <span>⚡</span> 6 通道戰術與「子彈配額即血條」規則 (上限 100 顆)
+                    <span>⚡</span> 6 通道戰術與「子彈配額即血條」規則 (上限 150 顆)
                 </div>
                 <div class="powerup-guide-grid">
                     <div class="powerup-guide-item powerup-item-green">
@@ -1231,11 +1231,11 @@
                     </div>
                     <div class="powerup-guide-item powerup-item-yellow">
                         <b>➡️ 右路(1單位)：石柱 + xN 門</b>
-                        <div>打掉停駐石柱，吃 x5/x10 直衝100！</div>
+                        <div>打掉停駐石柱，吃 x5/x10 直衝150！</div>
                     </div>
                     <div class="powerup-guide-item powerup-item-blue">
                         <b>🔋 子彈配額 = 血條 (HP)</b>
-                        <div>單排 4 顆 / 同屏上限 100，歸零失敗</div>
+                        <div>單排 4 顆 / 同屏上限 150，歸零失敗</div>
                     </div>
                     <div class="powerup-guide-item powerup-item-red">
                         <b>⚔️ 中路(4單位)：敵軍讀條攻擊</b>
@@ -1272,7 +1272,7 @@
                     <span style="font-weight:700;" id="res-time">100%</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px;">
-                    <span style="color:#8fa0b5;">擊破石柱 / 滿編 100 次數</span>
+                    <span style="color:#8fa0b5;">擊破石柱 / 滿編 150 次數</span>
                     <span style="font-weight:700; color:#ffd166;" id="res-pillars">0 柱 / 0 次</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:13px;">
@@ -3698,7 +3698,7 @@
                 this.quotaSprite.scale.set(2.4, 0.6, 1);
                 this.cannonGroup.add(this.quotaSprite);
                 this.lastRenderedQuota = -1;
-                this.updateQuotaBadge(16, 100);
+                this.updateQuotaBadge(16, 150);
 
                 // 鋼鐵人運動學與姿態快取狀態 (零 GC 記憶體配置，遵守 three-best-practices)
                 this.recoilTimer = 0;
@@ -3723,7 +3723,7 @@
                 this.updateCannonBarrels(2);
             }
 
-            updateQuotaBadge(quota = 16, maxQuota = 100) {
+            updateQuotaBadge(quota = 16, maxQuota = 150) {
                 if (this.lastRenderedQuota === quota) return;
                 this.lastRenderedQuota = quota;
                 if (!this.quotaCtx) return;
@@ -3732,7 +3732,7 @@
                 ctx.clearRect(0, 0, 256, 64);
 
                 const ratio = Math.max(0, Math.min(1, quota / maxQuota));
-                const barColor = (quota <= 12) ? '#ff385c' : (quota >= 80 ? '#ffd166' : '#00f0ff');
+                const barColor = (quota <= 12) ? '#ff385c' : (quota >= (maxQuota * 0.8) ? '#ffd166' : '#00f0ff');
 
                 // 外框底板
                 ctx.fillStyle = 'rgba(10, 18, 32, 0.88)';
@@ -4191,13 +4191,13 @@
             constructor(scene) {
                 this.scene = scene;
 
-                this.MAX_BLUE = 120; // 同屏子彈最高上限 100 顆 (預留 120 物件池，0 GC)
+                this.MAX_BLUE = 180; // 同屏子彈最高上限 150 顆 (預留 180 物件池，0 GC)
                 this.MAX_RED = 400;
                 this.MAX_GARGOYLES = 100;
                 this.MAX_PARTICLES = 300;
                 this.MAX_STATUS_BARS = 500;
 
-                // 預分配 MAX 100 滿編狂暴金色流光脈衝所需之色彩實例，確保渲染迴圈內 100% 零記憶體配置
+                // 預分配 MAX 150 滿編狂暴金色流光脈衝所需之色彩實例，確保渲染迴圈內 100% 零記憶體配置
                 this.baseBlueColor = new THREE.Color(0x00f0ff);
                 this.baseBlueEmissive = new THREE.Color(0x002c4c);
                 this.maxGoldColor = new THREE.Color(0xffd166);
@@ -4875,7 +4875,7 @@
                 }
                 this.particleMesh.instanceMatrix.needsUpdate = true;
 
-                // 重置破柱衝擊波、底線危險警報帶與 MAX 100 金色流光材質狀態
+                // 重置破柱衝擊波、底線危險警報帶與 MAX 150 金色流光材質狀態
                 if (this.shockwaveState) {
                     this.shockwaveState.active = false;
                     this.shockwaveState.timer = 0;
@@ -4936,8 +4936,8 @@
                     this.laneDangerLevel[3] = 0;
                 }
 
-                // 0. 滿編 100 顆達成：藍軍彈幕金色流光高能脈衝 (GDD 5.1 & 5.4, 零 GC Color 插值)
-                const isMaxQuota = Boolean(this.game && this.game.state === 'PLAYING' && this.game.bulletQuota >= 100);
+                // 0. 滿編 150 顆達成：藍軍彈幕金色流光高能脈衝 (GDD 5.1 & 5.4, 零 GC Color 插值)
+                const isMaxQuota = Boolean(this.game && this.game.state === 'PLAYING' && this.game.bulletQuota >= (this.game.maxBulletQuota || 150));
                 if (isMaxQuota && this.blueMesh && this.blueMesh.material) {
                     this.wasMaxQuotaAura = true;
                     this.auraPulseTimer += dt * 11.0;
@@ -5883,7 +5883,7 @@
             }
 
             /**
-             * 觸發 3D 座標投影之動態戰鬥飄字 (極限拆彈 / MAX 100! / 底線受擊扣額)
+             * 觸發 3D 座標投影之動態戰鬥飄字 (極限拆彈 / MAX 150! / 底線受擊扣額)
              */
             spawnFloatingText(text, color = '#ffd166', worldX = 0, worldY = 1.5, worldZ = 1.5) {
                 if (!this.floatingTextPool || this.floatingTextPool.length === 0) return;
@@ -5996,7 +5996,7 @@
             }
 
             /**
-             * 觸發滿編 100 顆達成之全螢幕邊緣藍金光暈爆發脈衝 (GDD 5.4 MAX 100! Vignette)
+             * 觸發滿編 150 顆達成之全螢幕邊緣藍金光暈爆發脈衝 (GDD 5.4 MAX 150! Vignette)
              */
             triggerMaxCapVignetteBurst() {
                 if (!this.maxCapVignette) return;
@@ -6011,7 +6011,7 @@
             }
 
             /**
-             * 左側 +N 強化門觸發：增加同屏子彈配額 (上限 100)
+             * 左側 +N 強化門觸發：增加同屏子彈配額 (上限 150)
              */
             addBulletQuota(amount) {
                 const prev = this.bulletQuota;
@@ -6019,7 +6019,7 @@
                 const reachedCap = (this.bulletQuota >= this.maxBulletQuota);
                 if (reachedCap && prev < this.maxBulletQuota) {
                     this.maxCapTriggers++;
-                    this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.5, 1.5);
+                    this.spawnFloatingText(`🔥 MAX ${this.maxBulletQuota}!`, '#ffd166', this.cannonX, 2.5, 1.5);
                     this.triggerMaxCapVignetteBurst();
                 } else {
                     this.spawnFloatingText(`+${amount} 配額`, '#4ade80', 5.0, 2.0, 2.0);
@@ -6029,7 +6029,7 @@
                     this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.0);
                     this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 1.5);
                     this.updateHeroSkillsHUD();
-                    this.showPowerUpToast(`🟢 +${amount} 配額已達上限 100！溢出能量加速技能冷卻！`, '#10b981');
+                    this.showPowerUpToast(`🟢 +${amount} 配額已達上限 ${this.maxBulletQuota}！溢出能量加速技能冷卻！`, '#10b981');
                 } else {
                     this.showPowerUpToast(`🟢 強化門 +${amount}！子彈配額(HP): ${prev} ➔ ${this.bulletQuota} / ${this.maxBulletQuota}`, '#10b981');
                 }
@@ -6038,14 +6038,14 @@
             }
 
             /**
-             * 右側 xN 強化門觸發：倍增同屏子彈配額 (上限 100)
+             * 右側 xN 強化門觸發：倍增同屏子彈配額 (上限 150)
              */
             multiplyBulletQuota(mult) {
                 const prev = this.bulletQuota;
                 this.bulletQuota = Math.min(this.maxBulletQuota, Math.max(4, this.bulletQuota) * mult);
                 if (this.bulletQuota >= this.maxBulletQuota && prev < this.maxBulletQuota) {
                     this.maxCapTriggers++;
-                    this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.6, 1.5);
+                    this.spawnFloatingText(`🔥 MAX ${this.maxBulletQuota}!`, '#ffd166', this.cannonX, 2.6, 1.5);
                     this.triggerMaxCapVignetteBurst();
                 } else {
                     this.spawnFloatingText(`🔥 ×${mult}!`, '#ffd166', -5.0, 2.2, 2.0);
@@ -6132,9 +6132,9 @@
                 this.laneSwitches = 0;
                 this.currentLaneZone = 'MID';
 
-                // v3.1 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 100 顆)
+                // v3.1 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 150 顆)
                 this.rowBulletWidth = 4;
-                this.maxBulletQuota = 100;
+                this.maxBulletQuota = 150;
                 this.bulletQuota = 16;
 
                 // 局內固定 4 管齊射 (對應單排 4 顆寬度)
@@ -6452,9 +6452,9 @@
                     }
                 }
 
-                // v3.1 開局初始子彈配額(HP) = 16，同屏上限 = 100，單排寬度 = 4
+                // v3.1 開局初始子彈配額(HP) = 16，同屏上限 = 150，單排寬度 = 4
                 this.rowBulletWidth = 4;
-                this.maxBulletQuota = 100;
+                this.maxBulletQuota = 150;
                 this.bulletQuota = 16;
                 this.inRunBarrels = 4;
                 this.inRunRateTier = 1;
@@ -6624,7 +6624,7 @@
 
                 if (this.hudShield) {
                     this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota}`;
-                    this.hudShield.style.color = this.bulletQuota <= 8 ? '#ff4d6d' : (this.bulletQuota >= 80 ? '#4ade80' : '#ffffff');
+                    this.hudShield.style.color = this.bulletQuota <= 8 ? '#ff4d6d' : (this.bulletQuota >= (this.maxBulletQuota * 0.8) ? '#4ade80' : '#ffffff');
                 }
                 if (this.hudLastStand) {
                     this.hudLastStand.style.display = (this.bulletQuota > 0 && this.bulletQuota <= 8) ? 'inline-block' : 'none';
@@ -7446,7 +7446,7 @@
                 this.threeScene.renderer.render(this.threeScene.scene, this.threeScene.camera);
 
                 const totalEntities = this.entityMgr.getActiveBlueCount();
-                this.debugStats.innerText = `Calls: ${this.threeScene.renderer.info.render.calls} | Quota(HP): ${this.bulletQuota}/100 | Blues: ${totalEntities}`;
+                this.debugStats.innerText = `Calls: ${this.threeScene.renderer.info.render.calls} | Quota(HP): ${this.bulletQuota}/${this.maxBulletQuota} | Blues: ${totalEntities}`;
             }
         }
 
