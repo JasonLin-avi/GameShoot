@@ -719,6 +719,53 @@
             justify-content: space-between;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
         }
+
+        /* 滿編 100 顆達成：全螢幕邊緣藍金光暈層 (GDD 5.4 MAX 100! Golden Aura & Vignette) */
+        #max-cap-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 12;
+            opacity: 0;
+            box-shadow: inset 0 0 45px rgba(255, 209, 102, 0.55), inset 0 0 90px rgba(0, 240, 255, 0.38);
+            border: 2px solid rgba(255, 209, 102, 0.65);
+            transition: opacity 0.3s ease;
+        }
+
+        #max-cap-vignette.max-active {
+            opacity: 1;
+            animation: max-cap-breathe 1.1s infinite alternate ease-in-out;
+        }
+
+        #max-cap-vignette.max-burst {
+            opacity: 1;
+            animation: max-cap-flash 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes max-cap-breathe {
+            from {
+                box-shadow: inset 0 0 28px rgba(255, 209, 102, 0.38), inset 0 0 60px rgba(0, 240, 255, 0.22);
+                border-color: rgba(255, 209, 102, 0.45);
+            }
+            to {
+                box-shadow: inset 0 0 56px rgba(255, 209, 102, 0.78), inset 0 0 110px rgba(0, 240, 255, 0.48);
+                border-color: rgba(255, 230, 138, 0.92);
+            }
+        }
+
+        @keyframes max-cap-flash {
+            0% {
+                box-shadow: inset 0 0 115px rgba(255, 209, 102, 0.98), inset 0 0 185px rgba(0, 240, 255, 0.88);
+                border-color: #ffffff;
+            }
+            100% {
+                box-shadow: inset 0 0 45px rgba(255, 209, 102, 0.55), inset 0 0 90px rgba(0, 240, 255, 0.38);
+                border-color: rgba(255, 209, 102, 0.65);
+            }
+        }
     </style>
 </head>
 <body>
@@ -727,6 +774,9 @@
 
     <!-- 戰鬥 HUD 層 -->
     <div id="ui-layer">
+        <!-- 滿編 100 顆達成：全螢幕邊緣藍金光暈層 -->
+        <div id="max-cap-vignette"></div>
+
         <div class="hud-header">
             <div class="hud-left">
                 <div class="stat-badge" id="hud-firepower-badge" style="color: #00f0ff; font-weight:800; border:1px solid rgba(0,240,255,0.45); background:rgba(0,240,255,0.12);">
@@ -3804,12 +3854,22 @@
                 this.MAX_PARTICLES = 300;
                 this.MAX_STATUS_BARS = 500;
 
+                // 預分配 MAX 100 滿編狂暴金色流光脈衝所需之色彩實例，確保渲染迴圈內 100% 零記憶體配置
+                this.baseBlueColor = new THREE.Color(0x00f0ff);
+                this.baseBlueEmissive = new THREE.Color(0x002c4c);
+                this.maxGoldColor = new THREE.Color(0xffd166);
+                this.maxGoldEmissive = new THREE.Color(0xb45309);
+                this.wasMaxQuotaAura = false;
+                this.auraPulseTimer = 0;
+
                 this.initBlueTroops();
                 this.initRedTroops();
                 this.initGargoyles();
                 this.initBoss();
                 this.initParticles();
                 this.initEnemyStatusMeshes();
+                this.initPillarShockwave();
+                this.initFrontlineDangerAlerts();
             }
 
             initBlueTroops() {
@@ -4058,8 +4118,115 @@
                 this.attackRingMesh.instanceMatrix.needsUpdate = true;
             }
 
+            /**
+             * 預先建立破柱瞬間 3D 金色橫向衝擊波物件 (Pillar Shockwave, GDD 5.4 & 9.3)
+             * 為了在破柱時提供無 GC 的視覺震撼反饋，預分配爆心擴散光環與橫掃中路 4 通道的金色能量波
+             */
+            initPillarShockwave() {
+                this.pillarShockwaveGroup = new THREE.Group();
+                this.pillarShockwaveGroup.visible = false;
+
+                // 1. 右路石柱爆心擴散光環
+                const ringGeo = new THREE.RingGeometry(0.45, 1.15, 28);
+                ringGeo.rotateX(-Math.PI / 2);
+                this.shockwaveRingMat = new THREE.MeshBasicMaterial({
+                    color: 0xffd166,
+                    transparent: true,
+                    opacity: 0,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                this.shockwaveRingMesh = new THREE.Mesh(ringGeo, this.shockwaveRingMat);
+                this.shockwaveRingMesh.position.set(-5.0, 0.12, 10.0);
+                this.pillarShockwaveGroup.add(this.shockwaveRingMesh);
+
+                // 2. 橫跨中路 4 通道的掃蕩能量波底層光暈與核心光刃
+                const sweepGeo = new THREE.PlaneGeometry(9.6, 2.8);
+                sweepGeo.rotateX(-Math.PI / 2);
+                this.shockwaveSweepMat = new THREE.MeshBasicMaterial({
+                    color: 0xfbbf24,
+                    transparent: true,
+                    opacity: 0,
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                this.shockwaveSweepMesh = new THREE.Mesh(sweepGeo, this.shockwaveSweepMat);
+                this.shockwaveSweepMesh.position.set(-4.5, 0.10, 5.5);
+                this.pillarShockwaveGroup.add(this.shockwaveSweepMesh);
+
+                const coreGeo = new THREE.BoxGeometry(9.2, 0.28, 0.55);
+                this.shockwaveCoreMat = new THREE.MeshBasicMaterial({
+                    color: 0xfffbeb,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                this.shockwaveCoreMesh = new THREE.Mesh(coreGeo, this.shockwaveCoreMat);
+                this.shockwaveCoreMesh.position.set(-4.5, 0.24, 5.5);
+                this.pillarShockwaveGroup.add(this.shockwaveCoreMesh);
+
+                this.scene.add(this.pillarShockwaveGroup);
+
+                this.shockwaveState = {
+                    active: false,
+                    timer: 0,
+                    duration: 0.55,
+                    startZ: 10.0
+                };
+            }
+
+            /**
+             * 啟動破柱 3D 金色橫向衝擊波動畫 (持續 0.55 秒，零記憶體配置)
+             */
+            triggerPillarShockwave(pillarZ = 10.0) {
+                if (!this.pillarShockwaveGroup) return;
+                this.shockwaveState.active = true;
+                this.shockwaveState.timer = 0;
+                this.shockwaveState.startZ = pillarZ;
+                this.pillarShockwaveGroup.visible = true;
+                this.shockwaveRingMesh.position.set(-5.0, 0.12, pillarZ);
+                this.shockwaveRingMesh.scale.set(1, 1, 1);
+                this.shockwaveSweepMesh.position.set(-4.5, 0.10, 2.2);
+                this.shockwaveCoreMesh.position.set(-4.5, 0.24, 2.2);
+            }
+
+            /**
+             * 預先建立中路 4 通道底線蓄力紅光警報帶 (Frontline Lane Danger Alert, GDD 5.2 & 9.3)
+             * 為避免渲染迴圈內動態產生幾何體，預先對中路 4 通道建立 4 塊 AdditiveBlending 警戒光帶
+             */
+            initFrontlineDangerAlerts() {
+                this.MID_LANE_CENTERS = [-3.0, -1.0, 1.0, 3.0];
+                this.laneDangerLevel = [0, 0, 0, 0];
+                this.laneDangerMeshes = [];
+                this.dangerPulseTimer = 0;
+
+                const alertGeo = new THREE.PlaneGeometry(1.88, 0.75);
+                alertGeo.rotateX(-Math.PI / 2);
+
+                for (let i = 0; i < 4; i++) {
+                    const alertMat = new THREE.MeshBasicMaterial({
+                        color: 0xff2a4d,
+                        transparent: true,
+                        opacity: 0,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    });
+                    const alertMesh = new THREE.Mesh(alertGeo, alertMat);
+                    alertMesh.position.set(this.MID_LANE_CENTERS[i], 0.06, 1.15);
+                    alertMesh.visible = false;
+                    this.scene.add(alertMesh);
+                    this.laneDangerMeshes.push(alertMesh);
+                }
+            }
+
             applyTheme(theme) {
                 if (!theme) return;
+                if (this.baseBlueColor) this.baseBlueColor.set(theme.blueTroopColor);
+                if (this.baseBlueEmissive) this.baseBlueEmissive.set(theme.blueTroopEmissive);
                 if (this.blueMesh && this.blueMesh.material) {
                     this.blueMesh.material.color.set(theme.blueTroopColor);
                     this.blueMesh.material.emissive.set(theme.blueTroopEmissive);
@@ -4317,6 +4484,32 @@
                     this.particleMesh.setMatrixAt(i, _tempMatrix);
                 }
                 this.particleMesh.instanceMatrix.needsUpdate = true;
+
+                // 重置破柱衝擊波、底線危險警報帶與 MAX 100 金色流光材質狀態
+                if (this.shockwaveState) {
+                    this.shockwaveState.active = false;
+                    this.shockwaveState.timer = 0;
+                }
+                if (this.pillarShockwaveGroup) {
+                    this.pillarShockwaveGroup.visible = false;
+                }
+                if (this.laneDangerLevel) {
+                    this.laneDangerLevel[0] = 0;
+                    this.laneDangerLevel[1] = 0;
+                    this.laneDangerLevel[2] = 0;
+                    this.laneDangerLevel[3] = 0;
+                }
+                if (this.laneDangerMeshes) {
+                    for (let i = 0; i < this.laneDangerMeshes.length; i++) {
+                        this.laneDangerMeshes[i].visible = false;
+                        this.laneDangerMeshes[i].material.opacity = 0;
+                    }
+                }
+                if (this.wasMaxQuotaAura && this.blueMesh && this.blueMesh.material) {
+                    this.wasMaxQuotaAura = false;
+                    this.blueMesh.material.color.copy(this.baseBlueColor);
+                    this.blueMesh.material.emissive.copy(this.baseBlueEmissive);
+                }
             }
 
             getActiveBlueCount() {
@@ -4344,6 +4537,28 @@
                 const frontlineZ = 1.45;
                 let hpBarIdx = 0;
                 let ringIdx = 0;
+
+                // 重置中路 4 通道底線警戒危險度 (固定預分配陣列，零 GC)
+                if (this.laneDangerLevel) {
+                    this.laneDangerLevel[0] = 0;
+                    this.laneDangerLevel[1] = 0;
+                    this.laneDangerLevel[2] = 0;
+                    this.laneDangerLevel[3] = 0;
+                }
+
+                // 0. 滿編 100 顆達成：藍軍彈幕金色流光高能脈衝 (GDD 5.1 & 5.4, 零 GC Color 插值)
+                const isMaxQuota = Boolean(this.game && this.game.state === 'PLAYING' && this.game.bulletQuota >= 100);
+                if (isMaxQuota && this.blueMesh && this.blueMesh.material) {
+                    this.wasMaxQuotaAura = true;
+                    this.auraPulseTimer += dt * 11.0;
+                    const pulse = 0.5 + 0.5 * Math.sin(this.auraPulseTimer);
+                    this.blueMesh.material.color.copy(this.baseBlueColor).lerp(this.maxGoldColor, 0.25 + pulse * 0.65);
+                    this.blueMesh.material.emissive.copy(this.baseBlueEmissive).lerp(this.maxGoldEmissive, 0.35 + pulse * 0.65);
+                } else if (this.wasMaxQuotaAura && this.blueMesh && this.blueMesh.material) {
+                    this.wasMaxQuotaAura = false;
+                    this.blueMesh.material.color.copy(this.baseBlueColor);
+                    this.blueMesh.material.emissive.copy(this.baseBlueEmissive);
+                }
 
                 // 1. 更新藍軍子彈 (嚴格直直向前推進，超出戰場 Z > 42 釋放同屏配額以便後排補射)
                 for (let i = 0; i < this.MAX_BLUE; i++) {
@@ -4384,8 +4599,12 @@
                             // 抵達防線：累加攻擊等待時間並顯示腳下蓄力紅圈
                             if (this.game && this.game.state === 'PLAYING') {
                                 u.attackTimer += dt;
+                                const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
+                                if (progress >= 0.65 && this.laneDangerLevel) {
+                                    const lIdx = Math.max(0, Math.min(3, Math.floor((u.x + 4.0) * 0.5)));
+                                    if (progress > this.laneDangerLevel[lIdx]) this.laneDangerLevel[lIdx] = progress;
+                                }
                                 if (ringIdx < 120) {
-                                    const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
                                     const rScale = (u.isElite ? 1.35 : 0.85) * (0.35 + progress * 0.85);
                                     _dummy.position.set(u.x, 0.04, u.z);
                                     _dummy.rotation.set(0, 0, 0);
@@ -4435,8 +4654,12 @@
                             u.z = frontlineZ + 0.1;
                             if (this.game && this.game.state === 'PLAYING') {
                                 u.attackTimer += dt;
+                                const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
+                                if (progress >= 0.65 && this.laneDangerLevel) {
+                                    const lIdx = Math.max(0, Math.min(3, Math.floor((u.x + 4.0) * 0.5)));
+                                    if (progress > this.laneDangerLevel[lIdx]) this.laneDangerLevel[lIdx] = progress;
+                                }
                                 if (ringIdx < 120) {
-                                    const progress = Math.min(1.0, u.attackTimer / u.attackInterval);
                                     const rScale = 0.95 * (0.35 + progress * 0.85);
                                     _dummy.position.set(u.x, 0.04, u.z);
                                     _dummy.rotation.set(0, 0, 0);
@@ -4501,8 +4724,12 @@
                         this.boss.z = 2.2;
                         if (this.game && this.game.state === 'PLAYING') {
                             this.boss.attackTimer += dt;
+                            const progress = Math.min(1.0, this.boss.attackTimer / this.boss.attackInterval);
+                            if (progress >= 0.65 && this.laneDangerLevel) {
+                                if (progress > this.laneDangerLevel[1]) this.laneDangerLevel[1] = progress;
+                                if (progress > this.laneDangerLevel[2]) this.laneDangerLevel[2] = progress;
+                            }
                             if (ringIdx < 120) {
-                                const progress = Math.min(1.0, this.boss.attackTimer / this.boss.attackInterval);
                                 const rScale = 2.4 * (0.35 + progress * 0.90);
                                 _dummy.position.set(this.boss.x, 0.05, this.boss.z);
                                 _dummy.rotation.set(0, 0, 0);
@@ -4542,7 +4769,55 @@
                 }
                 this.attackRingMesh.instanceMatrix.needsUpdate = true;
 
-                // 5. 更新踏步震波環物件池
+                // 5. 更新中路 4 通道底線 70% 蓄力紅光警報帶 (GDD 5.2 & 9.3, 零 GC)
+                if (this.laneDangerMeshes && this.laneDangerLevel) {
+                    this.dangerPulseTimer += dt * 26.0;
+                    const flashWave = 0.5 + 0.5 * Math.sin(this.dangerPulseTimer);
+                    for (let l = 0; l < 4; l++) {
+                        const lvl = this.laneDangerLevel[l];
+                        const alertMesh = this.laneDangerMeshes[l];
+                        if (lvl >= 0.65) {
+                            alertMesh.visible = true;
+                            alertMesh.material.opacity = 0.28 + flashWave * 0.62;
+                            alertMesh.scale.set(1.0, 1.0, 1.0 + flashWave * 0.28);
+                        } else if (alertMesh.visible) {
+                            alertMesh.visible = false;
+                            alertMesh.material.opacity = 0;
+                        }
+                    }
+                }
+
+                // 6. 更新破柱瞬間 3D 金色橫向衝擊波動畫 (GDD 5.4 & 9.3, 零 GC)
+                if (this.shockwaveState && this.shockwaveState.active && this.pillarShockwaveGroup) {
+                    this.shockwaveState.timer += dt;
+                    const prog = this.shockwaveState.timer / this.shockwaveState.duration;
+                    if (prog >= 1.0) {
+                        this.shockwaveState.active = false;
+                        this.pillarShockwaveGroup.visible = false;
+                    } else {
+                        const easeOut = 1.0 - (1.0 - prog) * (1.0 - prog);
+                        const fade = 1.0 - prog;
+
+                        // 右路石柱爆心擴散光環
+                        const ringScale = 1.0 + easeOut * 6.8;
+                        this.shockwaveRingMesh.scale.set(ringScale, 1, ringScale);
+                        this.shockwaveRingMat.opacity = fade * 0.90;
+
+                        // 橫跨中路 4 通道掃蕩能量波與核心光刃
+                        const sweepX = -4.2 + easeOut * 4.6;
+                        const sweepZ = 2.0 + easeOut * 7.5;
+                        const sweepScaleX = 0.40 + easeOut * 0.72;
+                        this.shockwaveSweepMesh.position.set(sweepX, 0.10, sweepZ);
+                        this.shockwaveSweepMesh.scale.set(sweepScaleX, 1, 1.0 + prog * 0.45);
+                        this.shockwaveSweepMat.opacity = fade * 0.68;
+
+                        this.shockwaveCoreMesh.position.set(sweepX, 0.24, sweepZ);
+                        this.shockwaveCoreMesh.scale.set(sweepScaleX, 1, 1);
+                        this.shockwaveCoreMat.opacity = fade * 0.92;
+                    }
+                }
+
+                // 7. 更新踏步震波環物件池
                 if (this.stompRingsPool) {
                     this.stompRingsPool.update(dt);
                 }
@@ -5267,6 +5542,21 @@
             }
 
             /**
+             * 觸發滿編 100 顆達成之全螢幕邊緣藍金光暈爆發脈衝 (GDD 5.4 MAX 100! Vignette)
+             */
+            triggerMaxCapVignetteBurst() {
+                if (!this.maxCapVignette) return;
+                this.maxCapVignette.classList.remove('max-burst');
+                this.maxCapVignette.classList.add('max-active', 'max-burst');
+                if (this.vignetteBurstTimer) clearTimeout(this.vignetteBurstTimer);
+                this.vignetteBurstTimer = setTimeout(() => {
+                    if (this.maxCapVignette) {
+                        this.maxCapVignette.classList.remove('max-burst');
+                    }
+                }, 650);
+            }
+
+            /**
              * 左側 +N 強化門觸發：增加同屏子彈配額 (上限 100)
              */
             addBulletQuota(amount) {
@@ -5276,6 +5566,7 @@
                 if (reachedCap && prev < this.maxBulletQuota) {
                     this.maxCapTriggers++;
                     this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.5, 1.5);
+                    this.triggerMaxCapVignetteBurst();
                 } else {
                     this.spawnFloatingText(`+${amount} 配額`, '#4ade80', 5.0, 2.0, 2.0);
                 }
@@ -5301,6 +5592,7 @@
                 if (this.bulletQuota >= this.maxBulletQuota && prev < this.maxBulletQuota) {
                     this.maxCapTriggers++;
                     this.spawnFloatingText('🔥 MAX 100!', '#ffd166', this.cannonX, 2.6, 1.5);
+                    this.triggerMaxCapVignetteBurst();
                 } else {
                     this.spawnFloatingText(`🔥 ×${mult}!`, '#ffd166', -5.0, 2.2, 2.0);
                 }
@@ -5319,7 +5611,11 @@
             onPillarDestroyed(pillarObj) {
                 this.pillarsDestroyed++;
                 this.shakeAmount = Math.max(this.shakeAmount, 0.55);
-                this.spawnFloatingText('💥 破柱震波!', '#fbbf24', -5.0, 2.2, pillarObj ? pillarObj.z : 10.0);
+                const pZ = pillarObj ? pillarObj.z : 10.0;
+                this.spawnFloatingText('💥 破柱震波!', '#fbbf24', -5.0, 2.2, pZ);
+                if (this.entityMgr && this.entityMgr.triggerPillarShockwave) {
+                    this.entityMgr.triggerPillarShockwave(pZ);
+                }
                 // 震退中路靠近底線的敵軍並重置其攻擊蓄力計時
                 for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
                     const r = this.entityMgr.redList[j];
@@ -5447,6 +5743,7 @@
                 this.hudCoins = document.getElementById('hud-coins');
                 this.hudShield = document.getElementById('hud-shield');
                 this.hudLastStand = document.getElementById('hud-last-stand');
+                this.maxCapVignette = document.getElementById('max-cap-vignette');
                 this.hudModeTitle = document.getElementById('hud-mode-title');
                 this.hudSwarmCount = document.getElementById('hud-swarm-count');
                 this.levelProgressBar = document.getElementById('level-progress-bar');
@@ -5736,6 +6033,9 @@
                 this.mainMenuModal.classList.add('hidden');
                 this.gameOverModal.classList.add('hidden');
                 this.bossWarning.classList.remove('show');
+                if (this.maxCapVignette) {
+                    this.maxCapVignette.classList.remove('max-active', 'max-burst');
+                }
 
                 if (this.mode === 'STAGE') {
                     const cfg = STAGE_CONFIGS[this.currentStageId - 1];
@@ -5837,12 +6137,24 @@
 
                 this.gameOverModal.classList.remove('hidden');
                 this.bossWarning.classList.remove('show');
+                if (this.maxCapVignette) {
+                    this.maxCapVignette.classList.remove('max-active', 'max-burst');
+                }
             }
 
             updateHUD() {
                 const activeBlues = this.entityMgr.getActiveBlueCount();
                 const fpEl = document.getElementById('hud-firepower');
                 if (fpEl) fpEl.innerText = `${this.rowBulletWidth} 顆`;
+
+                if (this.maxCapVignette) {
+                    const isMaxActive = (this.state === 'PLAYING' && this.bulletQuota >= this.maxBulletQuota);
+                    if (isMaxActive && !this.maxCapVignette.classList.contains('max-active')) {
+                        this.maxCapVignette.classList.add('max-active');
+                    } else if (!isMaxActive && this.maxCapVignette.classList.contains('max-active')) {
+                        this.maxCapVignette.classList.remove('max-active', 'max-burst');
+                    }
+                }
 
                 const odEl = document.getElementById('hud-overdrive');
                 if (odEl && this.gateMgr) {
