@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>軍團防線：增殖衝擊 (Mob Defense: Swarm Rush v3.1)</title>
     <style>
         :root {
@@ -104,13 +104,31 @@
 
         /* 頂部 HUD 狀態列 */
         .hud-header {
-            padding: 12px 18px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: var(--hud-bg);
             pointer-events: auto;
             transition: background 0.3s ease;
+            width: 100%;
+        }
+
+        .hud-top-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            order: 2;
+            flex: 1;
+            max-width: 480px;
+            justify-content: flex-end;
+        }
+
+        .hud-stats-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            order: 1;
         }
 
         .hud-left, .hud-right {
@@ -133,6 +151,7 @@
             gap: 5px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             color: var(--text-color);
+            white-space: nowrap;
         }
 
         .stat-badge.coins {
@@ -144,13 +163,19 @@
             color: var(--primary-blue);
         }
 
+        .badge-icon {
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+        }
+
         .hud-center {
             display: flex;
             flex-direction: column;
             align-items: center;
             flex: 1;
             max-width: 260px;
-            margin: 0 12px;
+            margin: 0;
         }
 
         .hud-title {
@@ -178,6 +203,12 @@
         }
 
         /* 快速控制鍵 (主題/音效) */
+        .hud-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
         .icon-btn {
             background: var(--card-inner-bg);
             border: 1px solid var(--glass-border);
@@ -198,6 +229,13 @@
         }
         .icon-btn:active {
             transform: scale(0.92);
+        }
+
+        .hud-lbl-short {
+            display: none !important;
+        }
+        .hud-lbl-full {
+            display: inline !important;
         }
 
         /* 主題切換 Toast 提示 */
@@ -766,6 +804,303 @@
                 border-color: rgba(255, 209, 102, 0.65);
             }
         }
+
+        /* 說明方塊 (Powerup Guide Card) 樣式 */
+        .powerup-guide-card {
+            background: var(--card-inner-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .powerup-guide-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--gold-accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .powerup-guide-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .powerup-guide-item {
+            padding: 7px 9px;
+            border-radius: 9px;
+        }
+
+        .powerup-guide-item div {
+            color: var(--subtext-color);
+            font-size: 10px;
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+
+        .powerup-item-green {
+            background: rgba(74, 222, 128, 0.08);
+            border: 1px solid rgba(74, 222, 128, 0.25);
+            color: #4ade80;
+        }
+        .powerup-item-yellow {
+            background: rgba(255, 209, 102, 0.08);
+            border: 1px solid rgba(255, 209, 102, 0.25);
+            color: #ffd166;
+        }
+        .powerup-item-blue {
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            color: #00f0ff;
+        }
+        .powerup-item-red {
+            background: rgba(244, 63, 94, 0.08);
+            border: 1px solid rgba(244, 63, 94, 0.25);
+            color: #f43f5e;
+        }
+
+        /* ==========================================================================
+           行動裝置與多端響應式版面最佳化 (Mobile Responsive Design)
+           ========================================================================== */
+        @media (max-width: 768px) {
+            /* 頂部 HUD 狀態列：改為兩層式防破版佈局 */
+            .hud-header {
+                flex-direction: column;
+                padding: max(8px, env(safe-area-inset-top, 8px)) max(10px, env(safe-area-inset-right, 10px)) 6px max(10px, env(safe-area-inset-left, 10px));
+                gap: 6px;
+                background: var(--hud-bg);
+            }
+
+            .hud-top-bar {
+                order: 1;
+                width: 100%;
+                max-width: none;
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .hud-top-bar .hud-center {
+                align-items: flex-start;
+                max-width: none;
+                margin: 0;
+            }
+
+            .hud-title {
+                font-size: 11.5px;
+                letter-spacing: 0.5px;
+                margin-bottom: 3px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: calc(100vw - 110px);
+            }
+
+            .progress-track {
+                height: 5px;
+                border-radius: 4px;
+            }
+
+            .hud-controls {
+                gap: 6px;
+                flex-shrink: 0;
+            }
+
+            .icon-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            /* 數據徽章列：均勻分佈、自適應文字與間距 */
+            .hud-stats-bar {
+                order: 2;
+                width: 100%;
+                gap: 4px;
+                justify-content: space-between;
+            }
+
+            .stat-badge {
+                padding: 4px 6px;
+                font-size: 10.5px;
+                border-radius: 12px;
+                gap: 3px;
+                flex: 1 1 0;
+                min-width: 0;
+                justify-content: center;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            }
+
+            #hud-firepower-badge {
+                flex: 1.15 1 0;
+            }
+
+            #hud-shield {
+                font-size: 11.5px !important;
+                font-weight: 800;
+            }
+
+            .stat-badge.shield {
+                font-size: 10.5px;
+            }
+
+            .badge-icon {
+                font-size: 11px;
+            }
+
+            /* 手機端隱藏冗長標籤，改用精簡版標籤 */
+            .hud-lbl-full {
+                display: none !important;
+            }
+            .hud-lbl-short {
+                display: inline !important;
+            }
+
+            #hud-last-stand {
+                margin-left: 2px;
+                padding: 1px 4px;
+                font-size: 9px;
+                border-radius: 6px;
+                white-space: nowrap;
+            }
+
+            /* 操作引導提示方塊：緊湊並自適應 */
+            .drag-guide {
+                font-size: 11px;
+                padding: 5px 12px;
+                bottom: 32px;
+                max-width: 90%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 英雄技能鈕在手機觸控下的佈局最佳化 */
+            #hero-skill-bar {
+                right: max(10px, env(safe-area-inset-right, 10px));
+                bottom: max(14px, env(safe-area-inset-bottom, 14px));
+                gap: 8px;
+            }
+
+            .hero-skill-btn {
+                width: 48px;
+                height: 48px;
+            }
+
+            .hero-skill-btn .skill-icon {
+                font-size: 20px;
+            }
+
+            .hero-skill-btn .skill-key {
+                display: none;
+            }
+
+            .hero-skill-btn .skill-cd-text {
+                font-size: 12px;
+            }
+
+            /* Boss 警告與 Toast 在手機上的定位與字級調整 */
+            #boss-warning {
+                font-size: 17px;
+                letter-spacing: 1.5px;
+                top: 24%;
+                white-space: nowrap;
+                max-width: 90%;
+            }
+
+            .theme-toast {
+                top: 86px;
+                font-size: 11px;
+                padding: 5px 14px;
+            }
+
+            /* Debug 標籤 */
+            #debug-stats {
+                bottom: max(4px, env(safe-area-inset-bottom, 4px));
+                left: max(8px, env(safe-area-inset-left, 8px));
+                font-size: 9.5px;
+            }
+
+            /* 彈窗卡片與說明方塊適配 */
+            .modal-card {
+                width: 94%;
+                padding: 14px 12px;
+                max-height: 90vh;
+            }
+
+            .modal-card h1 {
+                font-size: 18px;
+            }
+
+            .modal-card h2 {
+                font-size: 16px;
+            }
+
+            .modal-card p.subtitle {
+                font-size: 10.5px;
+                margin-bottom: 8px;
+            }
+
+            .powerup-guide-card {
+                padding: 10px 10px;
+                margin-bottom: 12px;
+            }
+
+            .powerup-guide-title {
+                font-size: 11.5px;
+                margin-bottom: 6px;
+            }
+
+            .powerup-guide-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .powerup-guide-item {
+                padding: 6px 8px;
+                font-size: 10.5px;
+            }
+
+            .powerup-guide-item div {
+                font-size: 9.5px;
+            }
+
+            .btn-primary {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+        }
+
+        /* 超窄手機螢幕 (<= 360px) 防破版加強 */
+        @media (max-width: 360px) {
+            .hud-header {
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+
+            .hud-stats-bar {
+                gap: 2px;
+            }
+
+            .stat-badge {
+                padding: 3px 4px;
+                font-size: 9.5px;
+                gap: 2px;
+            }
+
+            .badge-txt {
+                display: none !important;
+            }
+
+            #hud-shield {
+                font-size: 10.5px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -778,36 +1113,43 @@
         <div id="max-cap-vignette"></div>
 
         <div class="hud-header">
-            <div class="hud-left">
+            <div class="hud-top-bar">
+                <div class="hud-center">
+                    <div class="hud-title" id="hud-mode-title">第 1 關：初陣啟動</div>
+                    <div class="progress-track" id="progress-wrapper">
+                        <div class="progress-fill" id="level-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="hud-controls">
+                    <button class="icon-btn" id="btn-theme-toggle" title="切換配色風格">🎨</button>
+                    <button class="icon-btn" id="btn-sound-toggle" title="切換音效">🔊</button>
+                </div>
+            </div>
+
+            <div class="hud-stats-bar">
                 <div class="stat-badge" id="hud-firepower-badge" style="color: #00f0ff; font-weight:800; border:1px solid rgba(0,240,255,0.45); background:rgba(0,240,255,0.12);">
-                    <span>🔋</span>
-                    <span>子彈配額(HP)：</span>
+                    <span class="badge-icon">🔋</span>
+                    <span class="badge-txt hud-lbl-full">子彈配額(HP)：</span>
+                    <span class="badge-txt hud-lbl-short">配額:</span>
                     <span id="hud-shield" style="font-size:15px; color:#ffd166;">16 / 100</span>
-                    <span id="hud-last-stand">🔥 瀕死狂暴 +35%</span>
+                    <span id="hud-last-stand">
+                        <span class="hud-lbl-full">🔥 瀕死狂暴 +35%</span>
+                        <span class="hud-lbl-short">🔥 +35%</span>
+                    </span>
                 </div>
                 <div class="stat-badge shield" title="單排固定4顆 | 右路下一倍率預告">
-                    <span>🔱</span>
+                    <span class="badge-icon">🔱</span>
                     <span id="hud-firepower">單排 4 顆</span>
-                    <span style="color:#ffd166; margin-left:4px;">| 右路:</span>
+                    <span class="badge-txt hud-lbl-full" style="color:#ffd166; margin-left:4px;">| 右路:</span>
+                    <span class="badge-txt hud-lbl-short" style="color:#ffd166; margin-left:2px;">| 右:</span>
                     <span id="hud-overdrive" style="color:#ffd166;">x5</span>
                 </div>
-            </div>
-
-            <div class="hud-center">
-                <div class="hud-title" id="hud-mode-title">第 1 關：初陣啟動</div>
-                <div class="progress-track" id="progress-wrapper">
-                    <div class="progress-fill" id="level-progress-bar"></div>
-                </div>
-            </div>
-
-            <div class="hud-right">
                 <div class="stat-badge" id="hud-units-badge" title="畫面中同時存在的子彈數 / 當前配額上限">
-                    <span>🟦</span>
-                    <span>同屏彈幕:</span>
+                    <span class="badge-icon">🟦</span>
+                    <span class="badge-txt hud-lbl-full">同屏彈幕:</span>
+                    <span class="badge-txt hud-lbl-short">同屏:</span>
                     <span id="hud-swarm-count">0 / 16</span>
                 </div>
-                <button class="icon-btn" id="btn-theme-toggle" title="切換配色風格">🎨</button>
-                <button class="icon-btn" id="btn-sound-toggle" title="切換音效">🔊</button>
             </div>
         </div>
 
@@ -820,7 +1162,8 @@
 
         <div class="drag-guide" id="drag-guide">
             <span>↔️</span>
-            <span>左右滑動或使用 A/D 操控 | [E] 胸口集束砲 | [Q] 追蹤導彈</span>
+            <span class="hud-lbl-full">左右滑動或使用 A/D 操控 | [E] 胸口集束砲 | [Q] 追蹤導彈</span>
+            <span class="hud-lbl-short">左右滑動操控戰機防線</span>
         </div>
 
         <!-- 鋼鐵人英雄技能 HUD -->
@@ -877,26 +1220,26 @@
             </div>
 
             <!-- 6 通道分道與子彈配額即血條即時導引 -->
-            <div class="powerup-guide-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px; text-align: left;">
-                <div style="font-size: 13px; font-weight: 800; color: #ffd166; margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
+            <div class="powerup-guide-card">
+                <div class="powerup-guide-title">
                     <span>⚡</span> 6 通道戰術與「子彈配額即血條」規則 (上限 100 顆)
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
-                    <div style="background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #4ade80;">⬅️ 左路(1單位)：+N 強化門</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">持續推進，射擊即補血/增加配額</div>
+                <div class="powerup-guide-grid">
+                    <div class="powerup-guide-item powerup-item-green">
+                        <b>⬅️ 左路(1單位)：+N 強化門</b>
+                        <div>持續推進，射擊即補血/增加配額</div>
                     </div>
-                    <div style="background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #ffd166;">➡️ 右路(1單位)：石柱 + xN 門</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">打掉停駐石柱，吃 x5/x10 直衝100！</div>
+                    <div class="powerup-guide-item powerup-item-yellow">
+                        <b>➡️ 右路(1單位)：石柱 + xN 門</b>
+                        <div>打掉停駐石柱，吃 x5/x10 直衝100！</div>
                     </div>
-                    <div style="background: rgba(0,240,255,0.08); border: 1px solid rgba(0,240,255,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #00f0ff;">🔋 子彈配額 = 血條 (HP)</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">單排 4 顆 / 同屏上限 100，歸零失敗</div>
+                    <div class="powerup-guide-item powerup-item-blue">
+                        <b>🔋 子彈配額 = 血條 (HP)</b>
+                        <div>單排 4 顆 / 同屏上限 100，歸零失敗</div>
                     </div>
-                    <div style="background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); padding: 7px 9px; border-radius: 9px;">
-                        <b style="color: #f43f5e;">⚔️ 中路(4單位)：敵軍讀條攻擊</b>
-                        <div style="color: #94a3b8; font-size: 10px; margin-top:2px;">敵人有血條，貼臉蓄力前優先集火！</div>
+                    <div class="powerup-guide-item powerup-item-red">
+                        <b>⚔️ 中路(4單位)：敵軍讀條攻擊</b>
+                        <div>敵人有血條，貼臉蓄力前優先集火！</div>
                     </div>
                 </div>
             </div>
