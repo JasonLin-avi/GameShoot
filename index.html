@@ -3959,6 +3959,7 @@
                         attackTimer: 0,
                         attackInterval: 1.0,
                         attackDmg: 2,
+                        walkPhase: Math.random() * Math.PI * 2,
                         bounceTime: Math.random() * Math.PI
                     });
                     _tempMatrix.makeTranslation(0, -999, 0);
@@ -4347,6 +4348,7 @@
                         u.attackTimer = 0;
                         u.attackInterval = isElite ? 2.5 : 1.0;
                         u.attackDmg = isElite ? 15 : 2;
+                        u.walkPhase = Math.random() * Math.PI * 2;
                         return u;
                     }
                 }
@@ -4592,7 +4594,8 @@
                     const u = this.redList[i];
                     if (u.active) {
                         u.vx = 0;
-                        if (u.z > frontlineZ) {
+                        const isMarching = (u.z > frontlineZ);
+                        if (isMarching) {
                             u.z = Math.max(frontlineZ, u.z + u.vz * dt);
                         } else {
                             u.z = frontlineZ;
@@ -4619,21 +4622,57 @@
                             }
                         }
 
-                        u.bounceTime += dt * (u.isElite ? 7.5 : 11.0);
-                        const bounceY = Math.abs(Math.sin(u.bounceTime)) * 0.12;
-                        const runTiltZ = Math.sin(u.bounceTime) * 0.08;
+                        // 行走步態姿態計算 (Walk Cycle 代替跳躍 Bounce)
                         const s = u.isElite ? 1.48 : 1.0;
+                        let posX = u.x;
+                        let posY = 0;
+                        let rotX = 0;
+                        let rotZ = 0;
+                        let scaleX = s;
+                        let scaleY = s;
 
-                        _dummy.position.set(u.x, bounceY, u.z);
-                        _dummy.rotation.set(0, 0, runTiltZ);
-                        _dummy.scale.set(s, s, s);
+                        if (isMarching) {
+                            // 推進步行步頻：常規兵步伐節奏約 6.5 rad/s，重裝巨盾兵沉重穩健約 4.8 rad/s
+                            const walkFreq = u.isElite ? 4.8 : 6.5;
+                            u.walkPhase = (u.walkPhase !== undefined ? u.walkPhase : (u.bounceTime || 0)) + dt * walkFreq;
+                            const p = u.walkPhase;
+
+                            // 1. 雙足著地平滑重心起伏 (Smooth Grounded Bobbing)
+                            // 消除 Math.abs(sin) 的突變尖角彈跳，改用連續平滑餘弦波起伏 (1 - cos(2p))，波谷零速度接地
+                            const bobAmp = u.isElite ? 0.016 : 0.022;
+                            posY = (1.0 - Math.cos(p * 2.0)) * bobAmp;
+
+                            // 2. 左右出腳重心橫向移轉與側向傾角 (Lateral Weight Shift & Roll)
+                            // 左腳與右腳交替著地時，左右微幅晃動，自然呈現走動姿態
+                            const swayAmp = u.isElite ? 0.022 : 0.035;
+                            const rollAmp = u.isElite ? 0.030 : 0.045;
+                            posX = u.x + Math.sin(p) * swayAmp;
+                            rotZ = Math.sin(p) * rollAmp;
+
+                            // 3. 前行微幅邁步俯仰 (Pitch) 與步伐伸展彈性 (Squash & Stretch)
+                            const pitchAmp = u.isElite ? 0.012 : 0.020;
+                            rotX = 0.035 + Math.sin(p * 2.0) * pitchAmp;
+                            const strideSquash = Math.sin(p * 2.0) * 0.02;
+                            scaleY = s * (1.0 - strideSquash);
+                            scaleX = s * (1.0 + strideSquash * 0.6);
+                        } else {
+                            // 抵達底線戒備攻擊：雙腳扎地穩住陣型，進入蓄力微呼吸待命姿態
+                            const breathPhase = u.attackTimer * (u.isElite ? 2.5 : 4.0);
+                            posY = Math.sin(breathPhase) * 0.01;
+                            rotZ = Math.sin(breathPhase * 0.5) * 0.015;
+                            rotX = 0.04 + Math.sin(breathPhase) * 0.01;
+                        }
+
+                        _dummy.position.set(posX, posY, u.z);
+                        _dummy.rotation.set(rotX, 0, rotZ);
+                        _dummy.scale.set(scaleX, scaleY, s);
                         _dummy.updateMatrix();
                         this.redMesh.setMatrixAt(i, _dummy.matrix);
 
-                        // 繪製頭頂即時血條
+                        // 繪製頭頂即時血條 (隨步態起伏平滑跟隨)
                         if (hpBarIdx < this.MAX_STATUS_BARS) {
                             const hpRatio = Math.max(0.05, u.hp / u.maxHp);
-                            _dummy.position.set(u.x, (u.isElite ? 3.25 : 2.25) + bounceY, u.z);
+                            _dummy.position.set(posX, (u.isElite ? 3.25 : 2.25) + posY, u.z);
                             _dummy.rotation.set(0, 0, 0);
                             _dummy.scale.set(hpRatio * (u.isElite ? 1.45 : 0.95), u.isElite ? 1.35 : 1.0, 1);
                             _dummy.updateMatrix();
