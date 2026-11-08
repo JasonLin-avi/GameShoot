@@ -4021,7 +4021,8 @@
                     this.gargoyleList.push({
                         active: false,
                         x: 0, y: -999, z: 0,
-                        vx: 0, vz: -7.5,
+                        // 平衡性調整：石像鬼飛行速度由 -7.5 下調至 -5.0 u/s，提供玩家充分的側向轉火與技能攔截窗口
+                        vx: 0, vz: -5.0,
                         hp: 16, maxHp: 16,
                         attackTimer: 0,
                         attackInterval: 1.5,
@@ -4411,7 +4412,8 @@
                         u.y = 1.5;
                         u.z = z;
                         u.vx = 0;
-                        u.vz = -7.6;
+                        // 避免過快突進破壞 6 通道決策節奏，巡航突襲速度校正為 -5.0 u/s (自 Z=45 到底線需約 8.5 秒)
+                        u.vz = -5.0;
                         u.hp = scaledHp;
                         u.maxHp = scaledHp;
                         u.attackTimer = 0;
