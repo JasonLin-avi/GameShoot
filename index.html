@@ -1474,6 +1474,7 @@
                 this.muted = false;
                 this.chimeScaleIndex = 0;
                 this.lastChimeTime = 0;
+                this.lastHitSoundTime = 0; // [60 FPS 鐵律 / Web Audio 防爆] 打擊音效時間戳節流
             }
 
             init() {
@@ -1584,10 +1585,13 @@
                 });
             }
 
-            // 小兵碰撞消滅打擊感
+            // 小兵碰撞消滅打擊感 (Web Audio GC 優化與節流，防密集打擊導致音訊節點爆炸與音訊線程阻塞)
             playHit() {
                 if (!this.ctx || this.muted) return;
                 const t = this.ctx.currentTime;
+                if (t - this.lastHitSoundTime < 0.05) return;
+                this.lastHitSoundTime = t;
+
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
 
@@ -1934,128 +1938,131 @@
                 id: 1,
                 name: '第 1 關：初陣破柱',
                 leftAddPool: [2, 4],
-                pillarBaseHp: 32,
+                pillarBaseHp: 30,
                 rightMultPool: [5, 5, 10],
                 waves: [
                     { time: 0.8, type: 'red', count: 8 },
-                    { time: 5.5, type: 'red', count: 12 },
-                    { time: 11.0, type: 'elite', count: 1 },
-                    { time: 13.5, type: 'red', count: 16 }
+                    { time: 6.0, type: 'red', count: 12 },
+                    { time: 12.0, type: 'elite', count: 1 },
+                    { time: 16.5, type: 'red', count: 14 }
                 ]
             },
             {
                 id: 2,
                 name: '第 2 關：百彈洪流',
                 leftAddPool: [2, 4, 6],
-                pillarBaseHp: 36,
+                pillarBaseHp: 34,
                 rightMultPool: [5, 10],
                 waves: [
                     { time: 0.8, type: 'red', count: 12 },
-                    { time: 5.0, type: 'elite', count: 2 },
-                    { time: 9.5, type: 'red', count: 20 }
+                    { time: 6.5, type: 'elite', count: 2 },
+                    { time: 13.0, type: 'red', count: 18 }
                 ]
             },
             {
                 id: 3,
                 name: '第 3 關：重盾壓境',
                 leftAddPool: [4, 6],
-                pillarBaseHp: 44,
+                pillarBaseHp: 38,
                 rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 0.8, type: 'red', count: 14 },
-                    { time: 4.5, type: 'elite', count: 2 },
-                    { time: 9.0, type: 'red', count: 18 },
-                    { time: 13.0, type: 'elite', count: 3 }
+                    { time: 0.8, type: 'red', count: 12 },
+                    { time: 6.0, type: 'elite', count: 2 },
+                    { time: 12.5, type: 'red', count: 16 },
+                    { time: 18.0, type: 'elite', count: 3 }
                 ]
             },
             {
                 id: 4,
                 name: '第 4 關：空降石像鬼',
                 leftAddPool: [4, 6, 8],
-                pillarBaseHp: 48,
+                pillarBaseHp: 42,
                 rightMultPool: [5, 10, 15],
                 waves: [
                     { time: 0.8, type: 'red', count: 14 },
-                    { time: 4.2, type: 'gargoyle', count: 3 },
-                    { time: 8.0, type: 'elite', count: 2 },
-                    { time: 12.0, type: 'gargoyle', count: 4 }
+                    { time: 6.0, type: 'gargoyle', count: 3 },
+                    { time: 12.0, type: 'elite', count: 2 },
+                    { time: 17.5, type: 'gargoyle', count: 4 }
                 ]
             },
             {
                 id: 5,
                 name: '第 5 關：巨像降臨',
                 leftAddPool: [4, 8],
-                pillarBaseHp: 52,
+                pillarBaseHp: 46,
                 rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 0.8, type: 'red', count: 16 },
-                    { time: 4.5, type: 'elite', count: 2 },
-                    { time: 8.0, type: 'boss', hp: 220, count: 1 },
-                    { time: 12.5, type: 'red', count: 16 }
+                    { time: 0.8, type: 'red', count: 14 },
+                    { time: 6.0, type: 'elite', count: 2 },
+                    { time: 11.5, type: 'boss', hp: 350, count: 1 },
+                    { time: 17.5, type: 'red', count: 14 }
                 ]
             },
             {
                 id: 6,
                 name: '第 6 關：險峻突圍',
                 leftAddPool: [6, 8, 10],
-                pillarBaseHp: 60,
+                pillarBaseHp: 50,
                 rightMultPool: [5, 10, 15],
                 waves: [
-                    { time: 0.8, type: 'red', count: 18 },
-                    { time: 4.5, type: 'gargoyle', count: 4 },
-                    { time: 8.5, type: 'elite', count: 3 },
-                    { time: 12.5, type: 'red', count: 24 }
+                    { time: 0.8, type: 'red', count: 16 },
+                    { time: 6.5, type: 'gargoyle', count: 3 },
+                    { time: 12.5, type: 'elite', count: 3 },
+                    { time: 18.5, type: 'red', count: 20 }
                 ]
             },
             {
                 id: 7,
                 name: '第 7 關：雙線拉鋸',
                 leftAddPool: [6, 10],
-                pillarBaseHp: 68,
+                pillarBaseHp: 54,
                 rightMultPool: [10, 15],
                 waves: [
-                    { time: 0.8, type: 'red', count: 20 },
-                    { time: 4.5, type: 'elite', count: 3 },
-                    { time: 8.5, type: 'gargoyle', count: 5 },
-                    { time: 12.5, type: 'elite', count: 4 }
+                    { time: 0.8, type: 'red', count: 16 },
+                    { time: 6.5, type: 'elite', count: 2 },
+                    { time: 13.0, type: 'gargoyle', count: 4 },
+                    { time: 19.0, type: 'elite', count: 3 }
                 ]
             },
             {
                 id: 8,
                 name: '第 8 關：夜行狂襲',
                 leftAddPool: [8, 10, 12],
-                pillarBaseHp: 76,
+                pillarBaseHp: 58,
                 rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 0.8, type: 'gargoyle', count: 4 },
-                    { time: 4.5, type: 'red', count: 24 },
-                    { time: 8.5, type: 'elite', count: 4 },
-                    { time: 12.5, type: 'gargoyle', count: 6 }
+                    // 為什麼調整：移除開局 0.8s 4 隻石像鬼的無解冷啟動殺，改由斥候先鋒 + 4.5s 雙石像鬼預警，給予玩家破首柱或吃左路門的戰術建立期
+                    { time: 0.8, type: 'red', count: 14 },
+                    { time: 4.5, type: 'gargoyle', count: 2 },
+                    { time: 10.5, type: 'red', count: 16 },
+                    { time: 15.5, type: 'elite', count: 3 },
+                    { time: 20.5, type: 'gargoyle', count: 4 }
                 ]
             },
             {
                 id: 9,
                 name: '第 9 關：雙雄會戰',
                 leftAddPool: [8, 12],
-                pillarBaseHp: 84,
+                pillarBaseHp: 62,
                 rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 0.8, type: 'boss', hp: 260, count: 1 },
-                    { time: 6.0, type: 'elite', count: 4 },
-                    { time: 11.0, type: 'boss', hp: 320, count: 1 }
+                    { time: 0.8, type: 'red', count: 12 },
+                    { time: 4.0, type: 'boss', hp: 380, count: 1 },
+                    { time: 12.0, type: 'elite', count: 3 },
+                    { time: 18.5, type: 'boss', hp: 450, count: 1 }
                 ]
             },
             {
                 id: 10,
                 name: '第 10 關：終極決戰',
                 leftAddPool: [10, 15],
-                pillarBaseHp: 96,
+                pillarBaseHp: 68,
                 rightMultPool: [10, 15, 20],
                 waves: [
-                    { time: 0.8, type: 'red', count: 24 },
-                    { time: 4.5, type: 'gargoyle', count: 6 },
-                    { time: 8.5, type: 'elite', count: 5 },
-                    { time: 12.0, type: 'boss', hp: 380, count: 1 }
+                    { time: 0.8, type: 'red', count: 18 },
+                    { time: 6.5, type: 'gargoyle', count: 4 },
+                    { time: 13.0, type: 'elite', count: 4 },
+                    { time: 19.0, type: 'boss', hp: 550, count: 1 }
                 ]
             }
         ];
@@ -3723,16 +3730,17 @@
                 this.updateCannonBarrels(2);
             }
 
-            updateQuotaBadge(quota = 16, maxQuota = 150) {
-                if (this.lastRenderedQuota === quota) return;
-                this.lastRenderedQuota = quota;
+            updateQuotaBadge(quota = 16, maxQuota = 150, overloadTier = 0) {
+                const renderKey = `${quota}_${overloadTier}`;
+                if (this.lastRenderedQuotaKey === renderKey) return;
+                this.lastRenderedQuotaKey = renderKey;
                 if (!this.quotaCtx) return;
 
                 const ctx = this.quotaCtx;
                 ctx.clearRect(0, 0, 256, 64);
 
                 const ratio = Math.max(0, Math.min(1, quota / maxQuota));
-                const barColor = (quota <= 12) ? '#ff385c' : (quota >= (maxQuota * 0.8) ? '#ffd166' : '#00f0ff');
+                const barColor = (overloadTier > 0) ? '#ffd166' : ((quota <= 12) ? '#ff385c' : (quota >= (maxQuota * 0.8) ? '#4ade80' : '#00f0ff'));
 
                 // 外框底板
                 ctx.fillStyle = 'rgba(10, 18, 32, 0.88)';
@@ -3754,7 +3762,8 @@
                 ctx.font = '900 22px "Segoe UI", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(`🔋 ${quota} / ${maxQuota}`, 128, 24);
+                const text = (overloadTier > 0) ? `⚡ ${quota}/${maxQuota} [T${overloadTier}]` : `🔋 ${quota} / ${maxQuota}`;
+                ctx.fillText(text, 128, 24);
 
                 this.quotaTexture.needsUpdate = true;
             }
@@ -4204,6 +4213,8 @@
                 this.maxGoldEmissive = new THREE.Color(0xb45309);
                 this.wasMaxQuotaAura = false;
                 this.auraPulseTimer = 0;
+                this.lastHpBarCount = 0; // GPU 上傳優化：追蹤上一幀活躍頭頂血條數
+                this.lastRingCount = 0;  // GPU 上傳優化：追蹤上一幀活躍底線攻擊圈數
 
                 this.initBlueTroops();
                 this.initRedTroops();
@@ -4712,13 +4723,13 @@
             }
 
             // 生成紅軍步兵 (僅從中間4個單位通道 [-3.6, +3.6] 直線向下推進)
-            // GDD 3.3 & 4.2: M_HP(S) = 1.0 + 0.18 * (S - 1)
-            // isElite = false: Lv.1 紅軍斥候 (基礎 HP 6, 每 1.0s 攻擊扣 2 顆子彈)
-            // isElite = true : Lv.3 重裝巨盾兵 (基礎 HP 48, 每 2.5s 攻擊扣 15 顆子彈)
+            // GDD v3.3: M_HP(S) = 1.0 + 0.10 * (S - 1)
+            // isElite = false: Lv.1 紅軍斥候 (基礎 HP 8, 每 1.0s 攻擊扣 2 顆子彈)
+            // isElite = true : Lv.3 重裝巨盾兵 (基礎 HP 68, 每 2.2s 蓄力攻擊扣 20 顆子彈)
             spawnRedTroop(x, z, isElite = false) {
                 const clampedX = Math.max(-3.5, Math.min(3.5, x));
                 const hpMult = (this.game && this.game.getEnemyHpMultiplier) ? this.game.getEnemyHpMultiplier() : 1.0;
-                const baseHp = isElite ? 48 : 6;
+                const baseHp = isElite ? 68 : 8;
                 const scaledHp = Math.round(baseHp * hpMult);
                 for (let i = 0; i < this.MAX_RED; i++) {
                     const u = this.redList[i];
@@ -4733,8 +4744,8 @@
                         u.hp = scaledHp;
                         u.maxHp = scaledHp;
                         u.attackTimer = 0;
-                        u.attackInterval = isElite ? 2.5 : 1.0;
-                        u.attackDmg = isElite ? 15 : 2;
+                        u.attackInterval = isElite ? 2.2 : 1.0;
+                        u.attackDmg = isElite ? 20 : 2;
                         u.walkPhase = Math.random() * Math.PI * 2;
                         return u;
                     }
@@ -4742,11 +4753,11 @@
                 return null;
             }
 
-            // 生成石像鬼 (GDD 3.3 & 4.2 Lv.2: 基礎 HP 16 * M_HP(S), 每 1.5s 攻擊扣 5 顆子彈，僅從中間4單位推進)
+            // 生成石像鬼 (GDD v3.3 Lv.2: 基礎 HP 22 * M_HP(S), 每 1.5s 攻擊扣 6 顆子彈，僅從中間4單位推進)
             spawnGargoyle(x, z) {
                 const clampedX = Math.max(-3.5, Math.min(3.5, x));
                 const hpMult = (this.game && this.game.getEnemyHpMultiplier) ? this.game.getEnemyHpMultiplier() : 1.0;
-                const scaledHp = Math.round(16 * hpMult);
+                const scaledHp = Math.round(22 * hpMult);
                 for (let i = 0; i < this.MAX_GARGOYLES; i++) {
                     const u = this.gargoyleList[i];
                     if (!u.active) {
@@ -4761,15 +4772,15 @@
                         u.maxHp = scaledHp;
                         u.attackTimer = 0;
                         u.attackInterval = 1.5;
-                        u.attackDmg = 5;
+                        u.attackDmg = 6;
                         return u;
                     }
                 }
                 return null;
             }
 
-            // 生成 Boss (Lv.4: HP 240~400, 每 4.0s 攻擊扣 35 顆子彈)
-            spawnBoss(z, hp = 240) {
+            // 生成 Boss (GDD v3.3 Lv.4: 基礎 HP 350~550, 每 3.8s 攻擊扣 45 顆子彈)
+            spawnBoss(z, hp = 350) {
                 this.boss.active = true;
                 this.boss.x = 0;
                 this.boss.vx = 0;
@@ -4778,8 +4789,8 @@
                 this.boss.hp = hp;
                 this.boss.maxHp = hp;
                 this.boss.attackTimer = 0;
-                this.boss.attackInterval = 4.0;
-                this.boss.attackDmg = 35;
+                this.boss.attackInterval = 3.8;
+                this.boss.attackDmg = 45;
                 this.boss.enraged = false;
                 this.boss.isRoaring = false;
                 this.boss.roarTimer = 0;
@@ -4815,7 +4826,7 @@
                 ctx.font = 'bold 19px "Segoe UI", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const label = this.boss.enraged ? '狂暴巨像 (-35/4s)' : 'BOSS 巨像 (-35/4s)';
+                const label = this.boss.enraged ? '狂暴巨像 (-45/3.8s)' : 'BOSS 巨像 (-45/3.8s)';
                 ctx.fillText(`${label} ${Math.ceil(this.boss.hp)}/${this.boss.maxHp}`, 160, 32);
 
                 this.bossHpTexture.needsUpdate = true;
@@ -4858,6 +4869,8 @@
                     }
                     this.attackRingMesh.instanceMatrix.needsUpdate = true;
                 }
+                this.lastHpBarCount = 0;
+                this.lastRingCount = 0;
 
                 this.boss.active = false;
                 this.boss.enraged = false;
@@ -4950,7 +4963,7 @@
                     this.blueMesh.material.emissive.copy(this.baseBlueEmissive);
                 }
 
-                // 1. 更新藍軍子彈 (嚴格直直向前推進，超出戰場 Z > 42 釋放同屏配額以便後排補射)
+                // 1. 更新藍軍子彈 (嚴格直直向前推進，超出有效戰區 Z > 38 即刻釋放同屏配額，避免空包彈長時間鎖死低配額玩家的射速)
                 for (let i = 0; i < this.MAX_BLUE; i++) {
                     const u = this.blueList[i];
                     if (u.active) {
@@ -4963,7 +4976,7 @@
                         u.bounceTime += dt * 14.0;
                         u.y = 0.4 + Math.abs(Math.sin(u.bounceTime)) * 0.14;
 
-                        if (u.z > 42) {
+                        if (u.z > 38) {
                             u.active = false;
                             _dummy.position.set(0, -999, 0);
                         } else {
@@ -5149,12 +5162,15 @@
                 }
                 this.gargoyleMesh.instanceMatrix.needsUpdate = true;
 
-                // 隱藏未使用的血條與蓄力紅圈實例
-                for (let i = hpBarIdx; i < this.MAX_STATUS_BARS; i++) {
-                    _tempMatrix.makeTranslation(0, -999, 0);
-                    this.enemyHpMesh.setMatrixAt(i, _tempMatrix);
+                // 隱藏未使用的血條實例 (GPU 上傳優化：若本幀與上幀 active 實例數皆為 0，避免 500 次 setMatrixAt 與無謂的 GPU Buffer 上傳)
+                if (hpBarIdx > 0 || this.lastHpBarCount > 0) {
+                    for (let i = hpBarIdx; i < this.MAX_STATUS_BARS; i++) {
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.enemyHpMesh.setMatrixAt(i, _tempMatrix);
+                    }
+                    this.enemyHpMesh.instanceMatrix.needsUpdate = true;
                 }
-                this.enemyHpMesh.instanceMatrix.needsUpdate = true;
+                this.lastHpBarCount = hpBarIdx;
 
                 // 4. 更新 Boss (綠巨人步態動力學、抵達防線每 4.0s 重擊扣 35 子彈配額)
                 if (this.boss.active) {
@@ -5217,11 +5233,15 @@
                     );
                 }
 
-                for (let i = ringIdx; i < 120; i++) {
-                    _tempMatrix.makeTranslation(0, -999, 0);
-                    this.attackRingMesh.setMatrixAt(i, _tempMatrix);
+                // 隱藏未使用的蓄力紅圈實例 (GPU 上傳優化：若本幀與上幀 active 實例數皆為 0，避免 120 次 setMatrixAt 與無謂的 GPU Buffer 上傳)
+                if (ringIdx > 0 || this.lastRingCount > 0) {
+                    for (let i = ringIdx; i < 120; i++) {
+                        _tempMatrix.makeTranslation(0, -999, 0);
+                        this.attackRingMesh.setMatrixAt(i, _tempMatrix);
+                    }
+                    this.attackRingMesh.instanceMatrix.needsUpdate = true;
                 }
-                this.attackRingMesh.instanceMatrix.needsUpdate = true;
+                this.lastRingCount = ringIdx;
 
                 // 5. 更新中路 4 通道底線 70% 蓄力紅光警報帶 (GDD 5.2 & 9.3, 零 GC)
                 if (this.laneDangerMeshes && this.laneDangerLevel) {
@@ -5606,29 +5626,35 @@
             }
 
             pickDynamicMultiplier() {
-                // GDD 4.2 右路倍率門 (xN) 動態補償公式：k=1 固定為 5，k=2 為 {5, 10}，k>=3 為 {10, 15} 或關卡高倍率
+                // 為什麼調整：尊重各關卡配置的 rightMultPool（例如第 7~10 關首柱即可提供 x10），解決高難度關卡破首柱卻只給 x5 無法衝上滿編的問題
+                const pool = this.rightMultPool || [5, 10, 15];
                 const k = this.rightPairIndex;
                 if (k <= 1) {
-                    return 5;
+                    return pool[0];
                 }
                 let enemyCount = 0;
                 if (this.game && this.game.entityMgr) {
                     enemyCount = this.game.entityMgr.getActiveEnemyCount();
                 }
                 if (k === 2) {
-                    return (enemyCount >= 8 || Math.random() < 0.5) ? 10 : 5;
+                    const secondIdx = Math.min(1, pool.length - 1);
+                    return (enemyCount >= 6 || Math.random() < 0.65) ? pool[secondIdx] : pool[0];
                 }
-                const pool = this.rightMultPool || [10, 15];
-                const highOptions = (pool[pool.length - 1] >= 20 && enemyCount >= 14) ? [10, 15, 20] : [10, 15];
-                return highOptions[Math.floor(Math.random() * highOptions.length)];
+                const highPool = pool.length >= 2 ? pool.slice(1) : pool;
+                if (enemyCount >= 12) {
+                    return highPool[highPool.length - 1];
+                }
+                return highPool[Math.floor(Math.random() * highPool.length)];
             }
 
             spawnRightPillarAndGatePair(pillarZ = 38.0) {
                 this.rightPairIndex++;
-                // GDD 4.2 右路第 k 根阻擋石柱血量公式：HP_pillar(S, k) = round(32 * (1 + 0.15 * (S - 1)) * 1.35^(min(k, 6) - 1))
+                // 為什麼調整：採用關卡專屬 pillarBaseHp，並將連破遞增底數由 1.35 下修至 1.18、單柱上限鎖定 110 HP，防止無盡後期石柱突破 200 HP 無法破柱翻盤
                 const s = (this.game && this.game.getEffectiveStage) ? this.game.getEffectiveStage() : 1;
-                const kClamped = Math.min(this.rightPairIndex, 6);
-                const pillarHp = Math.round(32 * (1 + 0.15 * (s - 1)) * Math.pow(1.35, kClamped - 1));
+                const isEndless = Boolean(this.game && this.game.mode === 'ENDLESS');
+                const baseHp = isEndless ? Math.round(30 * (1 + 0.08 * (s - 1))) : (this.pillarBaseHp || 32);
+                const kClamped = Math.min(this.rightPairIndex, 5);
+                const pillarHp = Math.min(110, Math.round(baseHp * Math.pow(1.18, kClamped - 1)));
                 const multVal = this.pickDynamicMultiplier();
 
                 const pillar = this.createLaneObject({
@@ -5841,21 +5867,22 @@
         // =========================================================================
         class GameController {
             /**
-             * 取得當前關卡數 S (無盡模式下每 45 秒遞增 1 階，遵循 GDD 4.2)
+             * 取得當前關卡數 S (無盡模式下每 60 秒遞增 1 階，避免中後期血量與出怪數量雙重指數崩潰)
              */
             getEffectiveStage() {
                 if (this.mode === 'ENDLESS') {
-                    return 1 + Math.floor(this.gameTime / 45);
+                    return 1 + Math.floor(this.gameTime / 60);
                 }
                 return this.currentStageId || 1;
             }
 
             /**
-             * 敵軍基礎血量縮放係數 M_HP(S) = 1.0 + 0.18 * (S - 1) (遵循 GDD 4.2)
+             * 敵軍基礎血量縮放係數 M_HP(S) = 1.0 + 0.10 * (S - 1)
+             * 為什麼調整：將斜率由 0.18 下修至 0.10，避免後期關卡連普通雜兵都需 16 顆子彈才能擊殺，維持爽快割草與頭目威嚴感
              */
             getEnemyHpMultiplier() {
                 const s = this.getEffectiveStage();
-                return 1.0 + 0.18 * (s - 1);
+                return 1.0 + 0.10 * (s - 1);
             }
 
             /**
@@ -6012,50 +6039,77 @@
 
             /**
              * 左側 +N 強化門觸發：增加同屏子彈配額 (上限 150)
+             * 當滿額 150 溢出時，啟動/疊加超載系統 (Overcharge System Tier 1~5)
              */
             addBulletQuota(amount) {
                 const prev = this.bulletQuota;
                 this.bulletQuota = Math.min(this.maxBulletQuota, this.bulletQuota + amount);
                 const reachedCap = (this.bulletQuota >= this.maxBulletQuota);
-                if (reachedCap && prev < this.maxBulletQuota) {
-                    this.maxCapTriggers++;
-                    this.spawnFloatingText(`🔥 MAX ${this.maxBulletQuota}!`, '#ffd166', this.cannonX, 2.5, 1.5);
-                    this.triggerMaxCapVignetteBurst();
-                } else {
-                    this.spawnFloatingText(`+${amount} 配額`, '#4ade80', 5.0, 2.0, 2.0);
-                }
+
                 if (reachedCap && prev === this.maxBulletQuota) {
-                    // 滿額溢出時額外加速英雄技能冷卻
+                    // 已滿 150 配額再次吃門：疊加超載階級並續命 9 秒
+                    this.overloadTier = Math.min(5, this.overloadTier + 1);
+                    this.overloadTimer = 9.0;
+                    this.overloadDecayTimer = 3.0;
                     this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.0);
                     this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 1.5);
                     this.updateHeroSkillsHUD();
-                    this.showPowerUpToast(`🟢 +${amount} 配額已達上限 ${this.maxBulletQuota}！溢出能量加速技能冷卻！`, '#10b981');
+                    this.spawnFloatingText(`⚡ OVERLOAD Tier ${this.overloadTier}!`, '#ffd166', 5.0, 2.2, 2.0);
+                    const currentDmg = (1.5 * (1.0 + 0.25 * this.overloadTier)).toFixed(2);
+                    this.showPowerUpToast(`⚡ 滿編超載 Tier ${this.overloadTier}！單發傷害提升至 ${currentDmg}x，技能加速冷卻！`, '#ffd166');
+                } else if (reachedCap && prev < this.maxBulletQuota) {
+                    this.maxCapTriggers++;
+                    this.spawnFloatingText(`🔥 MAX ${this.maxBulletQuota}!`, '#ffd166', this.cannonX, 2.5, 1.5);
+                    this.triggerMaxCapVignetteBurst();
+                    this.showPowerUpToast(`🟢 強化門 +${amount}！配額抵達上限 ${this.maxBulletQuota}！`, '#10b981');
                 } else {
+                    this.spawnFloatingText(`+${amount} 配額`, '#4ade80', 5.0, 2.0, 2.0);
                     this.showPowerUpToast(`🟢 強化門 +${amount}！子彈配額(HP): ${prev} ➔ ${this.bulletQuota} / ${this.maxBulletQuota}`, '#10b981');
                 }
-                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota, this.overloadTier);
                 this.updateHUD();
             }
 
             /**
              * 右側 xN 強化門觸發：倍增同屏子彈配額 (上限 150)
+             * 當滿額 150 溢出時，啟動破柱狂暴超載 (x10+ 直升 Tier 5, x5 升 2 階，持續 12 秒)
              */
             multiplyBulletQuota(mult) {
                 const prev = this.bulletQuota;
                 this.bulletQuota = Math.min(this.maxBulletQuota, Math.max(4, this.bulletQuota) * mult);
-                if (this.bulletQuota >= this.maxBulletQuota && prev < this.maxBulletQuota) {
+
+                if (prev >= this.maxBulletQuota) {
+                    if (mult >= 10) {
+                        this.overloadTier = 5;
+                    } else {
+                        this.overloadTier = Math.min(5, this.overloadTier + 2);
+                    }
+                    this.overloadTimer = 12.0;
+                    this.overloadDecayTimer = 3.0;
+                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 3.5);
+                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.5);
+                    this.updateHeroSkillsHUD();
+                    this.spawnFloatingText(`🔥 OVERLOAD Tier ${this.overloadTier}!`, '#ff385c', -5.0, 2.4, 2.0);
+                    const currentDmg = (1.5 * (1.0 + 0.25 * this.overloadTier)).toFixed(2);
+                    this.showPowerUpToast(`🔥 破柱狂暴超載 Tier ${this.overloadTier} (傷害 ${currentDmg}x)！持續 12 秒！`, '#ff385c');
+                } else if (this.bulletQuota >= this.maxBulletQuota && prev < this.maxBulletQuota) {
                     this.maxCapTriggers++;
                     this.spawnFloatingText(`🔥 MAX ${this.maxBulletQuota}!`, '#ffd166', this.cannonX, 2.6, 1.5);
                     this.triggerMaxCapVignetteBurst();
+                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.5);
+                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.0);
+                    this.updateHeroSkillsHUD();
+                    this.showPowerUpToast(`🔥 狂暴倍增 ×${mult}！子彈配額直衝 ${this.bulletQuota} / ${this.maxBulletQuota}！`, '#ffd166');
                 } else {
                     this.spawnFloatingText(`🔥 ×${mult}!`, '#ffd166', -5.0, 2.2, 2.0);
+                    this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.5);
+                    this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.0);
+                    this.updateHeroSkillsHUD();
+                    this.showPowerUpToast(`🔥 狂暴倍增 ×${mult}！子彈配額(HP): ${prev} ➔ ${this.bulletQuota} / ${this.maxBulletQuota}`, '#ffd166');
                 }
-                // 觸發 xN 時額外給予微幅技能冷卻回饋
-                this.heroSkills.unibeam.timer = Math.max(0, this.heroSkills.unibeam.timer - 2.5);
-                this.heroSkills.missiles.timer = Math.max(0, this.heroSkills.missiles.timer - 2.0);
-                this.updateHeroSkillsHUD();
-                this.showPowerUpToast(`🔥 狂暴倍增 ×${mult}！子彈配額直衝 ${this.bulletQuota} / ${this.maxBulletQuota}！`, '#ffd166');
-                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota, this.overloadTier);
                 this.updateHUD();
             }
 
@@ -6103,7 +6157,16 @@
                 soundFX.playHit();
                 this.spawnFloatingText(`-${dmg}`, '#ff385c', enemyX, 1.5, enemyZ);
                 this.entityMgr.spawnExplosion(enemyX, 0.9, enemyZ, 10);
-                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota);
+
+                // 受擊斷流懲罰：若受擊導致配額不足滿編 150，超載立即中斷歸零 (GDD v3.3 Overcharge Reset)
+                if (this.bulletQuota < this.maxBulletQuota && this.overloadTier > 0) {
+                    this.overloadTier = 0;
+                    this.overloadTimer = 0;
+                    this.overloadDecayTimer = 0;
+                    this.spawnFloatingText('⚠️ 超載中斷!', '#ff4d6d', this.cannonX, 2.0, 1.5);
+                }
+
+                this.threeScene.updateQuotaBadge(this.bulletQuota, this.maxBulletQuota, this.overloadTier);
                 this.updateHUD();
 
                 if (this.bulletQuota <= 0) {
@@ -6131,6 +6194,11 @@
                 this.defuseCount = 0;
                 this.laneSwitches = 0;
                 this.currentLaneZone = 'MID';
+
+                // v3.3 滿編 150 超載增傷系統屬性 (Overcharge System Tier 0~5)
+                this.overloadTier = 0;
+                this.overloadTimer = 0;
+                this.overloadDecayTimer = 0;
 
                 // v3.1 核心設計：子彈配額即生命值 (單排固定 4 顆，畫面同屏上限 150 顆)
                 this.rowBulletWidth = 4;
@@ -6452,12 +6520,17 @@
                     }
                 }
 
-                // v3.1 開局初始子彈配額(HP) = 16，同屏上限 = 150，單排寬度 = 4
+                // v3.2 動態初始子彈配額補貼：隨關卡提升開局基礎配額 Q_0 = 16 + 2*(S-1)，解決中高難度關卡開局冷啟動卡彈問題
                 this.rowBulletWidth = 4;
                 this.maxBulletQuota = 150;
-                this.bulletQuota = 16;
+                this.bulletQuota = (this.mode === 'STAGE') ? (16 + 2 * ((this.currentStageId || 1) - 1)) : 20;
                 this.inRunBarrels = 4;
                 this.inRunRateTier = 1;
+
+                // v3.3 滿編超載狀態初始化
+                this.overloadTier = 0;
+                this.overloadTimer = 0;
+                this.overloadDecayTimer = 0;
 
                 this.cannonX = 0;
                 this.targetCannonX = 0;
@@ -6623,11 +6696,16 @@
                 }
 
                 if (this.hudShield) {
-                    this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota}`;
-                    this.hudShield.style.color = this.bulletQuota <= 8 ? '#ff4d6d' : (this.bulletQuota >= (this.maxBulletQuota * 0.8) ? '#4ade80' : '#ffffff');
+                    if (this.overloadTier > 0) {
+                        this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota} [⚡Lv.${this.overloadTier}]`;
+                        this.hudShield.style.color = '#ffd166';
+                    } else {
+                        this.hudShield.innerText = `${this.bulletQuota} / ${this.maxBulletQuota}`;
+                        this.hudShield.style.color = this.bulletQuota <= 12 ? '#ff4d6d' : (this.bulletQuota >= (this.maxBulletQuota * 0.8) ? '#4ade80' : '#ffffff');
+                    }
                 }
                 if (this.hudLastStand) {
-                    this.hudLastStand.style.display = (this.bulletQuota > 0 && this.bulletQuota <= 8) ? 'inline-block' : 'none';
+                    this.hudLastStand.style.display = (this.bulletQuota > 0 && this.bulletQuota <= 12) ? 'inline-block' : 'none';
                 }
                 if (this.hudSwarmCount) {
                     this.hudSwarmCount.innerText = `${activeBlues} / ${this.bulletQuota}`;
@@ -6650,6 +6728,12 @@
                 let blueChanged = false;
                 let redChanged = false;
                 let gargoyleChanged = false;
+                let hitSoundTriggered = false; // 單幀限制最多觸發 1 次打擊音效 (Zero Audio Lag)
+
+                // 為什麼加倍：當玩家達成 MAX 150 滿編狀態時啟動超載增傷，基礎 1.5x，每階超載 +25% (最高 Tier 5 達到 3.375x)
+                const bulletDmg = (this.bulletQuota >= this.maxBulletQuota)
+                    ? 1.5 * (1.0 + 0.25 * this.overloadTier)
+                    : 1.0;
 
                 // 1. 藍軍子彈 vs 左右通道強化門 & 阻擋柱
                 for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
@@ -6663,7 +6747,7 @@
                     }
                 }
 
-                // 2. 藍軍子彈 vs 紅軍步兵 / 重裝盾衛 (具備獨立血條，每顆子彈扣 1 點 HP)
+                // 2. 藍軍子彈 vs 紅軍步兵 / 重裝盾衛
                 for (let i = 0; i < this.entityMgr.MAX_BLUE; i++) {
                     const b = blueList[i];
                     if (!b.active) continue;
@@ -6671,6 +6755,11 @@
                     for (let j = 0; j < this.entityMgr.MAX_RED; j++) {
                         const r = redList[j];
                         if (!r.active) continue;
+
+                        // 快速軸向剪枝 (AABB Culling): 子彈與敵人皆在通道直線前進
+                        // 剪枝消減 95% 以上無效開根號/平方運算，遵循 60 FPS 鐵律
+                        if (Math.abs(b.x - r.x) > 1.2) continue;
+                        if (b.z < r.z - 1.2 || b.z > r.z + 1.2) continue;
 
                         const dx = b.x - r.x;
                         const dz = b.z - r.z;
@@ -6681,9 +6770,15 @@
                             this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
                             blueChanged = true;
 
-                            r.hp--;
-                            this.entityMgr.spawnExplosion(b.x, 0.5, b.z, 2);
-                            soundFX.playHit();
+                            r.hp -= bulletDmg;
+                            // 粒子池限頻：常規命中機率產生火花，避免粒子池瞬間爆滿與 GC 停頓
+                            if (Math.random() < 0.35) {
+                                this.entityMgr.spawnExplosion(b.x, 0.5, b.z, 2);
+                            }
+                            if (!hitSoundTriggered) {
+                                soundFX.playHit();
+                                hitSoundTriggered = true;
+                            }
 
                             if (r.hp <= 0) {
                                 if (r.attackTimer > 0) {
@@ -6709,6 +6804,10 @@
                         const g = gargoyleList[k];
                         if (!g.active) continue;
 
+                        // 快速軸向剪枝 (AABB Culling)
+                        if (Math.abs(b.x - g.x) > 1.2) continue;
+                        if (b.z < g.z - 1.2 || b.z > g.z + 1.2) continue;
+
                         const dz = Math.abs(b.z - g.z);
                         if (dz < 0.88) {
                             const dx = Math.abs(b.x - g.x);
@@ -6718,9 +6817,14 @@
                                 this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
                                 blueChanged = true;
 
-                                g.hp--;
-                                this.entityMgr.spawnExplosion(g.x, g.y, g.z, 3);
-                                soundFX.playHit();
+                                g.hp -= bulletDmg;
+                                if (Math.random() < 0.35) {
+                                    this.entityMgr.spawnExplosion(g.x, g.y, g.z, 3);
+                                }
+                                if (!hitSoundTriggered) {
+                                    soundFX.playHit();
+                                    hitSoundTriggered = true;
+                                }
                                 if (g.hp <= 0) {
                                     if (g.attackTimer > 0) {
                                         this.recordDefuse(g.x, g.z);
@@ -6743,6 +6847,10 @@
                         const b = blueList[i];
                         if (!b.active) continue;
 
+                        // 快速軸向剪枝 (Boss 體型較大，容差 1.8)
+                        if (Math.abs(b.x - boss.x) > 1.8) continue;
+                        if (b.z < boss.z - 1.8 || b.z > boss.z + 1.8) continue;
+
                         const dz = Math.abs(b.z - boss.z);
                         if (dz < 1.5) {
                             const dx = Math.abs(b.x - boss.x);
@@ -6752,10 +6860,15 @@
                                 this.entityMgr.blueMesh.setMatrixAt(i, _tempMatrix);
                                 blueChanged = true;
 
-                                boss.hp--;
-                                this.entityMgr.spawnExplosion(b.x, 0.9, b.z, 2);
+                                boss.hp = Math.max(0, Math.round((boss.hp - bulletDmg) * 10) / 10);
+                                if (Math.random() < 0.35) {
+                                    this.entityMgr.spawnExplosion(b.x, 0.9, b.z, 2);
+                                }
                                 this.entityMgr.updateBossHpBar();
-                                soundFX.playHit();
+                                if (!hitSoundTriggered) {
+                                    soundFX.playHit();
+                                    hitSoundTriggered = true;
+                                }
 
                                 if (boss.hp <= 0) {
                                     if (boss.attackTimer > 0) {
@@ -7027,7 +7140,16 @@
 
                 this.batchSpawnTimer -= dt;
                 if (this.batchSpawnTimer <= 0) {
-                    const batch = this.enemyBatchQueue.shift();
+                    // 為什麼調整：由於 Boss 為單一實例，若隊列首項為第 2 隻 Boss 而場上第 1 隻 Boss 尚未陣亡，優先釋放後續一般波次並保留第 2 隻 Boss 待命，防止直接覆蓋重置第 1 隻 Boss
+                    let batchIdx = 0;
+                    if (this.enemyBatchQueue[0].type === 'boss' && this.entityMgr.boss.active) {
+                        batchIdx = this.enemyBatchQueue.findIndex(b => b.type !== 'boss');
+                        if (batchIdx === -1) {
+                            this.batchSpawnTimer = 0.25;
+                            return;
+                        }
+                    }
+                    const batch = this.enemyBatchQueue.splice(batchIdx, 1)[0];
                     if (!batch) return;
 
                     if (batch.type === 'boss') {
@@ -7339,10 +7461,10 @@
                     this.updateLaneZoneTracking();
 
                     // GDD 4.1 單排 4 顆寬度 + 同屏總子彈配額上限控制 (正常排間發射間隔 0.08s)
-                    // 瀕死狂暴保護 (Last Stand Buff)：當子彈配額 Q <= 8 時，出膛頻率與子彈飛行速度同步提升 +35%
-                    const isLowQuota = (this.bulletQuota <= 8);
-                    const fireInterval = isLowQuota ? (0.08 / 1.35) : 0.08;
-                    const bulletVz = isLowQuota ? (14.5 * 1.35) : 14.5;
+                    // 瀕死狂暴保護 (Last Stand Buff)：當子彈配額 Q <= 12 時，出膛頻率與子彈飛行速度同步提升 +40%
+                    const isLowQuota = (this.bulletQuota <= 12);
+                    const fireInterval = isLowQuota ? (0.08 / 1.40) : 0.08;
+                    const bulletVz = isLowQuota ? (14.5 * 1.40) : 14.5;
                     const activeBlues = this.entityMgr.getActiveBlueCount();
 
                     if (this.bulletQuota > 0 && activeBlues < this.bulletQuota && (time - this.lastShootTime >= fireInterval)) {
@@ -7378,29 +7500,29 @@
                             }
                         }
                     } else {
-                        // 無盡生存模式
+                        // 無盡生存模式：出怪間隔下限為 1.20s (每 20 秒壓縮一次 x0.93)
                         this.endlessSpawnTimer += dt;
                         this.endlessDifficultyTimer += dt;
 
                         if (this.endlessDifficultyTimer > 20) {
                             this.endlessDifficultyTimer = 0;
-                            this.endlessInterval = Math.max(1.05, this.endlessInterval * 0.92);
+                            this.endlessInterval = Math.max(1.20, this.endlessInterval * 0.93);
                         }
 
                         if (this.endlessSpawnTimer >= this.endlessInterval) {
                             this.endlessSpawnTimer = 0;
                             const randType = Math.random();
-                            if (randType < 0.52) {
-                                const count = 3 + Math.floor(this.gameTime * 0.06);
+                            if (randType < 0.54) {
+                                const count = Math.min(10, 3 + Math.floor(this.gameTime * 0.04));
                                 this.enqueueEnemyWave({ type: 'red', count: count });
-                            } else if (randType < 0.76) {
-                                const count = 1 + Math.floor(this.gameTime * 0.03);
+                            } else if (randType < 0.78) {
+                                const count = Math.min(4, 1 + Math.floor(this.gameTime * 0.02));
                                 this.enqueueEnemyWave({ type: 'gargoyle', count: count });
                             } else if (randType < 0.92) {
-                                const count = 1 + Math.floor(this.gameTime * 0.02);
+                                const count = Math.min(3, 1 + Math.floor(this.gameTime * 0.015));
                                 this.enqueueEnemyWave({ type: 'elite', count: count });
                             } else if (!this.entityMgr.boss.active) {
-                                const hp = 200 + Math.floor(this.gameTime * 2.5);
+                                const hp = Math.min(550, 350 + Math.floor(this.gameTime * 2.2));
                                 this.enqueueEnemyWave({ type: 'boss', hp: hp });
                             }
                         }
@@ -7408,6 +7530,19 @@
 
                     // 逐幀執行戰術小隊排波隊列推進
                     this.updateEnemySpawnQueue(dt);
+
+                    // 每幀超載時序倒數與階梯衰減 (GDD v3.3 Overcharge Decay)
+                    if (this.overloadTier > 0) {
+                        if (this.overloadTimer > 0) {
+                            this.overloadTimer -= dt;
+                        } else {
+                            this.overloadDecayTimer -= dt;
+                            if (this.overloadDecayTimer <= 0) {
+                                this.overloadTier--;
+                                this.overloadDecayTimer = 3.0;
+                            }
+                        }
+                    }
 
                     this.gateMgr.update(time, dt);
                     this.entityMgr.update(dt);
